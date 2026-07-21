@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>招き猫ゲーム</title>
+    <style>
+        :root {
+            --bg-color: #f7f5f0;
+            --panel-color: #ffffff;
+            --text-color: #333333;
+            --primary-color: #e74c3c;
+            --border-radius: 12px;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        header {
+            text-align: center;
+            width: 100%;
+            max-width: 1000px;
+            margin-bottom: 20px;
+        }
+
+        .logo-container {
+            margin-bottom: 15px;
+        }
+
+        /* 画像を本来の比率で表示するためのスタイル */
+        .img-contain {
+            object-fit: contain;
+            max-width: 100%;
+        }
+
+        .mode-select-container select, .mode-select-container button {
+            padding: 8px 12px;
+            font-size: 16px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            margin: 5px;
+            cursor: pointer;
+        }
+
+        .mode-select-container button {
+            background-color: #2c3e50;
+            color: white;
+            border: none;
+        }
+
+        .game-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        @media (max-width: 768px) {
+            .game-container { grid-template-columns: 1fr; }
+        }
+
+        .panel {
+            background: var(--panel-color);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border: 1px solid #e0dacb;
+        }
+
+        .full-width { grid-column: 1 / -1; }
+
+        h3 {
+            margin-top: 0;
+            border-bottom: 2px solid #f1ece1;
+            padding-bottom: 8px;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 10px;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .status-card {
+            background: #fdfcf7;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #eee;
+            font-weight: bold;
+        }
+
+        .status-val {
+            font-size: 24px;
+            color: var(--primary-color);
+            margin-top: 5px;
+        }
+
+        .field-area {
+            min-height: 200px;
+            background: #fbfaf5;
+            border: 2px inset #eee;
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-content: flex-start;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        /* 招き猫の表示 */
+        .cat-obj {
+            position: relative;
+            width: 50px;
+            height: 50px;
+        }
+        .cat-obj img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            filter: drop-shadow(0px 2px 3px rgba(0,0,0,0.2));
+        }
+
+        .lifetime-chip {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #e74c3c;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 10px;
+            border: 1px solid white;
+            z-index: 10;
+        }
+
+        .action-zone {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        /* サイコロ動画・画像の表示領域 */
+        .dice-media-container {
+            min-height: 100px;
+            margin: 15px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .dice-video {
+            display: none;
+            max-width: 250px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .dice-img {
+            width: 60px;
+            height: 60px;
+            object-fit: contain;
+        }
+
+        .action-btn {
+            font-size: 18px;
+            padding: 12px 25px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 5px;
+        }
+        .action-btn:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+        .dropout-btn { background-color: #2c3e50; }
+
+        .log-box {
+            height: 150px;
+            overflow-y: auto;
+            background: #fafafa;
+            border: 1px solid #ddd;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 13px;
+        }
+
+        /* モーダル */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .event-img {
+            max-height: 150px;
+            object-fit: contain;
+            margin: 10px 0;
+        }
+
+        .meter-container { background: #eee; height: 15px; border-radius: 5px; margin: 5px 0 15px; overflow: hidden; }
+        .meter-bar { height: 100%; transition: width 0.3s; }
+
+        .npc-avatar { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid #ccc; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="logo-container">
+        <img src="logo.png" alt="招き猫ゲーム" class="img-contain" style="max-height: 80px;">
+    </div>
+    <div class="mode-select-container">
+        <select id="modeSelect" onchange="initGame()">
+            <option value="CLASSIC">クラシックモード</option>
+            <option value="COLLECTOR">コレクターモード</option>
+            <option value="ALICE">アリスモード</option>
+            <option value="COLLECTOR_ALICE">コレクター＋アリスモード</option>
+            <option value="BATTLE">バトルモード</option>
+        </select>
+        <span id="npcDifficultySpan" style="display:none;">
+            <select id="npcDifficulty" onchange="initGame()">
+                <option value="easy">イージーNPC</option>
+                <option value="normal" selected>ノーマルNPC</option>
+                <option value="hard">ハードNPC</option>
+            </select>
+        </span>
+        <button onclick="initGame()">リセットして開始</button>
+    </div>
+</header>
+
+<div class="game-container">
+    <div class="panel">
+        <h3>📊 プレイヤー・ステータス</h3>
+        <div class="status-grid">
+            <div class="status-card">ターン<div id="infoTurn" class="status-val">1</div></div>
+            <div class="status-card">招き猫数<div id="infoCats" class="status-val">0</div></div>
+            <div class="status-card">サイコロ数<div id="infoDice" class="status-val">1</div></div>
+        </div>
+        
+        <div id="colorCountDiv" style="display:none; font-size:14px; text-align:center; font-weight:bold; margin-bottom:10px;">
+            ⚪白: <span id="cntWhite">0</span> | ⚫黒: <span id="cntBlack">0</span> | 🟡金: <span id="cntGold">0</span>
+        </div>
+
+        <div id="npcPanel" style="display:none; border-top:2px dashed #ccc; padding-top:15px; margin-top:15px;">
+            <h3>🤖 NPCステータス</h3>
+            <div style="display:flex; align-items:center; justify-content:center; gap:15px;">
+                <img id="npcAvatarImg" src="npc_normal.jpg" alt="NPC" class="npc-avatar">
+                <div class="status-grid" style="margin-bottom:0;">
+                    <div class="status-card">確定猫数<div id="npcCats" class="status-val">0</div></div>
+                    <div class="status-card">状態<div id="npcStatus" class="status-val" style="font-size:16px;">対戦中</div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel action-zone">
+        <h3>🎲 アクション</h3>
+        
+        <div class="dice-media-container" id="diceMediaContainer">
+            <video id="diceVideo" class="dice-video" playsinline muted></video>
+            <div id="diceImageContainer" style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center;"></div>
+        </div>
+
+        <button id="btnRoll" class="action-btn" onclick="playerAction('roll')">サイコロを振る</button>
+        <button id="btnDropout" class="action-btn dropout-btn" onclick="playerAction('dropout')" style="display:none;">ドロップアウト</button>
+    </div>
+
+    <div class="panel full-width">
+        <h3>🐱 招き猫フィールド</h3>
+        <div class="field-area" id="catField"></div>
+    </div>
+
+    <div class="panel full-width">
+        <h3>📜 ログ</h3>
+        <div class="log-box" id="logBox"></div>
+    </div>
+</div>
+
+<div class="modal" id="aliceModal">
+    <div class="modal-content">
+        <h2 style="color:#3498db">不思議の国の勝負師 アリス</h2>
+        <img id="aliceEventImg" src="alice_normal1.png" alt="アリス" class="event-img">
+        <p><b>「このキャラメルサイコロを振る勇気はある？」</b></p>
+        <button class="action-btn" onclick="acceptAliceChallenge(true)">挑戦する</button>
+        <button class="action-btn dropout-btn" onclick="acceptAliceChallenge(false)">挑戦しない</button>
+    </div>
+</div>
+
+<div class="modal" id="mogumoguModal">
+    <div class="modal-content">
+        <h2>🍬 もぐもぐチャレンジ 🍬</h2>
+        <img id="mogumoguAliceImg" src="alice_normal1.png" alt="アリス" class="event-img">
+        <p>素数 (2, 3, 5) を5回連続で出せ！</p>
+        
+        <div style="text-align:left; font-size:14px; background:#f9f9f9; padding:10px; border-radius:6px; margin-bottom:15px;">
+            <div>空腹度: <span id="lblHunger"></span></div>
+            <div class="meter-container"><div id="barHunger" class="meter-bar" style="background:#e74c3c;"></div></div>
+            <div>機嫌: <span id="lblMood"></span></div>
+            <div class="meter-container"><div id="barMood" class="meter-bar" style="background:#3498db;"></div></div>
+        </div>
+
+        <div id="mogumoguDiceContainer" style="min-height: 80px; margin-bottom:10px;">
+            <img src="caramel_dice.png" alt="キャラメルサイコロ" style="width:60px; height:60px; object-fit:contain;">
+        </div>
+
+        <p id="mogumoguLog" style="font-weight:bold; color:#e74c3c;">サイコロを振ってください！</p>
+        <button id="btnMogumoguRoll" class="action-btn" onclick="rollMogumogu()">チャレンジを振る</button>
+    </div>
+</div>
+
+<div class="modal" id="cheshireModal">
+    <div class="modal-content">
+        <h2 style="color:#9b59b6">チェシャ猫 現る</h2>
+        <img src="cheshire_cat.png" alt="チェシャ猫" class="event-img">
+        <p id="cheshireText" style="font-style:italic;">「それは本当に招き猫かな？」</p>
+        <h3 id="cheshireEffect" style="color:#e74c3c;"></h3>
+        <button class="action-btn" onclick="closeModal('cheshireModal'); proceedNextTurn();">次へ</button>
+    </div>
+</div>
+
+<div class="modal" id="betChooseModal">
+    <div class="modal-content">
+        <h2>🃏 勝負師アリスの賭け</h2>
+        <img id="betAliceImg" src="alice_normal2.png" alt="アリス" class="event-img">
+        <p>ドロップアウトしました。ここでアリスの勝負に賭けますか？</p>
+        <p style="font-size:14px; text-align:left;">
+            <b>① 降りる</b>：現在の招き猫数をそのまま確定する。<br>
+            <b>② アリスに賭ける</b>：もぐもぐチャレンジに挑戦。成功で【猫数2倍】、失敗で【0匹】。
+        </p>
+        <button class="action-btn dropout-btn" onclick="resolveBetChoice(1)">① 降りる</button>
+        <button class="action-btn" onclick="resolveBetChoice(2)" style="background:#f1c40f; color:black;">② アリスに賭ける</button>
+    </div>
+</div>
+
+<script>
+// --- データモデル ---
+class CatObject {
+    constructor(color, maxLifetime, turnCreated) {
+        this.color = color; // "white", "black", "gold"
+        this.lifetime = maxLifetime; 
+        this.createdAt = turnCreated;
+    }
+}
+
+let GameState = {};
+let MogumoguState = { successCount: 0, isWinBetMode: false };
+
+// --- ユーティリティ ---
+function isPrime(n) {
+    if (n <= 1) return false;
+    if (n <= 3) return true;
+    if (n % 2 === 0 || n % 3 === 0) return false;
+    for (let i = 5; i * i <= n; i += 6) {
+        if (n % i === 0 || n % (i + 2) === 0) return false;
+    }
+    return true;
+}
+
+function writeLog(text) {
+    const box = document.getElementById('logBox');
+    box.innerHTML += `<div>[Turn ${GameState.turn}] ${text}</div>`;
+    box.scrollTop = box.scrollHeight;
+}
+
+function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+// アリスの画像切り替えロジック
+function getAliceImage() {
+    if (GameState.alice.hunger > 60) {
+        const r = Math.floor(Math.random() * 3) + 1;
+        return `alice_hungry${r}.png`;
+    } else if (GameState.alice.mood < 40) {
+        return `alice_angry.png`;
+    } else if (GameState.alice.mood > 80) {
+        return `alice_happy.png`;
+    } else {
+        const r = Math.floor(Math.random() * 3) + 1;
+        return `alice_normal${r}.png`;
+    }
+}
+
+// --- ゲーム初期化 ---
+function initGame() {
+    const mode = document.getElementById('modeSelect').value;
+    const diff = document.getElementById('npcDifficulty').value;
+
+    GameState = {
+        currentMode: mode,
+        turn: 1,
+        phase: 1,
+        diceCount: 1,
+        diceColor: (mode.includes("ALICE")) ? "B" : "R", // B=青, R=赤
+        cats: [],
+        alice: {
+            hunger: Math.floor(Math.random() * 30),
+            mood: 70 + Math.floor(Math.random() * 30)
+        },
+        playerDroppedOut: false,
+        npcDroppedOut: false,
+        isGameOver: false,
+        npc: { difficulty: diff, catsCount: 0, diceCount: 1, phase: 1, droppedOut: false }
+    };
+
+    // UI制御
+    document.getElementById('npcPanel').style.display = (mode === "BATTLE") ? "block" : "none";
+    document.getElementById('npcDifficultySpan').style.display = (mode === "BATTLE") ? "inline" : "none";
+    document.getElementById('btnDropout').style.display = (mode === "BATTLE") ? "inline-block" : "none";
+    document.getElementById('colorCountDiv').style.display = (mode.includes("COLLECTOR")) ? "block" : "none";
+    
+    document.getElementById('btnRoll').disabled = false;
+    document.getElementById('btnDropout').disabled = false;
+    document.getElementById('logBox').innerHTML = "";
+    document.getElementById('diceImageContainer').innerHTML = "";
+
+    if(mode === "BATTLE") {
+        // NPC画像の拡張子は.jpg
+        document.getElementById('npcAvatarImg').src = `npc_${diff}.jpg`; 
+        document.getElementById('npcStatus').innerText = "対戦中";
+    }
+
+    writeLog(`ゲーム開始： ${mode} モード`);
+    updateUI();
+}
+
+// --- UI更新処理 ---
+function updateUI() {
+    document.getElementById('infoTurn').innerText = GameState.turn;
+    document.getElementById('infoCats').innerText = GameState.cats.length;
+    document.getElementById('infoDice').innerText = GameState.diceCount;
+
+    // フィールド上の猫を描画
+    const field = document.getElementById('catField');
+    field.innerHTML = "";
+    
+    let w = 0, b = 0, g = 0;
+
+    GameState.cats.forEach(cat => {
+        if(cat.color === "white") w++;
+        if(cat.color === "black") b++;
+        if(cat.color === "gold") g++;
+
+        const div = document.createElement('div');
+        div.className = "cat-obj";
+        
+        // 猫画像の拡張子は.png
+        const img = document.createElement('img');
+        img.src = `${cat.color}_cat.png`; 
+        div.appendChild(img);
+
+        // 寿命バッジ
+        if (GameState.currentMode.includes("ALICE") && cat.lifetime !== Infinity) {
+            const chip = document.createElement('span');
+            chip.className = "lifetime-chip";
+            chip.innerText = cat.lifetime;
+            div.appendChild(chip);
+        }
+        field.appendChild(div);
+    });
+
+    document.getElementById('cntWhite').innerText = w;
+    document.getElementById('cntBlack').innerText = b;
+    document.getElementById('cntGold').innerText = g;
+
+    if(GameState.currentMode === "BATTLE") {
+        document.getElementById('npcCats').innerText = GameState.npc.catsCount;
+    }
+}
+
+// --- コアロジック ---
+function createCat(forcedColor = null, rollValue = 1) {
+    let color = "white";
+    if (GameState.currentMode.includes("COLLECTOR")) {
+        // コレクターモード：出目で色決定 1,2:白, 3,4:黒, 5,6:金
+        if (rollValue <= 2) color = "white";
+        else if (rollValue <= 4) color = "black";
+        else color = "gold";
+    }
+    if (forcedColor) color = forcedColor;
+
+    let lifetime = Infinity;
+    if (GameState.currentMode === "ALICE") {
+        lifetime = 6;
+    } else if (GameState.currentMode === "COLLECTOR_ALICE") {
+        if (color === "white") lifetime = 4;
+        if (color === "black") lifetime = 6;
+        if (color === "gold") lifetime = 8;
+    }
+
+    return new CatObject(color, lifetime, GameState.turn);
+}
+
+function playerAction(type) {
+    if (GameState.isGameOver) return;
+
+    if (type === 'dropout') {
+        GameState.playerDroppedOut = true;
+        writeLog(`ドロップアウトしました。確定招き猫数: ${GameState.cats.length}匹`);
+        document.getElementById('btnRoll').disabled = true;
+        document.getElementById('btnDropout').disabled = true;
+        
+        document.getElementById('betAliceImg').src = getAliceImage();
+        openModal('betChooseModal');
+        return;
+    }
+
+    // サイコロを振る
+    document.getElementById('btnRoll').disabled = true;
+    document.getElementById('btnDropout').disabled = true;
+
+    // 1. MP4動画の再生
+    const video = document.getElementById('diceVideo');
+    const imgContainer = document.getElementById('diceImageContainer');
+    imgContainer.innerHTML = "";
+    
+    // N個に応じた動画ファイル (最大4)
+    const vidCount = Math.min(GameState.diceCount, 4);
+    video.src = `diceroll_${GameState.diceColor}${vidCount}.mp4`;
+    
+    video.style.display = "block";
+    
+    // 動画再生の約束（エラーハンドリング含む）
+    const playPromise = video.play();
+    
+    if (playPromise !== undefined) {
+        playPromise.then(_ => {
+            // 再生成功、終了を待つ
+            video.onended = () => {
+                video.style.display = "none";
+                executeRollLogic();
+            };
+        }).catch(error => {
+            // 自動再生ブロックやファイル不在時は即座にスキップ
+            video.style.display = "none";
+            executeRollLogic();
+        });
+    } else {
+        video.style.display = "none";
+        executeRollLogic();
+    }
+}
+
+function executeRollLogic() {
+    let totalDiceScore = 0;
+    const rolls = [];
+    
+    for (let i = 0; i < GameState.diceCount; i++) {
+        const roll = Math.floor(Math.random() * 6) + 1;
+        rolls.push(roll);
+        totalDiceScore += roll;
+    }
+
+    // 2. 確定したJPEG画像の表示
+    const imgContainer = document.getElementById('diceImageContainer');
+    imgContainer.innerHTML = "";
+    rolls.forEach(val => {
+        const img = document.createElement('img');
+        img.src = `dice_${GameState.diceColor}${val}.jpeg`; // jpeg拡張子
+        img.className = "dice-img";
+        // もし画像がない場合は数字だけテキストで出す簡易フォールバック
+        img.onerror = function() { this.style.display='none'; imgContainer.innerHTML += `<div style="font-size:30px; font-weight:bold; margin:10px;">[${val}]</div>`; };
+        imgContainer.appendChild(img);
+    });
+
+    writeLog(`サイコロ出目: ${rolls.join(', ')} (合計: ${totalDiceScore})`);
+
+    // 3. フェーズ計算
+    if (GameState.phase === 1) {
+        const added = totalDiceScore;
+        const colorBasis = rolls[0]; // フェーズ1は1個なのでその出目を基準とする
+        
+        for (let k = 0; k < added; k++) {
+            GameState.cats.push(createCat(null, colorBasis));
+        }
+        
+        writeLog(`招き猫を ${added} 匹追加しました。`);
+        GameState.diceCount = 2;
+        GameState.phase = 2;
+
+    } else {
+        if (isPrime(totalDiceScore)) {
+            const currentM = GameState.cats.length;
+            const diff = Math.abs(totalDiceScore - currentM);
+            const nextM = Math.max(0, currentM - diff);
+            const removeCount = currentM - nextM;
+
+            if (removeCount > 0) {
+                // 古い招き猫(配列の先頭)から消去
+                GameState.cats.splice(0, removeCount);
+                writeLog(`【素数】数式により ${removeCount} 匹が消滅しました。`);
+            }
+            GameState.diceCount++;
+            writeLog(`サイコロ数が1個増えました。(計: ${GameState.diceCount}個)`);
+        } else {
+            GameState.diceCount--;
+            writeLog(`【非素数】サイコロ数が1個減りました。(計: ${GameState.diceCount}個)`);
+            if (GameState.diceCount === 1) {
+                GameState.phase = 1;
+            }
+        }
+    }
+
+    updateUI();
+    if (checkInstantWinLose()) return;
+    triggerEndTurnEvents();
+}
+
+function triggerEndTurnEvents() {
+    let eventTriggered = false;
+
+    // チェシャ猫イベント判定 (2%)
+    if (Math.random() < 0.02) {
+        eventTriggered = true;
+        executeCheshireCatEvent();
+        return;
+    }
+
+    // アリスイベント判定 (5%)
+    if (!eventTriggered && Math.random() < 0.05) {
+        eventTriggered = true;
+        document.getElementById('aliceEventImg').src = getAliceImage();
+        openModal('aliceModal');
+        return;
+    }
+
+    proceedNextTurn();
+}
+
+function proceedNextTurn() {
+    if (GameState.currentMode === "BATTLE" && !GameState.npc.droppedOut) {
+        executeNPCTurn();
+    }
+
+    GameState.turn++;
+
+    // アリスモード寿命処理
+    if (GameState.currentMode.includes("ALICE")) {
+        let beforeCount = GameState.cats.length;
+        GameState.cats = GameState.cats.filter(cat => {
+            if (cat.createdAt === GameState.turn - 1) return true;
+            cat.lifetime--;
+            return cat.lifetime > 0;
+        });
+        let diedCount = beforeCount - GameState.cats.length;
+        if(diedCount > 0) writeLog(`⏳ 寿命により ${diedCount} 匹が消滅しました。`);
+    }
+
+    updateUI();
+    if (checkInstantWinLose()) return;
+
+    if (!GameState.playerDroppedOut) {
+        document.getElementById('btnRoll').disabled = false;
+        if (GameState.currentMode === "BATTLE") document.getElementById('btnDropout').disabled = false;
+    } else {
+        setTimeout(() => { if(!GameState.isGameOver) proceedNextTurn(); }, 1000);
+    }
+}
+
+function checkInstantWinLose() {
+    const total = GameState.cats.length;
+    
+    if (GameState.currentMode.includes("COLLECTOR")) {
+        let w = 0, b = 0, g = 0;
+        GameState.cats.forEach(c => {
+            if(c.color === "white") w++;
+            if(c.color === "black") b++;
+            if(c.color === "gold") g++;
+        });
+        if (w >= 10 && b >= 10 && g >= 10) {
+            endGame(true, `勝利！白10・黒10・金10のコレクション達成！`);
+            return true;
+        }
+    }
+
+    if (total <= 0) {
+        endGame(false, `敗北… 招き猫の数が0匹になりました。`);
+        return true;
+    }
+
+    if (GameState.currentMode === "BATTLE") {
+        if (GameState.playerDroppedOut && GameState.npc.droppedOut) {
+            const p = GameState.cats.length;
+            const n = GameState.npc.catsCount;
+            writeLog(`結果: プレイヤー ${p}匹 vs NPC ${n}匹`);
+            if (p > n) endGame(true, `勝利！NPCを上回りました！`);
+            else if (p < n) endGame(false, `敗北… NPCに負けました。`);
+            else endGame(true, `引き分け！`);
+            return true;
+        }
+    }
+    return false;
+}
+
+function endGame(isWin, message) {
+    GameState.isGameOver = true;
+    writeLog(`ゲーム終了： ${message}`);
+    alert(message);
+}
+
+// --- チェシャ猫イベント ---
+function executeCheshireCatEvent() {
+    openModal('cheshireModal');
+    const effectId = Math.floor(Math.random() * 5) + 1;
+    const effLabel = document.getElementById('cheshireEffect');
+    
+    if(Math.random() < 0.1) {
+        document.getElementById('cheshireText').innerText = "「今回は何もしないよ」";
+        effLabel.innerText = "笑顔だけ残して消えた";
+        return;
+    }
+
+    document.getElementById('cheshireText').innerText = "「それは本当に招き猫かな？」";
+
+    switch(effectId) {
+        case 1:
+            const r = Math.floor(Math.random() * 2);
+            if(r===0) {
+                for(let i=0; i<5; i++) GameState.cats.push(createCat());
+                effLabel.innerText = "招き猫 +5匹";
+            } else {
+                GameState.cats.splice(0, 5);
+                effLabel.innerText = "招き猫 -5匹";
+            }
+            break;
+        case 2:
+            if (GameState.currentMode.includes("COLLECTOR")) {
+                GameState.cats.forEach(c => {
+                    if(c.color === "white") c.color = "black";
+                    else if(c.color === "black") c.color = "white";
+                });
+                effLabel.innerText = `白猫 ⇄ 黒猫 入れ替え！`;
+            } else {
+                effLabel.innerText = "変化なし";
+            }
+            break;
+        case 3:
+            let oldDice = GameState.diceCount;
+            GameState.diceCount = Math.max(1, GameState.cats.length);
+            GameState.cats.splice(0, GameState.cats.length - oldDice);
+            while(GameState.cats.length < oldDice) GameState.cats.push(createCat());
+            effLabel.innerText = `サイコロと招き猫の数が逆転！`;
+            break;
+        case 4:
+            GameState.alice.hunger = Math.max(0, Math.min(100, GameState.alice.hunger + 20));
+            effLabel.innerText = `アリスの空腹度上昇！`;
+            break;
+        case 5:
+            effLabel.innerText = "笑顔だけ残して消えた";
+            break;
+    }
+    updateUI();
+}
+
+// --- アリス / もぐもぐチャレンジ ---
+function acceptAliceChallenge(accept) {
+    closeModal('aliceModal');
+    if (accept) {
+        MogumoguState.successCount = 0;
+        MogumoguState.isWinBetMode = false;
+        startMogumoguUI();
+    } else {
+        proceedNextTurn();
+    }
+}
+
+function resolveBetChoice(choice) {
+    closeModal('betChooseModal');
+    if (choice === 2) {
+        MogumoguState.successCount = 0;
+        MogumoguState.isWinBetMode = true;
+        startMogumoguUI();
+    } else {
+        checkInstantWinLose();
+    }
+}
+
+function startMogumoguUI() {
+    document.getElementById('mogumoguAliceImg').src = getAliceImage();
+    document.getElementById('lblHunger').innerText = GameState.alice.hunger;
+    document.getElementById('barHunger').style.width = `${GameState.alice.hunger}%`;
+    document.getElementById('lblMood').innerText = GameState.alice.mood;
+    document.getElementById('barMood').style.width = `${GameState.alice.mood}%`;
+    
+    document.getElementById('mogumoguLog').innerText = "キャラメルサイコロを振ってください！";
+    document.getElementById('btnMogumoguRoll').style.display = "inline-block";
+    openModal('mogumoguModal');
+}
+
+function rollMogumogu() {
+    const roll = Math.floor(Math.random() * 6) + 1;
+    const isPrimeDice = (roll === 2 || roll === 3 || roll === 5);
+    const isEven = (roll % 2 === 0);
+
+    // キャラメルサイコロ（画像更新）
+    document.getElementById('mogumoguDiceContainer').innerHTML = `
+        <img src="caramel_dice.png" alt="キャラメル" style="width:60px; height:60px; object-fit:contain;">
+        <div style="font-size:24px; font-weight:bold;">出目: ${roll}</div>
+    `;
+
+    // 確率計算ロジック
+    let pBase = 1/3;
+    if (MogumoguState.successCount === 2) pBase = 1/6;
+    if (MogumoguState.successCount === 3) pBase = 1/7;
+    if (MogumoguState.successCount === 4) pBase = 1/9;
+
+    const baseAdds = [0, 1/7, 1/6, 1/5, 1/4, 1/3];
+    let moodAdjustment = 0;
+    if (MogumoguState.successCount > 0) {
+        let factor = 1 + ((50 - GameState.alice.mood) / 10) * 0.1;
+        moodAdjustment = baseAdds[MogumoguState.successCount] * factor;
+    }
+
+    let pEat = pBase + (GameState.alice.hunger / 500) - (GameState.alice.mood / 500) + moodAdjustment;
+    pEat = Math.max(0, Math.min(1, pEat));
+
+    // アリスが食べる判定
+    if (isEven && Math.random() < pEat) {
+        document.getElementById('mogumoguLog').innerText = `😱 アリスがサイコロを食べてしまった！`;
+        document.getElementById('mogumoguAliceImg').src = "alice_hungry1.png"; // 食べてしまった後の表情
+        setTimeout(() => resolveMogumogu(false), 2000);
+        return;
+    }
+
+    if (isPrimeDice) {
+        MogumoguState.successCount++;
+        document.getElementById('mogumoguLog').innerText = `〇 成功！ 連勝: ${MogumoguState.successCount}/5`;
+        if (MogumoguState.successCount >= 5) {
+            setTimeout(() => resolveMogumogu(true), 1500);
+        }
+    } else {
+        document.getElementById('mogumoguLog').innerText = `❌ 失敗！ 出目が素数ではありません。`;
+        setTimeout(() => resolveMogumogu(false), 1500);
+    }
+}
+
+function resolveMogumogu(isSuccess) {
+    closeModal('mogumoguModal');
+    document.getElementById('mogumoguDiceContainer').innerHTML = `<img src="caramel_dice.png" style="width:60px;">`; // リセット
+
+    if (MogumoguState.isWinBetMode) {
+        if (isSuccess) {
+            let cloned = [...GameState.cats];
+            cloned.forEach(c => GameState.cats.push(createCat(c.color)));
+            writeLog(`勝負師アリス大成功！招き猫が2倍になりました！`);
+        } else {
+            GameState.cats = [];
+            writeLog(`勝負師アリス失敗… 招き猫をすべて失いました。`);
+        }
+        updateUI();
+        checkInstantWinLose();
+        return;
+    }
+
+    if (isSuccess) {
+        for(let i=0; i<10; i++) GameState.cats.push(createCat());
+        writeLog("🎉 もぐもぐチャレンジ成功！招き猫+10匹！");
+    } else {
+        writeLog("💦 もぐもぐチャレンジ失敗。");
+    }
+    updateUI();
+    proceedNextTurn();
+}
+
+// --- NPCターン（バトルモード用） ---
+function executeNPCTurn() {
+    const diff = GameState.npc.difficulty;
+    let shouldDropout = false;
+
+    if (diff === "easy") {
+        if (GameState.npc.catsCount >= 6 && GameState.npc.diceCount >= 3) shouldDropout = true;
+    } else if (diff === "normal") {
+        if (GameState.npc.catsCount >= 40 && Math.random() < 0.4) shouldDropout = true;
+    } else if (diff === "hard") {
+        // 簡易モンテカルロ法による期待値計算の代替シミュレーション
+        let expectedValue = GameState.npc.catsCount + (GameState.npc.phase === 1 ? 3.5 : -1.5);
+        if (GameState.npc.catsCount >= expectedValue || (GameState.playerDroppedOut && GameState.npc.catsCount > GameState.cats.length)) {
+            shouldDropout = true;
+        }
+    }
+
+    if (shouldDropout) {
+        GameState.npc.droppedOut = true;
+        document.getElementById('npcStatus').innerText = "ドロップアウト";
+        writeLog(`🤖 NPCがドロップアウトしました。(確定: ${GameState.npc.catsCount}匹)`);
+        
+        // 勝負師アリス判定
+        if (Math.random() < (diff === "hard" ? 0.5 : 0.2)) {
+            writeLog(`🤖 NPCが【勝負師アリス】に挑戦！`);
+            if (Math.random() < 0.3) {
+                GameState.npc.catsCount *= 2;
+                writeLog(`🤖 NPCは成功し、猫数が2倍になりました！`);
+            } else {
+                GameState.npc.catsCount = 0;
+                writeLog(`🤖 NPCは失敗し、猫数が0匹になりました。`);
+            }
+        }
+    } else {
+        let rollSum = 0;
+        for(let i=0; i<GameState.npc.diceCount; i++) rollSum += Math.floor(Math.random() * 6) + 1;
+
+        if (GameState.npc.phase === 1) {
+            GameState.npc.catsCount += rollSum;
+            GameState.npc.diceCount = 2;
+            GameState.npc.phase = 2;
+        } else {
+            if (isPrime(rollSum)) {
+                let diffAmt = Math.abs(rollSum - GameState.npc.catsCount);
+                GameState.npc.catsCount = Math.max(0, GameState.npc.catsCount - diffAmt);
+                GameState.npc.diceCount++;
+            } else {
+                GameState.npc.diceCount--;
+                if (GameState.npc.diceCount === 1) GameState.npc.phase = 1;
+            }
+        }
+        writeLog(`🤖 NPC行動終了。(現在: ${GameState.npc.catsCount}匹)`);
+        if (GameState.npc.catsCount <= 0) {
+            GameState.npc.droppedOut = true;
+            document.getElementById('npcStatus').innerText = "バースト";
+        }
+    }
+}
+
+// 起動時処理
+window.onload = initGame;
+</script>
+</body>
+</html>
