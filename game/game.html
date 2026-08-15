@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>招き猫ゲーム - Beta</title>
+<style>
+body{margin:0;background:#f7f5f0;color:#333;font-family:system-ui,-apple-system,"Yu Gothic",Meiryo,sans-serif}
+main{max-width:900px;margin:auto;padding:24px}
+.panel{background:#fff;border:1px solid #e5dfd2;border-radius:14px;padding:20px;margin:14px 0;box-shadow:0 3px 12px #0000000b}
+h1{text-align:center}.sub{text-align:center;color:#666}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stat{text-align:center;background:#fbfaf6;padding:12px;border-radius:10px}
+.num{font-size:28px;font-weight:700}
+.actions{text-align:center}
+button{font-size:18px;padding:12px 22px;margin:5px;border:0;border-radius:9px;cursor:pointer;background:#e74c3c;color:white;font-weight:700}
+button:disabled{background:#aaa;cursor:not-allowed}
+#cats{display:flex;flex-wrap:wrap;gap:8px;min-height:90px}
+.cat{width:52px;height:52px;display:flex;align-items:center;justify-content:center;font-size:34px}
+#log{height:220px;overflow:auto;background:#fafafa;border:1px solid #ddd;padding:10px;font:13px monospace}
+.notice{font-size:14px;color:#666}
+@media(max-width:600px){.stats{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+<h1>🐾 招き猫ゲーム</h1>
+<div class="sub">アリス研究所 ― 「面白い、を数学に。」</div>
+
+<section class="panel">
+<div class="stats">
+<div class="stat">ターン<div id="turn" class="num">1</div></div>
+<div class="stat">招き猫<div id="count" class="num">0</div></div>
+<div class="stat">次のサイコロ<div id="dice" class="num">1</div></div>
+</div>
+<div id="eventStatus" class="notice">イベント: idle / -</div>
+</section>
+
+<section class="panel actions">
+<h2>🎲 アクション</h2>
+<div id="result">まだ振っていません</div>
+<button id="roll">サイコロを振る</button>
+<button id="dropout">ドロップアウト</button>
+<button id="reset">リセット</button>
+</section>
+
+<section class="panel">
+<h2>🐱 招き猫フィールド</h2>
+<div id="cats"></div>
+</section>
+
+<section class="panel">
+<h2>📜 ログ</h2>
+<div id="log"></div>
+</section>
+
+<section class="panel notice">
+<strong>Beta公開版</strong><br>
+クラシックモードを中心に、基本ターン処理・招き猫生成・チェシャ猫イベント・ドロップアウトを統合しています。
+</section>
+
+<script type="module">
+import { createMain } from "../src/main/Main.js";
+const app = createMain(document);
+app.controller.start();
+</script>
+</main>
+</body>
+</html>
