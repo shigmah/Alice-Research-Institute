@@ -63,6 +63,8 @@ export class MainScreen {
     const container = this.elements.diceAnimation;
     if (!container) return;
 
+    container.replaceChildren();
+
     const video = this.document.createElement("video");
     video.className = "dice-video";
     video.autoplay = true;
@@ -70,35 +72,46 @@ export class MainScreen {
     video.playsInline = true;
     video.controls = false;
 
-    container.replaceChildren(video);
+    const skip = this.document.createElement("button");
+    skip.type = "button";
+    skip.className = "dice-skip";
+    skip.textContent = "演出をスキップ";
+
+    container.appendChild(video);
+    container.appendChild(skip);
     container.hidden = false;
 
     return new Promise(resolve => {
       let resolved = false;
+      let loadTimer = null;
+
       const finish = () => {
         if (resolved) return;
         resolved = true;
-        setTimeout(() => {
-          container.replaceChildren();
-          container.hidden = true;
-          resolve();
-        }, 100);
+        if (loadTimer) clearTimeout(loadTimer);
+        video.pause();
+        container.replaceChildren();
+        container.hidden = true;
+        resolve();
       };
 
+      skip.addEventListener("click", finish, { once: true });
       video.addEventListener("ended", finish, { once: true });
+
+      // 素材のロードが遅い場合でも、最大1.5秒でゲームへ進む。
+      loadTimer = setTimeout(finish, 1500);
 
       AssetResolver.setVideoWithFallback(
         video,
         AssetResolver.diceVideoCandidates(Math.max(1, diceCount)),
         () => {
-          if (video.dataset.assetStatus === "missing") {
-            setTimeout(finish, 450);
-          }
+          if (video.dataset.assetStatus === "missing") finish();
         }
       );
 
       video.addEventListener("loadeddata", () => {
-        video.play().catch(() => setTimeout(finish, 450));
+        if (resolved) return;
+        video.play().catch(() => finish());
       }, { once: true });
     });
   }
@@ -333,6 +346,11 @@ export class MainScreen {
           `出目計 ${outcome.result.totalIsPrime ? "→ 素数" : "→ 非素数"}`
         );
       }
+    }
+
+    const mode = outcome.mode;
+    if (mode?.phase === 2 && mode.isPrime && mode.removedCats > 0) {
+      lines.push(`素数なので${mode.removedCats}匹の招き猫をしまいました。`);
     }
 
     if (outcome.event?.message) {

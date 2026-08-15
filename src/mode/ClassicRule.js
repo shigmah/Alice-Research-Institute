@@ -31,12 +31,20 @@ export class ClassicRule extends PlayRule {
     this.rollDice(diceCount);
 
     const phase = this.determinePhase(diceCount);
+    let phaseResult;
 
     if (phase === 1) {
       this.generateCats();
       this.updateDiceCount(phase);
+      phaseResult = {
+        phase: 1,
+        total: this.gameState.getDiceTotal(),
+        isPrime: null,
+        removedCats: 0,
+        generatedCats: this.gameState.getDiceResults()[0]
+      };
     } else {
-      this.processPhase2();
+      phaseResult = this.processPhase2();
     }
 
     this.checkResult();
@@ -44,6 +52,8 @@ export class ClassicRule extends PlayRule {
     for (const modifier of this.modifiers) {
       modifier.afterTurn?.();
     }
+
+    return phaseResult;
   }
 
   checkResult() {
@@ -118,12 +128,22 @@ export class ClassicRule extends PlayRule {
   processPhase2() {
     const total = this.gameState.getDiceTotal();
     const currentCatCount = this.gameState.getCats().length;
+    const isPrime = this.isPrime(total);
+    let removedCats = 0;
 
-    if (this.isPrime(total)) {
-      this.updateCatCount(total, currentCatCount);
+    if (isPrime) {
+      removedCats = this.updateCatCount(total, currentCatCount);
     }
 
-    this.updateDiceCount(2, this.isPrime(total));
+    this.updateDiceCount(2, isPrime);
+
+    return {
+      phase: 2,
+      total,
+      isPrime,
+      removedCats,
+      generatedCats: 0
+    };
   }
 
   isPrime(value) {
@@ -150,7 +170,7 @@ export class ClassicRule extends PlayRule {
     }
 
     this.catManager.updateCats();
-    return nextCount;
+    return removeCount;
   }
 
   updateDiceCount(phase, primeResult = null) {

@@ -107,6 +107,7 @@ export class Game {
           : null
       },
       event: turnResult?.event ?? null,
+      mode: turnResult?.mode ?? null,
       gameEnd: this.state.isGameOver ? { reason: "no-cats" } : null,
       state: this.state
     };

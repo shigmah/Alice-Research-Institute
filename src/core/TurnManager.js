@@ -21,12 +21,12 @@ export class TurnManager {
     this.startTurn();
     if (this.gameState.isGameOver) return null;
 
-    this.executeMode();
+    const modeResult = this.executeMode();
 
     if (this.isGameEnd()) {
       this.gameState.isGameOver = true;
       this.currentMode?.terminate?.();
-      return null;
+      return { mode: modeResult, event: null };
     }
 
     const eventResult = this.checkEvent();
@@ -34,18 +34,18 @@ export class TurnManager {
     if (this.gameState.isGameOver || this.currentMode?.isFinished?.()) {
       this.gameState.isGameOver = true;
       this.currentMode?.terminate?.();
-      return { event: eventResult };
+      return { mode: modeResult, event: eventResult };
     }
 
     this.updateGameState();
 
     if (this.gameState.isGameOver) {
-      return { event: eventResult };
+      return { mode: modeResult, event: eventResult };
     }
 
     this.endTurn();
 
-    return { event: eventResult };
+    return { mode: modeResult, event: eventResult };
   }
 
   endTurn() {
@@ -71,7 +71,7 @@ export class TurnManager {
   updateCommon() {}
 
   executeMode() {
-    this.currentMode?.executeTurn?.();
+    return this.currentMode?.executeTurn?.();
   }
 
   checkEvent() {
