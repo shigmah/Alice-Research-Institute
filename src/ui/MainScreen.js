@@ -32,6 +32,14 @@ export class MainScreen {
     this.elements.eventClose?.addEventListener("click", () => {
       this.hideEventModal();
     });
+
+    const logo = this.document.querySelector("#logoImage");
+    if (logo) {
+      AssetResolver.setImageWithFallback(
+        logo,
+        AssetResolver.imageCandidates("logo.png")
+      );
+    }
   }
 
   bindActions({ onRoll, onDropout, onReset, onMogumogu }) {
@@ -118,7 +126,9 @@ export class MainScreen {
     const eventId = state.eventState?.eventId ?? "-";
     this.setText("eventStatus", `イベント: ${eventStatus} / ${eventId}`);
 
+    const gameOver = Boolean(state.isGameOver) || state.getCats().length <= 0;
     this.updateButtons(state);
+    this.updateGameOverMessage(state, gameOver, outcome);
     this.logOutcome(outcome);
 
     if (outcome?.event) {
@@ -271,11 +281,37 @@ export class MainScreen {
   }
 
   updateButtons(state) {
-    const over = Boolean(state.isGameOver);
-    if (this.elements.roll) this.elements.roll.disabled = over;
-    if (this.elements.dropout) {
-      this.elements.dropout.disabled = over || Boolean(state.hasDroppedOut);
+    const over = Boolean(state.isGameOver) || state.getCats().length <= 0;
+
+    if (this.elements.roll) {
+      this.elements.roll.disabled = over;
     }
+
+    if (this.elements.reset) {
+      this.elements.reset.disabled = false;
+    }
+
+    if (this.elements.dropout) {
+      this.elements.dropout.disabled =
+        over || Boolean(state.hasDroppedOut);
+    }
+  }
+
+  updateGameOverMessage(state, gameOver, outcome) {
+    const message = this.elements.gameOverMessage;
+    if (!message) return;
+
+    if (!gameOver) {
+      message.hidden = true;
+      return;
+    }
+
+    const reason = outcome?.gameEnd?.reason ?? "no-cats";
+    message.hidden = false;
+    message.textContent =
+      reason === "player-dropout"
+        ? "ゲーム終了：ドロップアウトしました。"
+        : "ゲームオーバー：招き猫が0匹になりました。";
   }
 
   logOutcome(outcome) {

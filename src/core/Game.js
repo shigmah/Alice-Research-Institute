@@ -68,10 +68,34 @@ export class Game {
     this.emit(this.state, null);
   }
 
+  ensureGameOverIfNoCats() {
+    // 初回ターン（turn=1）は猫0匹から開始する仕様なので、ここでは終了扱いにしない。
+    if (this.state.turn === 1 && this.state.getCats().length === 0) {
+      return false;
+    }
+
+    if (this.state.getCats().length <= 0) {
+      this.state.isGameOver = true;
+      this.classicRule.terminate();
+      return true;
+    }
+    return false;
+  }
+
   roll() {
-    if (this.state.isGameOver) return null;
+    if (this.state.isGameOver || this.ensureGameOverIfNoCats()) {
+      const outcome = {
+        result: null,
+        event: null,
+        gameEnd: { reason: "no-cats" },
+        state: this.state
+      };
+      this.emit(this.state, outcome);
+      return null;
+    }
 
     const turnResult = this.turnManager.executeTurn();
+    this.ensureGameOverIfNoCats();
 
     const outcome = {
       result: {
@@ -79,6 +103,7 @@ export class Game {
         total: this.state.getDiceTotal()
       },
       event: turnResult?.event ?? null,
+      gameEnd: this.state.isGameOver ? { reason: "no-cats" } : null,
       state: this.state
     };
 

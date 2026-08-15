@@ -60,8 +60,9 @@ export class GameController {
   }
 
   reset() {
-    if (this.busy) return;
     this.game.reset();
+    this.ui.setBusy(false);
+    this.ui.hideEventModal?.();
     this.game.start();
   }
 
