@@ -1,13 +1,12 @@
-<!DOCTYPE html>
-
+<!doctype html>
 <html lang="ja">
 <head>
-<meta charset="utf-8"/>
-<meta content="width=device-width,initial-scale=1" name="viewport"/>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>招き猫ゲーム - Beta</title>
 <style>
 body{margin:0;background:#f7f5f0;color:#333;font-family:system-ui,-apple-system,"Yu Gothic",Meiryo,sans-serif}
-main{max-width:900px;margin:auto;padding:24px}
+main{max-width:1180px;margin:auto;padding:20px}
 .panel{background:#fff;border:1px solid #e5dfd2;border-radius:14px;padding:20px;margin:14px 0;box-shadow:0 3px 12px #0000000b}
 h1{text-align:center}.sub{text-align:center;color:#666}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
@@ -22,65 +21,118 @@ button:disabled{background:#aaa;cursor:not-allowed}
 .notice{font-size:14px;color:#666}.game-over-message{margin-top:14px;padding:14px 18px;border:2px solid #e6a23c;border-radius:12px;background:#fff6df;color:#6b4b10;font-size:20px;font-weight:800;text-align:center}.logo{text-align:center;margin-bottom:4px}.logo img{max-width:260px;max-height:90px;object-fit:contain}
 @media(max-width:600px){.stats{grid-template-columns:1fr}}
 
-.play-layout{display:grid;grid-template-columns:minmax(0,2fr) minmax(280px,0.9fr);gap:16px;align-items:start}
-.play-main{min-width:0}
-.play-main .panel{text-align:left}
-.play-main .actions{text-align:left}
-.play-main .actions h2{text-align:left}
-.play-main #result{text-align:center}
-.play-log{position:sticky;top:16px;min-width:0}
-.play-log #log{height:min(70vh,520px);overflow:auto}
-.dice-animation{flex-direction:column;gap:8px}
-.dice-skip{font-size:14px;padding:7px 14px;background:#777}
-.dice-skip:hover{background:#555}
-@media(max-width:900px){
-  .play-layout{grid-template-columns:1fr}
-  .play-log{position:static}
-  .play-log #log{height:180px}
+.game-layout{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;align-items:start}
+.game-main-column{min-width:0}
+.game-side-column{position:sticky;top:14px;max-height:calc(100vh - 28px);overflow:auto}
+.mogumogu-panel{margin-top:14px}
+.game-over-modal{position:fixed;inset:0;background:rgba(20,24,32,.72);display:none;align-items:center;justify-content:center;z-index:2000;padding:18px}
+.game-over-modal.visible{display:flex}
+.game-over-content{background:#fff;border-radius:18px;padding:28px;max-width:460px;width:min(460px,92vw);text-align:center;box-shadow:0 12px 36px rgba(0,0,0,.35)}
+.game-over-mark{font-size:52px}
+.game-over-content h2{margin:8px 0;font-size:32px}
+.game-over-content p{margin:8px 0;color:#555}
+.game-over-content button{margin:8px 5px}
+@media (max-width:900px){
+  .game-layout{grid-template-columns:1fr}
+  .game-side-column{position:static;max-height:none;overflow:visible}
 }
+@media (orientation:landscape) and (max-width:900px) and (min-height:360px){
+  main{max-width:1180px;padding:10px 14px}
+  .game-layout{grid-template-columns:minmax(0,1fr) 280px;gap:12px}
+  .game-side-column{position:sticky;top:8px;max-height:calc(100vh - 16px);overflow:auto}
+  .panel{padding:14px}
+  .stats{gap:6px}
+  .num{font-size:24px}
+  .actions{padding:14px}
+  #cats{min-height:70px}
+  .cat,.cat-image{width:56px;height:56px}
+}
+
 </style>
 </head>
 <body>
 <main>
-<div class="logo"><img alt="招き猫ゲーム" id="logoImage"/></div><h1>🐾 招き猫ゲーム</h1>
+<div class="logo"><img id="logoImage" alt="招き猫ゲーム"></div><h1>🐾 招き猫ゲーム</h1>
 <div class="sub">アリス研究所 ― 「面白い、を数学に。」</div>
 
-
-<div class="play-layout"><div class="play-main"><section class="panel">
+<div class="game-layout">
+<div class="game-main-column">
+<section class="panel">
 <div class="stats">
-<div class="stat">ターン<div class="num" id="turn">1</div></div>
-<div class="stat">招き猫<div class="num" id="count">0</div></div>
-<div class="stat">次のサイコロ<div class="num" id="dice">1</div></div>
+<div class="stat">ターン<div id="turn" class="num">1</div></div>
+<div class="stat">招き猫<div id="count" class="num">0</div></div>
+<div class="stat">次のサイコロ<div id="dice" class="num">1</div></div>
 </div>
-<div class="notice" id="eventStatus">イベント: idle / -</div><div class="notice" id="gameHint">まずはサイコロを振ってゲームを開始してください。</div><div class="game-over-message" hidden="" id="gameOverMessage"></div>
-</section><section class="panel actions">
+<div id="eventStatus" class="notice">イベント: idle / -</div><div id="gameHint" class="notice">まずはサイコロを振ってゲームを開始してください。</div><div id="gameOverBanner" class="game-over-message" hidden></div><div id="gameOverMessage" class="game-over-message" hidden></div>
+</section>
+
+<section class="panel actions">
 <h2>🎲 アクション</h2>
-<div id="result">まだ振っていません</div><div class="dice-animation" hidden="" id="diceAnimation"></div><div class="dice-visual" id="diceVisual"></div>
+<div id="result">まだ振っていません</div><div id="diceAnimation" class="dice-animation" hidden></div><div id="diceVisual" class="dice-visual"></div>
 <button id="roll">サイコロを振る</button>
 <button id="dropout">ドロップアウト</button>
-<button id="reset">リセット</button><div class="mogumogu-panel" id="mogumoguPanel"><div><strong>🍬 研究チャレンジ</strong></div><div id="mogumoguResult">もぐもぐチャレンジ</div><div id="mogumoguDice"></div><div id="mogumoguReward"></div><button type="button">もぐもぐチャレンジを試す</button></div>
-</section><section class="panel">
+<button id="reset">リセット</button>
+</section>
+
+<div id="eventModal" class="event-modal" role="dialog" aria-modal="true" aria-labelledby="eventTitle">
+  <div class="event-modal-content">
+    <img id="eventModalImage" class="event-image" alt="チェシャ猫">
+    <h2 id="eventTitle">🐈 イベント</h2>
+    <p id="eventMessage"></p>
+    <button id="eventClose">閉じる</button>
+  </div>
+</div>
+
+<section class="panel">
 <h2>🐱 招き猫フィールド</h2>
 <div id="cats"></div>
-</section><section class="panel notice">
-<strong>Beta公開版</strong><br/>
+</section>
+
+
+
+
+<section class="panel mogumogu-panel">
+  <div id="mogumoguPanel">
+    <div><strong>🍬 研究チャレンジ</strong></div>
+    <div id="mogumoguResult">もぐもぐチャレンジ</div>
+    <div id="mogumoguDice"></div>
+    <div id="mogumoguReward"></div>
+    <button type="button">もぐもぐチャレンジを試す</button>
+  </div>
+</section>
+
+
+</div>
+<div class="game-side-column">
+<section class="panel">
+<h2>📜 ログ</h2>
+<div id="log"></div>
+</section>
+</div>
+</div>
+<section class="panel notice">
+<strong>Beta公開版</strong><br>
 クラシックモードを中心に、基本ターン処理・招き猫生成・チェシャ猫イベント・ドロップアウトを統合しています。
-</section></div><aside class="panel play-log"><h2>📜 ログ</h2><div id="log"></div></aside></div><div aria-labelledby="eventTitle" aria-modal="true" class="event-modal" id="eventModal" role="dialog">
-<div class="event-modal-content">
-<img alt="チェシャ猫" class="event-image" id="eventModalImage"/>
-<h2 id="eventTitle">🐈 イベント</h2>
-<p id="eventMessage"></p>
-<button id="eventClose">閉じる</button>
-</div>
-</div>
-
-
+</section>
 
 <script type="module">
 import { createMain } from "../src/main/Main.js";
 const app = createMain(document);
+document.querySelector("#gameOverReset")?.addEventListener("click", () => app.controller.reset());
 app.controller.start();
 </script>
+
+<div id="gameOverModal" class="game-over-modal" role="dialog" aria-modal="true" aria-labelledby="gameOverTitle">
+  <div class="game-over-content">
+    <div class="game-over-mark">🐱</div>
+    <h2 id="gameOverTitle">ゲームオーバー</h2>
+    <p id="gameOverMessage">招き猫が0匹になりました。</p>
+    <p id="gameOverReason">リセットすると最初から遊び直せます。</p>
+    <button id="gameOverClose" type="button">閉じる</button>
+    <button id="gameOverReset" type="button">最初から遊ぶ</button>
+  </div>
+</div>
+
 </main>
 </body>
 </html>

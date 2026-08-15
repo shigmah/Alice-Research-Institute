@@ -24,13 +24,23 @@ export class MainScreen {
       mogumoguPanel: documentRef.querySelector("#mogumoguPanel"),
       mogumoguResult: documentRef.querySelector("#mogumoguResult"),
       mogumoguReward: documentRef.querySelector("#mogumoguReward"),
-      mogumoguDice: documentRef.querySelector("#mogumoguDice")
+      mogumoguDice: documentRef.querySelector("#mogumoguDice"),
+      gameOverModal: documentRef.querySelector("#gameOverModal"),
+      gameOverTitle: documentRef.querySelector("#gameOverTitle"),
+      gameOverMessage: documentRef.querySelector("#gameOverMessage"),
+      gameOverBanner: documentRef.querySelector("#gameOverBanner"),
+      gameOverReason: documentRef.querySelector("#gameOverReason"),
+      gameOverClose: documentRef.querySelector("#gameOverClose")
     };
 
     this.lastShownEventKey = null;
 
     this.elements.eventClose?.addEventListener("click", () => {
       this.hideEventModal();
+    });
+
+    this.elements.gameOverClose?.addEventListener("click", () => {
+      this.hideGameOverModal();
     });
 
     const logo = this.document.querySelector("#logoImage");
@@ -145,6 +155,7 @@ export class MainScreen {
     this.updateButtons(state);
     this.updateGameOverMessage(state, gameOver, outcome);
     this.logOutcome(outcome);
+    this.updateGameOverModal(state, gameOver, outcome);
 
     if (outcome?.event) {
       this.showEvent(outcome.event);
@@ -315,20 +326,49 @@ export class MainScreen {
   }
 
   updateGameOverMessage(state, gameOver, outcome) {
-    const message = this.elements.gameOverMessage;
+    const message = this.elements.gameOverBanner;
     if (!message) return;
 
+    message.hidden = !gameOver;
+
+    if (gameOver) {
+      const reason = outcome?.gameEnd?.reason ?? "no-cats";
+      message.textContent =
+        reason === "player-dropout"
+          ? "ゲーム終了：ドロップアウトしました。"
+          : "ゲームオーバー：招き猫が0匹になりました。";
+    }
+  }
+
+  updateGameOverModal(state, gameOver, outcome) {
+    if (!this.elements.gameOverModal) return;
+
     if (!gameOver) {
-      message.hidden = true;
+      this.hideGameOverModal();
       return;
     }
 
     const reason = outcome?.gameEnd?.reason ?? "no-cats";
-    message.hidden = false;
-    message.textContent =
-      reason === "player-dropout"
-        ? "ゲーム終了：ドロップアウトしました。"
-        : "ゲームオーバー：招き猫が0匹になりました。";
+    const title = reason === "player-dropout"
+      ? "🎲 ゲーム終了"
+      : "🐱 ゲームオーバー";
+
+    const message = reason === "player-dropout"
+      ? "ドロップアウトしました。"
+      : "招き猫が0匹になりました。";
+
+    this.setText("gameOverTitle", title);
+    this.setText("gameOverMessage", message);
+    this.setText(
+      "gameOverReason",
+      "リセットすると最初から遊び直せます。"
+    );
+
+    this.elements.gameOverModal.classList.add("visible");
+  }
+
+  hideGameOverModal() {
+    this.elements.gameOverModal?.classList.remove("visible");
   }
 
   logOutcome(outcome) {

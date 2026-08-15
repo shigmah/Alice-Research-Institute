@@ -63,6 +63,7 @@ export class GameController {
     this.game.reset();
     this.ui.setBusy(false);
     this.ui.hideEventModal?.();
+    this.ui.hideGameOverModal?.();
     this.game.start();
   }
 
