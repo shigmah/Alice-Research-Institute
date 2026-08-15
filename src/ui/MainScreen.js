@@ -272,14 +272,54 @@ export class MainScreen {
           : "失敗時のゲーム内ペナルティはありません。"
       );
 
-      this.showEventModal({
-        title: "🍬 もぐもぐチャレンジ",
-        image: "caramel_dice.png",
-        message: success
-          ? `成功回数 ${successCount}/5。アリスは最後まで我慢できました。`
-          : `成功回数 ${successCount}/5。アリスはキャラメルサイコロを食べてしまいました。`
+      this.showAliceMogumoguModal({
+        success,
+        successCount,
+        dice
       });
     }
+  }
+
+  showAliceMogumoguModal({ success, successCount, dice }) {
+    this.setText(
+      "eventTitle",
+      success ? "🍬 アリスのもぐもぐチャレンジ！" : "🍬 アリスのもぐもぐチャレンジ"
+    );
+
+    this.setText(
+      "eventMessage",
+      success
+        ? `成功回数 ${successCount}/5。アリスはキャラメルサイコロを最後まで我慢しました。${dice ? ` 最後の出目は${dice}です。` : ""}`
+        : `成功回数 ${successCount}/5。アリスはキャラメルサイコロを食べてしまいました。${dice ? ` 最後の出目は${dice}です。` : ""}`
+    );
+
+    const img = this.elements.eventModalImage;
+    if (img) {
+      // リポジトリに用意されているAlice画像を優先。
+      AssetResolver.setImageWithFallback(
+        img,
+        AssetResolver.aliceImageCandidates(),
+        resolved => {
+          if (!resolved) {
+            // 画像がまだない環境でも「アリスが登場した」ことが分かる最終フォールバック。
+            img.removeAttribute("src");
+            img.alt = "アリス";
+            img.replaceWith(this.createAliceFallback());
+          }
+        }
+      );
+    }
+
+    this.elements.eventModal?.classList.add("visible");
+  }
+
+  createAliceFallback() {
+    const el = this.document.createElement("div");
+    el.className = "alice-fallback";
+    el.setAttribute("role", "img");
+    el.setAttribute("aria-label", "アリス");
+    el.textContent = "👧🏻";
+    return el;
   }
 
   showEventModal({ title, image, message }) {

@@ -15,6 +15,21 @@ export class AssetResolver {
     return this.candidates(name);
   }
 
+
+  static aliceImageCandidates() {
+    const names = [
+      "alice.png",
+      "alice.jpg",
+      "alice.jpeg",
+      "alice_apron.png",
+      "alice_apron.jpg",
+      "alice_apron_dress.png",
+      "alice_normal.png",
+      "alice_main.png"
+    ];
+
+    return names.flatMap(name => this.imageCandidates(name));
+  }
   static videoCandidates(name) {
     return [
       name,
