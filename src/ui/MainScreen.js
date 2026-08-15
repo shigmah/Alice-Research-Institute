@@ -15,7 +15,6 @@ export class MainScreen {
       roll: documentRef.querySelector("#roll"),
       dropout: documentRef.querySelector("#dropout"),
       reset: documentRef.querySelector("#reset"),
-      eventStatus: documentRef.querySelector("#eventStatus"),
       eventModal: documentRef.querySelector("#eventModal"),
       eventModalImage: documentRef.querySelector("#eventModalImage"),
       eventTitle: documentRef.querySelector("#eventTitle"),
@@ -144,10 +143,6 @@ export class MainScreen {
     }
 
     this.renderCats(state.getCats());
-
-    const eventStatus = state.eventState?.status ?? "idle";
-    const eventId = state.eventState?.eventId ?? "-";
-    this.setText("eventStatus", `イベント: ${eventStatus} / ${eventId}`);
 
     const gameOver =
       Boolean(state.isGameOver) ||

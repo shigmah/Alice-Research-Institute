@@ -7,10 +7,11 @@
 <style>body{margin:0;background:#f7f5f0;color:#333;font-family:system-ui,-apple-system,"Yu Gothic",Meiryo,sans-serif}
 main{width:min(1180px,calc(100% - 32px));margin:0 auto;padding:14px 0 28px}
 .panel{background:#fff;border:1px solid #e5dfd2;border-radius:14px;padding:18px;margin:0 0 14px;box-shadow:0 3px 12px #0000000b}
-h1{text-align:center;margin:8px 0}.sub{text-align:center;color:#666;margin-bottom:6px}.howto-link{text-align:center;margin-bottom:12px}.howto-link a{color:#555;text-decoration:none;font-weight:700}.howto-link a:hover{text-decoration:underline}
+h1{text-align:center;margin:8px 0 4px}.sub{text-align:center;color:#666;margin-bottom:6px}.howto-link{text-align:center;margin-bottom:12px}.howto-link a{color:#555;text-decoration:none;font-weight:700}.howto-link a:hover{text-decoration:underline}
 .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .stat{text-align:center;background:#fbfaf6;padding:10px;border-radius:10px}
 .num{font-size:28px;font-weight:700}
+.game-hint{text-align:center;font-size:14px;color:#666;margin:0 0 8px}
 .actions{text-align:center}
 .action-buttons{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin-top:8px}
 button{font-size:18px;padding:12px 22px;margin:3px;border:0;border-radius:9px;cursor:pointer;background:#e74c3c;color:white;font-weight:700}
@@ -19,8 +20,9 @@ button:disabled{background:#aaa;cursor:not-allowed}
 .cat{width:64px;height:64px;display:flex;align-items:center;justify-content:center;font-size:34px}.cat-image{width:64px;height:64px;object-fit:contain}
 .logo{text-align:center;margin-bottom:4px}.logo img{max-width:260px;max-height:90px;object-fit:contain}
 .notice{font-size:14px;color:#666}
+.status-panel{margin-top:0}
 .game-over-message{margin-top:10px;padding:12px 16px;border:2px solid #e6a23c;border-radius:12px;background:#fff6df;color:#6b4b10;font-size:18px;font-weight:800;text-align:center}
-.dice-animation{display:flex;justify-content:center;align-items:center;min-height:56px}
+.dice-animation{display:flex;justify-content:center;align-items:center;min-height:56px;gap:8px;flex-wrap:wrap}
 .dice-video{max-width:240px;border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,.18)}
 .dice-visual{display:flex;gap:10px;justify-content:center;align-items:center;min-height:70px;margin:6px 0}
 .dice-image{object-fit:contain}.dice-fallback{font-size:28px}
@@ -40,6 +42,7 @@ button:disabled{background:#aaa;cursor:not-allowed}
   .game-side-column{position:sticky;top:8px;max-height:calc(100vh - 16px);overflow:auto}
   .panel{padding:12px;margin-bottom:10px}
   .stats{gap:6px}.stat{padding:8px}.num{font-size:24px}
+  .game-hint{font-size:13px;margin-bottom:5px}
   .action-buttons button{font-size:16px;padding:9px 15px}
   #cats{min-height:58px}.cat,.cat-image{width:52px;height:52px}
   #log{height:calc(100vh - 125px);min-height:180px}
@@ -49,6 +52,7 @@ button:disabled{background:#aaa;cursor:not-allowed}
   .game-layout{grid-template-columns:1fr}
   .game-side-column{position:static;max-height:none;overflow:visible}
   .panel{padding:14px}.stats{gap:6px}.stat{padding:8px}.num{font-size:24px}
+  .game-hint{font-size:13px;margin-bottom:5px}
   .action-buttons{gap:4px}.action-buttons button{font-size:16px;padding:9px 14px}
   #log{height:180px}.cat,.cat-image{width:52px;height:52px}
 }
@@ -62,16 +66,7 @@ button:disabled{background:#aaa;cursor:not-allowed}
 
 <div class="game-layout">
   <div class="game-main-column">
-    <section class="panel">
-      <div class="stats">
-        <div class="stat">ターン<div id="turn" class="num">1</div></div>
-        <div class="stat">招き猫<div id="count" class="num">0</div></div>
-        <div class="stat">次のサイコロ<div id="dice" class="num">1</div></div>
-      </div>
-      <div id="eventStatus" class="notice">イベント: idle / -</div>
-      <div id="gameHint" class="notice">まずはサイコロを振ってゲームを開始してください。</div>
-      <div id="gameOverBanner" class="game-over-message" hidden></div>
-    </section>
+    <div id="gameHint" class="game-hint">まずはサイコロを振ってゲームを開始してください。</div>
 
     <section class="panel actions">
       <h2>🎲 アクション</h2>
@@ -88,6 +83,15 @@ button:disabled{background:#aaa;cursor:not-allowed}
     <section class="panel">
       <h2>🐱 招き猫フィールド</h2>
       <div id="cats"></div>
+    </section>
+
+    <section class="panel status-panel">
+      <div class="stats">
+        <div class="stat">ターン<div id="turn" class="num">1</div></div>
+        <div class="stat">招き猫<div id="count" class="num">0</div></div>
+        <div class="stat">次のサイコロ数<div id="dice" class="num">1</div></div>
+      </div>
+      <div id="gameOverBanner" class="game-over-message" hidden></div>
     </section>
   </div>
 
