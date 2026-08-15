@@ -15,7 +15,8 @@ export class GameController {
       onRoll: () => this.roll(),
       onDropout: () => this.dropout(),
       onReset: () => this.reset(),
-      onMogumogu: () => this.mogumogu()
+      onMogumogu: () => this.mogumogu(),
+      onEventReset: () => this.reset()
     });
   }
 
@@ -47,7 +48,7 @@ export class GameController {
     this.ui.setBusy(true);
 
     try {
-      return this.game.startMogumoguForTest();
+      return this.game.stepMogumogu();
     } finally {
       this.busy = false;
       this.ui.setBusy(false);

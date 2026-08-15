@@ -18,18 +18,19 @@ export class AssetResolver {
 
   static aliceImageCandidates() {
     const names = [
-      "alice.png",
-      "alice.jpg",
-      "alice.jpeg",
-      "alice_apron.png",
-      "alice_apron.jpg",
-      "alice_apron_dress.png",
-      "alice_normal.png",
-      "alice_main.png"
+      "alice_normal1.png",
+      "alice_normal2.png",
+      "alice_normal3.png",
+      "alice_happy.png",
+      "alice_hungry1.png",
+      "alice_hungry2.png",
+      "alice_hungry3.png",
+      "alice_angry.png"
     ];
 
     return names.flatMap(name => this.imageCandidates(name));
   }
+
   static videoCandidates(name) {
     return [
       name,

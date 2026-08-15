@@ -49,6 +49,14 @@ export class Game {
       rewardHandler: this.mogumoguRewardHandler
     });
 
+    // UIから任意に開始する「研究チャレンジ」用の独立インスタンス。
+    // 自動イベントの1ターン1回制限とは分離し、1投ずつ継続できる。
+    this.manualMogumoguEvent = new MogumoguEvent({
+      randomManager: this.randomManager,
+      judge: this.mogumoguJudge,
+      rewardHandler: this.mogumoguRewardHandler
+    });
+
     this.eventManager = new EventManager(
       this.state,
       this.randomManager,
@@ -116,22 +124,33 @@ export class Game {
     return outcome;
   }
 
-  startMogumoguForTest() {
+  stepMogumogu() {
     if (this.state.isGameOver) return null;
 
-    this.eventManager.queueEvent("mogumogu");
+    const event = this.manualMogumoguEvent;
 
-    const eventResult = this.eventManager.startEvent()
-      ? this.runCurrentEvent()
-      : null;
+    if (!event.challenge) {
+      event.start();
+    }
+
+    const result = event.execute(this.state);
+
+    if (result?.payload?.finished) {
+      event.end();
+    }
 
     const outcome = {
-      event: eventResult,
+      event: result,
       state: this.state
     };
 
     this.emit(this.state, outcome);
     return outcome;
+  }
+
+  // Backward-compatible alias for existing UI/test callers.
+  startMogumoguForTest() {
+    return this.stepMogumogu();
   }
 
   runCurrentEvent() {

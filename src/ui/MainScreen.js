@@ -20,10 +20,12 @@ export class MainScreen {
       eventTitle: documentRef.querySelector("#eventTitle"),
       eventMessage: documentRef.querySelector("#eventMessage"),
       eventClose: documentRef.querySelector("#eventClose"),
+      eventReset: documentRef.querySelector("#eventReset"),
       mogumoguPanel: documentRef.querySelector("#mogumoguPanel"),
       mogumoguResult: documentRef.querySelector("#mogumoguResult"),
       mogumoguReward: documentRef.querySelector("#mogumoguReward"),
       mogumoguDice: documentRef.querySelector("#mogumoguDice"),
+      mogumoguButton: documentRef.querySelector("#mogumoguButton"),
       gameOverModal: documentRef.querySelector("#gameOverModal"),
       gameOverTitle: documentRef.querySelector("#gameOverTitle"),
       gameOverMessage: documentRef.querySelector("#gameOverMessage"),
@@ -51,14 +53,12 @@ export class MainScreen {
     }
   }
 
-  bindActions({ onRoll, onDropout, onReset, onMogumogu }) {
+  bindActions({ onRoll, onDropout, onReset, onMogumogu, onEventReset }) {
     this.elements.roll?.addEventListener("click", onRoll);
     this.elements.dropout?.addEventListener("click", onDropout);
     this.elements.reset?.addEventListener("click", onReset);
-    this.elements.mogumoguPanel?.querySelector("button")?.addEventListener(
-      "click",
-      onMogumogu
-    );
+    this.elements.mogumoguButton?.addEventListener("click", onMogumogu);
+    this.elements.eventReset?.addEventListener("click", onEventReset);
   }
 
   setBusy(busy) {
@@ -281,46 +281,53 @@ export class MainScreen {
   }
 
   showAliceMogumoguModal({ success, successCount, dice }) {
-    this.setText(
-      "eventTitle",
-      success ? "🍬 アリスのもぐもぐチャレンジ！" : "🍬 アリスのもぐもぐチャレンジ"
-    );
+    const finished = success === false || successCount >= 5;
+    const aliceImage = success
+      ? "alice_happy.png"
+      : "alice_hungry1.png";
+
+    this.currentAliceImage = aliceImage;
+
+    const message = success
+      ? (successCount >= 5
+        ? `成功回数 ${successCount}/5。アリスは最後まで我慢しました！${dice ? ` 最後の出目は${dice}です。` : ""}`
+        : `成功回数 ${successCount}/5。アリスはキャラメルサイコロを我慢しました。${dice ? ` 出目は${dice}です。` : ""}`)
+      : `成功回数 ${successCount}/5。アリスはキャラメルサイコロを食べてしまいました。${dice ? ` 出目は${dice}です。` : ""}`;
 
     this.setText(
-      "eventMessage",
-      success
-        ? `成功回数 ${successCount}/5。アリスはキャラメルサイコロを最後まで我慢しました。${dice ? ` 最後の出目は${dice}です。` : ""}`
-        : `成功回数 ${successCount}/5。アリスはキャラメルサイコロを食べてしまいました。${dice ? ` 最後の出目は${dice}です。` : ""}`
+      "eventTitle",
+      successCount >= 5
+        ? "🎉 アリスのもぐもぐチャレンジ成功！"
+        : success
+          ? "🍬 アリスのもぐもぐチャレンジ"
+          : "🍬 アリスが食べちゃった！"
     );
+
+    this.setText("eventMessage", message);
 
     const img = this.elements.eventModalImage;
     if (img) {
-      // リポジトリに用意されているAlice画像を優先。
       AssetResolver.setImageWithFallback(
         img,
-        AssetResolver.aliceImageCandidates(),
+        AssetResolver.imageCandidates(aliceImage),
         resolved => {
           if (!resolved) {
-            // 画像がまだない環境でも「アリスが登場した」ことが分かる最終フォールバック。
-            img.removeAttribute("src");
-            img.alt = "アリス";
             img.replaceWith(this.createAliceFallback());
           }
         }
       );
     }
 
+    // 1投ごとに、次の操作が何か分かるようにする。
+    if (this.elements.mogumoguButton) {
+      this.elements.mogumoguButton.textContent = finished
+        ? "🍬 もう一度アリスと挑戦する"
+        : "🎲 次の一投を試す";
+    }
+
     this.elements.eventModal?.classList.add("visible");
   }
 
-  createAliceFallback() {
-    const el = this.document.createElement("div");
-    el.className = "alice-fallback";
-    el.setAttribute("role", "img");
-    el.setAttribute("aria-label", "アリス");
-    el.textContent = "👧🏻";
-    return el;
-  }
 
   showEventModal({ title, image, message }) {
     this.setText("eventTitle", title);
