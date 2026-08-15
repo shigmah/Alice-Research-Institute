@@ -277,16 +277,21 @@ export class MainScreen {
         success,
         successCount,
         dice,
+        reason: payload.reason ?? null,
         finished
       });
     }
   }
 
-  showAliceMogumoguModal({ success, successCount, dice, finished = false }) {
+  showAliceMogumoguModal({ success, successCount, dice, reason = null, finished = false }) {
     const canContinue = success && successCount < 5 && !finished;
+    const ate = reason === "mogumogu";
+    const diceFailure = reason === "dice";
     const aliceImage = success
       ? "alice_happy.png"
-      : "alice_hungry1.png";
+      : ate
+        ? "alice_hungry1.png"
+        : "alice_hungry1.png";
 
     this.currentAliceImage = aliceImage;
 
@@ -294,15 +299,21 @@ export class MainScreen {
       ? (successCount >= 5
         ? `成功回数 ${successCount}/5。アリスは最後まで我慢しました！`
         : `成功回数 ${successCount}/5。アリスはキャラメルサイコロを我慢しました。`)
-      : `成功回数 ${successCount}/5。アリスはキャラメルサイコロを食べてしまいました。`;
+      : ate
+        ? `成功回数 ${successCount}/5。アリスはキャラメルサイコロを食べてしまいました。`
+        : diceFailure
+          ? `成功回数 ${successCount}/5。出目は${dice}。素数ではないため、チャレンジ失敗です。`
+          : `成功回数 ${successCount}/5。チャレンジ失敗です。`;
 
     this.setText(
       "eventTitle",
       successCount >= 5
         ? "🎉 アリスのもぐもぐチャレンジ成功！"
-        : success
-          ? "🍬 アリスのもぐもぐチャレンジ"
-          : "🍬 アリスが食べちゃった！"
+        : ate
+          ? "🍬 アリスが食べちゃった！"
+          : diceFailure
+            ? "🎲 素数ではない！"
+            : "🍬 アリスのもぐもぐチャレンジ失敗"
     );
 
     this.setText("eventMessage", message);
