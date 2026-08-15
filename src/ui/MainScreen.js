@@ -126,7 +126,9 @@ export class MainScreen {
     const eventId = state.eventState?.eventId ?? "-";
     this.setText("eventStatus", `イベント: ${eventStatus} / ${eventId}`);
 
-    const gameOver = Boolean(state.isGameOver) || state.getCats().length <= 0;
+    const gameOver =
+      Boolean(state.isGameOver) ||
+      (state.turn > 1 && state.getCats().length <= 0);
     this.updateButtons(state);
     this.updateGameOverMessage(state, gameOver, outcome);
     this.logOutcome(outcome);
@@ -281,7 +283,9 @@ export class MainScreen {
   }
 
   updateButtons(state) {
-    const over = Boolean(state.isGameOver) || state.getCats().length <= 0;
+    const over =
+      Boolean(state.isGameOver) ||
+      (state.turn > 1 && state.getCats().length <= 0);
 
     if (this.elements.roll) {
       this.elements.roll.disabled = over;
@@ -323,6 +327,12 @@ export class MainScreen {
       lines.push(
         `サイコロ: ${outcome.result.values.join(", ")} / 合計 ${outcome.result.total}`
       );
+
+      if (outcome.result.phase === 2) {
+        lines.push(
+          `出目計 ${outcome.result.totalIsPrime ? "→ 素数" : "→ 非素数"}`
+        );
+      }
     }
 
     if (outcome.event?.message) {

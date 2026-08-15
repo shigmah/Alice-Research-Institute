@@ -100,7 +100,11 @@ export class Game {
     const outcome = {
       result: {
         values: this.state.getDiceResults(),
-        total: this.state.getDiceTotal()
+        total: this.state.getDiceTotal(),
+        phase: this.state.getDiceCount() === 1 ? 1 : 2,
+        totalIsPrime: this.state.getDiceCount() >= 2
+          ? this.classicRule.isPrime(this.state.getDiceTotal())
+          : null
       },
       event: turnResult?.event ?? null,
       gameEnd: this.state.isGameOver ? { reason: "no-cats" } : null,
