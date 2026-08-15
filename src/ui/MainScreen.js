@@ -21,6 +21,8 @@ export class MainScreen {
       eventMessage: documentRef.querySelector("#eventMessage"),
       eventClose: documentRef.querySelector("#eventClose"),
       eventReset: documentRef.querySelector("#eventReset"),
+      eventNext: documentRef.querySelector("#eventNext"),
+      eventModalDice: documentRef.querySelector("#eventModalDice"),
       mogumoguPanel: documentRef.querySelector("#mogumoguPanel"),
       mogumoguResult: documentRef.querySelector("#mogumoguResult"),
       mogumoguReward: documentRef.querySelector("#mogumoguReward"),
@@ -59,6 +61,7 @@ export class MainScreen {
     this.elements.reset?.addEventListener("click", onReset);
     this.elements.mogumoguButton?.addEventListener("click", onMogumogu);
     this.elements.eventReset?.addEventListener("click", onEventReset);
+    this.elements.eventNext?.addEventListener("click", onMogumogu);
   }
 
   setBusy(busy) {
@@ -231,13 +234,13 @@ export class MainScreen {
     if (!eventResult) return;
 
     const payload = eventResult.payload ?? {};
-    const effect = payload.effect ?? "event";
-    const key = `${eventResult.eventId ?? "event"}:${effect}:${payload.message ?? ""}:${payload.reason ?? ""}`;
-
-    if (this.lastShownEventKey === key) return;
-    this.lastShownEventKey = key;
 
     if (eventResult.eventId === "cheshire") {
+      const effect = payload.effect ?? "event";
+      const key = `${eventResult.eventId}:${effect}:${payload.message ?? ""}:${payload.reason ?? ""}`;
+      if (this.lastShownEventKey === key) return;
+      this.lastShownEventKey = key;
+
       this.showEventModal({
         title: "🐈 チェシャ猫",
         image: "cheshire_cat.png",
@@ -250,38 +253,37 @@ export class MainScreen {
       const success = payload.success === true;
       const dice = payload.dice;
       const successCount = payload.successCount ?? 0;
+      const finished = payload.finished === true || success === false || successCount >= 5;
 
       this.setText(
         "mogumoguResult",
-        success
-          ? "🎉 もぐもぐチャレンジ成功！"
-          : "💭 もぐもぐチャレンジ失敗"
-      );
-
-      this.setText(
-        "mogumoguDice",
-        dice ? `最後の出目：${dice}` : ""
+        payload.message === "もぐもぐチャレンジ継続中"
+          ? `🎲 もぐもぐチャレンジ継続中（${successCount}/5）`
+          : success
+            ? "🎉 もぐもぐチャレンジ成功！"
+            : "💭 もぐもぐチャレンジ失敗"
       );
 
       this.setText(
         "mogumoguReward",
-        success
-          ? (payload.reward?.type === "cat-plus-10"
-            ? "報酬：招き猫 +10"
-            : "報酬を獲得しました。")
-          : "失敗時のゲーム内ペナルティはありません。"
+        success && payload.reward?.type === "cat-plus-10"
+          ? "報酬：招き猫 +10"
+          : !success && finished
+            ? "失敗時のゲーム内ペナルティはありません。"
+            : ""
       );
 
       this.showAliceMogumoguModal({
         success,
         successCount,
-        dice
+        dice,
+        finished
       });
     }
   }
 
-  showAliceMogumoguModal({ success, successCount, dice }) {
-    const finished = success === false || successCount >= 5;
+  showAliceMogumoguModal({ success, successCount, dice, finished = false }) {
+    const canContinue = success && successCount < 5 && !finished;
     const aliceImage = success
       ? "alice_happy.png"
       : "alice_hungry1.png";
@@ -290,9 +292,9 @@ export class MainScreen {
 
     const message = success
       ? (successCount >= 5
-        ? `成功回数 ${successCount}/5。アリスは最後まで我慢しました！${dice ? ` 最後の出目は${dice}です。` : ""}`
-        : `成功回数 ${successCount}/5。アリスはキャラメルサイコロを我慢しました。${dice ? ` 出目は${dice}です。` : ""}`)
-      : `成功回数 ${successCount}/5。アリスはキャラメルサイコロを食べてしまいました。${dice ? ` 出目は${dice}です。` : ""}`;
+        ? `成功回数 ${successCount}/5。アリスは最後まで我慢しました！`
+        : `成功回数 ${successCount}/5。アリスはキャラメルサイコロを我慢しました。`)
+      : `成功回数 ${successCount}/5。アリスはキャラメルサイコロを食べてしまいました。`;
 
     this.setText(
       "eventTitle",
@@ -305,28 +307,71 @@ export class MainScreen {
 
     this.setText("eventMessage", message);
 
+    this.renderEventDice(dice);
+
     const img = this.elements.eventModalImage;
     if (img) {
       AssetResolver.setImageWithFallback(
         img,
         AssetResolver.imageCandidates(aliceImage),
         resolved => {
-          if (!resolved) {
+          if (!resolved && img.isConnected) {
             img.replaceWith(this.createAliceFallback());
           }
         }
       );
     }
 
-    // 1投ごとに、次の操作が何か分かるようにする。
-    if (this.elements.mogumoguButton) {
-      this.elements.mogumoguButton.textContent = finished
-        ? "🍬 もう一度アリスと挑戦する"
-        : "🎲 次の一投を試す";
+    if (this.elements.eventNext) {
+      this.elements.eventNext.hidden = !canContinue;
+      this.elements.eventNext.textContent = "🎲 次の一投を試す";
+    }
+
+    if (this.elements.eventClose) {
+      this.elements.eventClose.hidden = canContinue;
+    }
+
+    if (this.elements.eventReset) {
+      this.elements.eventReset.hidden = false;
     }
 
     this.elements.eventModal?.classList.add("visible");
   }
+
+  renderEventDice(value) {
+    const container = this.elements.eventModalDice;
+    if (!container) return;
+
+    container.replaceChildren();
+
+    if (!value) {
+      container.hidden = true;
+      return;
+    }
+
+    const img = this.document.createElement("img");
+    img.className = "event-dice-image";
+    img.alt = `アリスが振ったサイコロの出目 ${value}`;
+    img.width = 84;
+    img.height = 84;
+
+    AssetResolver.setImageWithFallback(
+      img,
+      AssetResolver.diceImageCandidates(value),
+      resolved => {
+        if (!resolved && img.isConnected) {
+          const fallback = this.document.createElement("span");
+          fallback.className = "dice-fallback";
+          fallback.textContent = `🎲 ${value}`;
+          img.replaceWith(fallback);
+        }
+      }
+    );
+
+    container.appendChild(img);
+    container.hidden = false;
+  }
+
 
 
   showEventModal({ title, image, message }) {
@@ -346,6 +391,11 @@ export class MainScreen {
 
   hideEventModal() {
     this.elements.eventModal?.classList.remove("visible");
+
+    if (this.elements.eventNext) this.elements.eventNext.hidden = true;
+    if (this.elements.eventClose) this.elements.eventClose.hidden = false;
+    this.elements.eventModalDice?.replaceChildren();
+    if (this.elements.eventModalDice) this.elements.eventModalDice.hidden = true;
   }
 
   updateButtons(state) {

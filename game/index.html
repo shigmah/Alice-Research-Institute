@@ -35,7 +35,7 @@ button:disabled{background:#aaa;cursor:not-allowed}
 .event-modal,.game-over-modal{position:fixed;inset:0;background:rgba(20,24,32,.72);display:none;align-items:center;justify-content:center;z-index:2000;padding:18px}
 .event-modal.visible,.game-over-modal.visible{display:flex}
 .event-modal-content,.game-over-content{background:#fff;border-radius:18px;padding:24px;max-width:520px;width:min(520px,92vw);text-align:center;box-shadow:0 10px 32px rgba(0,0,0,.3)}
-.event-image{max-width:260px;max-height:260px;object-fit:contain}.alice-fallback{font-size:120px;line-height:1;margin:8px auto}.game-over-mark{font-size:52px}
+.event-image{max-width:260px;max-height:260px;object-fit:contain}.alice-fallback{font-size:120px;line-height:1;margin:8px auto}.event-modal-dice{margin:8px 0 2px;min-height:84px}.event-dice-image{width:84px;height:84px;object-fit:contain}.event-modal-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}.game-over-mark{font-size:52px}
 .event-modal-content button,.game-over-content button{margin-top:10px}
 @media (orientation:landscape) and (max-width:900px) and (min-height:360px){
   main{width:calc(100% - 20px);max-width:none;padding:8px 10px}
@@ -120,7 +120,12 @@ button:disabled{background:#aaa;cursor:not-allowed}
     <img id="eventModalImage" class="event-image" alt="イベント">
     <h2 id="eventTitle">🐈 イベント</h2>
     <p id="eventMessage"></p>
-    <button id="eventClose">閉じる</button><button id="eventReset">リセット</button>
+    <div id="eventModalDice" class="event-modal-dice" hidden></div>
+    <div class="event-modal-actions">
+      <button id="eventNext" type="button" hidden>🎲 次の一投を試す</button>
+      <button id="eventClose">閉じる</button>
+      <button id="eventReset">リセット</button>
+    </div>
   </div>
 </div>
 
