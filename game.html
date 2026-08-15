@@ -30,7 +30,7 @@ button:disabled{background:#aaa;cursor:not-allowed}
 .game-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,340px);gap:14px;align-items:start}
 .game-main-column{min-width:0}.game-side-column{min-width:0;position:sticky;top:12px;align-self:start}
 .mogumogu-panel{margin-top:14px;padding:14px;border:1px dashed #d9c8a8;background:#fffaf0}
-.mogumogu-panel button{margin-top:8px}
+.mogumogu-panel button{margin-top:8px}.mogumogu-description{margin:8px 0 4px;font-size:14px;line-height:1.6;color:#5f5142}
 .event-modal,.game-over-modal{position:fixed;inset:0;background:rgba(20,24,32,.72);display:none;align-items:center;justify-content:center;z-index:2000;padding:18px}
 .event-modal.visible,.game-over-modal.visible{display:flex}
 .event-modal-content,.game-over-content{background:#fff;border-radius:18px;padding:24px;max-width:520px;width:min(520px,92vw);text-align:center;box-shadow:0 10px 32px rgba(0,0,0,.3)}
@@ -105,6 +105,11 @@ button:disabled{background:#aaa;cursor:not-allowed}
       <div id="mogumoguPanel">
         <div><strong>🍬 研究チャレンジ</strong></div>
         <div id="mogumoguResult">もぐもぐチャレンジ</div>
+        <p class="mogumogu-description">
+          素数を5回連続で出すチャレンジ。<br>
+          ただし偶数が出ると、アリスが食べちゃうかも？
+        </p>
+
         <div id="mogumoguDice"></div>
         <div id="mogumoguReward"></div>
         <button id="mogumoguButton" type="button">🍬 アリスと挑戦する</button>
