@@ -4,50 +4,54 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>招き猫ゲーム - Beta</title>
-<style>
-body{margin:0;background:#f7f5f0;color:#333;font-family:system-ui,-apple-system,"Yu Gothic",Meiryo,sans-serif}
-main{max-width:1180px;margin:auto;padding:20px}
-.panel{background:#fff;border:1px solid #e5dfd2;border-radius:14px;padding:20px;margin:14px 0;box-shadow:0 3px 12px #0000000b}
-h1{text-align:center}.sub{text-align:center;color:#666}
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.stat{text-align:center;background:#fbfaf6;padding:12px;border-radius:10px}
+<style>body{margin:0;background:#f7f5f0;color:#333;font-family:system-ui,-apple-system,"Yu Gothic",Meiryo,sans-serif}
+main{width:min(1180px,calc(100% - 32px));margin:0 auto;padding:14px 0 28px}
+.panel{background:#fff;border:1px solid #e5dfd2;border-radius:14px;padding:18px;margin:0 0 14px;box-shadow:0 3px 12px #0000000b}
+h1{text-align:center;margin:8px 0}.sub{text-align:center;color:#666;margin-bottom:12px}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.stat{text-align:center;background:#fbfaf6;padding:10px;border-radius:10px}
 .num{font-size:28px;font-weight:700}
 .actions{text-align:center}
-button{font-size:18px;padding:12px 22px;margin:5px;border:0;border-radius:9px;cursor:pointer;background:#e74c3c;color:white;font-weight:700}
+.action-buttons{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin-top:8px}
+button{font-size:18px;padding:12px 22px;margin:3px;border:0;border-radius:9px;cursor:pointer;background:#e74c3c;color:white;font-weight:700}
 button:disabled{background:#aaa;cursor:not-allowed}
-#cats{display:flex;flex-wrap:wrap;gap:8px;min-height:90px}
-.cat{width:72px;height:72px;display:flex;align-items:center;justify-content:center;font-size:34px}.cat-image{width:72px;height:72px;object-fit:contain}.dice-animation{display:flex;justify-content:center;align-items:center;min-height:80px}.dice-video{max-width:260px;border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,.18)}.event-modal{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;z-index:1000;padding:20px}.event-modal.visible{display:flex}.mogumogu-panel{margin-top:12px;padding:12px;border:1px dashed #d9c8a8;border-radius:10px;background:#fffaf0}.mogumogu-panel button{margin-top:8px}.event-modal-content{background:#fff;border-radius:16px;padding:24px;max-width:520px;width:min(520px,92vw);text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.3)}.event-image{max-width:180px;max-height:180px;object-fit:contain}.event-modal-content button{margin-top:10px}.dice-visual{display:flex;gap:10px;justify-content:center;align-items:center;min-height:80px;margin:10px 0}.dice-image{object-fit:contain}.dice-fallback{font-size:28px}
-#log{height:220px;overflow:auto;background:#fafafa;border:1px solid #ddd;padding:10px;font:13px monospace}
-.notice{font-size:14px;color:#666}.game-over-message{margin-top:14px;padding:14px 18px;border:2px solid #e6a23c;border-radius:12px;background:#fff6df;color:#6b4b10;font-size:20px;font-weight:800;text-align:center}.logo{text-align:center;margin-bottom:4px}.logo img{max-width:260px;max-height:90px;object-fit:contain}
-@media(max-width:600px){.stats{grid-template-columns:1fr}}
-
-.game-layout{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;align-items:start}
-.game-main-column{min-width:0}
-.game-side-column{position:sticky;top:14px;max-height:calc(100vh - 28px);overflow:auto}
-.mogumogu-panel{margin-top:14px}
-.game-over-modal{position:fixed;inset:0;background:rgba(20,24,32,.72);display:none;align-items:center;justify-content:center;z-index:2000;padding:18px}
-.game-over-modal.visible{display:flex}
-.game-over-content{background:#fff;border-radius:18px;padding:28px;max-width:460px;width:min(460px,92vw);text-align:center;box-shadow:0 12px 36px rgba(0,0,0,.35)}
-.game-over-mark{font-size:52px}
-.game-over-content h2{margin:8px 0;font-size:32px}
-.game-over-content p{margin:8px 0;color:#555}
-.game-over-content button{margin:8px 5px}
-@media (max-width:900px){
+#cats{display:flex;flex-wrap:wrap;gap:8px;min-height:70px}
+.cat{width:64px;height:64px;display:flex;align-items:center;justify-content:center;font-size:34px}.cat-image{width:64px;height:64px;object-fit:contain}
+.logo{text-align:center;margin-bottom:4px}.logo img{max-width:260px;max-height:90px;object-fit:contain}
+.notice{font-size:14px;color:#666}
+.game-over-message{margin-top:10px;padding:12px 16px;border:2px solid #e6a23c;border-radius:12px;background:#fff6df;color:#6b4b10;font-size:18px;font-weight:800;text-align:center}
+.dice-animation{display:flex;justify-content:center;align-items:center;min-height:56px}
+.dice-video{max-width:240px;border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,.18)}
+.dice-visual{display:flex;gap:10px;justify-content:center;align-items:center;min-height:70px;margin:6px 0}
+.dice-image{object-fit:contain}.dice-fallback{font-size:28px}
+#log{height:300px;overflow:auto;background:#fafafa;border:1px solid #ddd;padding:10px;font:13px monospace}
+.game-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,340px);gap:14px;align-items:start}
+.game-main-column{min-width:0}.game-side-column{min-width:0;position:sticky;top:12px;align-self:start}
+.mogumogu-panel{margin-top:14px;padding:14px;border:1px dashed #d9c8a8;background:#fffaf0}
+.mogumogu-panel button{margin-top:8px}
+.event-modal,.game-over-modal{position:fixed;inset:0;background:rgba(20,24,32,.72);display:none;align-items:center;justify-content:center;z-index:2000;padding:18px}
+.event-modal.visible,.game-over-modal.visible{display:flex}
+.event-modal-content,.game-over-content{background:#fff;border-radius:18px;padding:24px;max-width:520px;width:min(520px,92vw);text-align:center;box-shadow:0 10px 32px rgba(0,0,0,.3)}
+.event-image{max-width:180px;max-height:180px;object-fit:contain}.game-over-mark{font-size:52px}
+.event-modal-content button,.game-over-content button{margin-top:10px}
+@media (orientation:landscape) and (max-width:900px) and (min-height:360px){
+  main{width:calc(100% - 20px);max-width:none;padding:8px 10px}
+  .game-layout{grid-template-columns:minmax(0,1fr) minmax(250px,32vw);gap:10px}
+  .game-side-column{position:sticky;top:8px;max-height:calc(100vh - 16px);overflow:auto}
+  .panel{padding:12px;margin-bottom:10px}
+  .stats{gap:6px}.stat{padding:8px}.num{font-size:24px}
+  .action-buttons button{font-size:16px;padding:9px 15px}
+  #cats{min-height:58px}.cat,.cat-image{width:52px;height:52px}
+  #log{height:calc(100vh - 125px);min-height:180px}
+}
+@media (max-width:700px) and (orientation:portrait){
+  main{width:calc(100% - 20px);padding:8px 0 20px}
   .game-layout{grid-template-columns:1fr}
   .game-side-column{position:static;max-height:none;overflow:visible}
+  .panel{padding:14px}.stats{gap:6px}.stat{padding:8px}.num{font-size:24px}
+  .action-buttons{gap:4px}.action-buttons button{font-size:16px;padding:9px 14px}
+  #log{height:180px}.cat,.cat-image{width:52px;height:52px}
 }
-@media (orientation:landscape) and (max-width:900px) and (min-height:360px){
-  main{max-width:1180px;padding:10px 14px}
-  .game-layout{grid-template-columns:minmax(0,1fr) 280px;gap:12px}
-  .game-side-column{position:sticky;top:8px;max-height:calc(100vh - 16px);overflow:auto}
-  .panel{padding:14px}
-  .stats{gap:6px}
-  .num{font-size:24px}
-  .actions{padding:14px}
-  #cats{min-height:70px}
-  .cat,.cat-image{width:56px;height:56px}
-}
-
 </style>
 </head>
 <body>
@@ -56,58 +60,72 @@ button:disabled{background:#aaa;cursor:not-allowed}
 <div class="sub">アリス研究所 ― 「面白い、を数学に。」</div>
 
 <div class="game-layout">
-<div class="game-main-column">
-<section class="panel">
-<div class="stats">
-<div class="stat">ターン<div id="turn" class="num">1</div></div>
-<div class="stat">招き猫<div id="count" class="num">0</div></div>
-<div class="stat">次のサイコロ<div id="dice" class="num">1</div></div>
-</div>
-<div id="eventStatus" class="notice">イベント: idle / -</div><div id="gameHint" class="notice">まずはサイコロを振ってゲームを開始してください。</div><div id="gameOverBanner" class="game-over-message" hidden></div><div id="gameOverMessage" class="game-over-message" hidden></div>
-</section>
+  <div class="game-main-column">
+    <section class="panel">
+      <div class="stats">
+        <div class="stat">ターン<div id="turn" class="num">1</div></div>
+        <div class="stat">招き猫<div id="count" class="num">0</div></div>
+        <div class="stat">次のサイコロ<div id="dice" class="num">1</div></div>
+      </div>
+      <div id="eventStatus" class="notice">イベント: idle / -</div>
+      <div id="gameHint" class="notice">まずはサイコロを振ってゲームを開始してください。</div>
+      <div id="gameOverBanner" class="game-over-message" hidden></div>
+    </section>
 
-<section class="panel actions">
-<h2>🎲 アクション</h2>
-<div id="result">まだ振っていません</div><div id="diceAnimation" class="dice-animation" hidden></div><div id="diceVisual" class="dice-visual"></div>
-<button id="roll">サイコロを振る</button>
-<button id="dropout">ドロップアウト</button>
-<button id="reset">リセット</button>
-</section>
+    <section class="panel actions">
+      <h2>🎲 アクション</h2>
+      <div id="result">まだ振っていません</div>
+      <div id="diceAnimation" class="dice-animation" hidden></div>
+      <div id="diceVisual" class="dice-visual"></div>
+      <div class="action-buttons">
+        <button id="roll">サイコロを振る</button>
+        <button id="dropout">ドロップアウト</button>
+        <button id="reset">リセット</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>🐱 招き猫フィールド</h2>
+      <div id="cats"></div>
+    </section>
+  </div>
+
+  <aside class="game-side-column">
+    <section class="panel">
+      <h2>📜 ログ</h2>
+      <div id="log"></div>
+    </section>
+
+    <section class="panel mogumogu-panel">
+      <div id="mogumoguPanel">
+        <div><strong>🍬 研究チャレンジ</strong></div>
+        <div id="mogumoguResult">もぐもぐチャレンジ</div>
+        <div id="mogumoguDice"></div>
+        <div id="mogumoguReward"></div>
+        <button type="button">もぐもぐチャレンジを試す</button>
+      </div>
+    </section>
+  </aside>
+</div>
 
 <div id="eventModal" class="event-modal" role="dialog" aria-modal="true" aria-labelledby="eventTitle">
   <div class="event-modal-content">
-    <img id="eventModalImage" class="event-image" alt="チェシャ猫">
+    <img id="eventModalImage" class="event-image" alt="イベント">
     <h2 id="eventTitle">🐈 イベント</h2>
     <p id="eventMessage"></p>
     <button id="eventClose">閉じる</button>
   </div>
 </div>
 
-<section class="panel">
-<h2>🐱 招き猫フィールド</h2>
-<div id="cats"></div>
-</section>
-
-
-
-
-<section class="panel mogumogu-panel">
-  <div id="mogumoguPanel">
-    <div><strong>🍬 研究チャレンジ</strong></div>
-    <div id="mogumoguResult">もぐもぐチャレンジ</div>
-    <div id="mogumoguDice"></div>
-    <div id="mogumoguReward"></div>
-    <button type="button">もぐもぐチャレンジを試す</button>
+<div id="gameOverModal" class="game-over-modal" role="dialog" aria-modal="true" aria-labelledby="gameOverTitle">
+  <div class="game-over-content">
+    <div class="game-over-mark">🐱</div>
+    <h2 id="gameOverTitle">ゲームオーバー</h2>
+    <p id="gameOverMessage">招き猫が0匹になりました。</p>
+    <p id="gameOverReason">リセットすると最初から遊び直せます。</p>
+    <button id="gameOverClose" type="button">閉じる</button>
+    <button id="gameOverReset" type="button">最初から遊ぶ</button>
   </div>
-</section>
-
-
-</div>
-<div class="game-side-column">
-<section class="panel">
-<h2>📜 ログ</h2>
-<div id="log"></div>
-</section>
 </div>
 </div>
 <section class="panel notice">
@@ -121,18 +139,6 @@ const app = createMain(document);
 document.querySelector("#gameOverReset")?.addEventListener("click", () => app.controller.reset());
 app.controller.start();
 </script>
-
-<div id="gameOverModal" class="game-over-modal" role="dialog" aria-modal="true" aria-labelledby="gameOverTitle">
-  <div class="game-over-content">
-    <div class="game-over-mark">🐱</div>
-    <h2 id="gameOverTitle">ゲームオーバー</h2>
-    <p id="gameOverMessage">招き猫が0匹になりました。</p>
-    <p id="gameOverReason">リセットすると最初から遊び直せます。</p>
-    <button id="gameOverClose" type="button">閉じる</button>
-    <button id="gameOverReset" type="button">最初から遊ぶ</button>
-  </div>
-</div>
-
 </main>
 </body>
 </html>
