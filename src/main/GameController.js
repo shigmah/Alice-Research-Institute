@@ -55,7 +55,9 @@ export class GameController {
   }
 
   dropout() {
-    if (this.busy) return null;
+    if (this.busy || this.game.state.isGameOver || this.game.state.hasDroppedOut) {
+      return null;
+    }
     return this.game.dropout();
   }
 
