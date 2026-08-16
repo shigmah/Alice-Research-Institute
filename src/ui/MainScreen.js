@@ -209,7 +209,12 @@ export class MainScreen {
   }
 
   renderCats(cats) {
-    this.elements.cats?.replaceChildren();
+    const container = this.elements.cats;
+    if (!container) return;
+
+    container.replaceChildren();
+
+    let hasLifetime = false;
 
     for (const cat of cats) {
       const wrapper = this.document.createElement("div");
@@ -229,12 +234,32 @@ export class MainScreen {
         img,
         AssetResolver.imageCandidates(this.getCatAsset(cat.color)),
         resolved => {
-          if (!resolved) wrapper.textContent = this.getCatGlyph(cat.color);
+          if (!resolved) {
+            img.replaceWith(this.document.createTextNode(this.getCatGlyph(cat.color)));
+          }
         }
       );
 
       wrapper.appendChild(img);
-      this.elements.cats?.appendChild(wrapper);
+
+      if (Number.isFinite(cat.lifetime)) {
+        hasLifetime = true;
+        const lifetime = this.document.createElement("span");
+        lifetime.className = "cat-lifetime";
+        lifetime.textContent = String(cat.lifetime);
+        lifetime.setAttribute("aria-label", `残り${cat.lifetime}ターン`);
+        lifetime.title = `寿命：残り${cat.lifetime}ターン`;
+        wrapper.appendChild(lifetime);
+      }
+
+      container.appendChild(wrapper);
+    }
+
+    if (hasLifetime) {
+      const legend = this.document.createElement("div");
+      legend.className = "cats-lifetime-legend";
+      legend.textContent = "寿命の数字＝その招き猫が残っていられるターン数";
+      container.appendChild(legend);
     }
   }
 
