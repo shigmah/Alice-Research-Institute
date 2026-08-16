@@ -125,27 +125,38 @@ export class Game {
   }
 
   stepMogumogu() {
-    if (this.state.isGameOver) return null;
+    if (this.state.isGameOver || this.hasActiveEvent()) return null;
 
     const event = this.manualMogumoguEvent;
-
-    if (!event.challenge) {
-      event.start();
-    }
+    if (!event.challenge) event.beginChallenge();
 
     const result = event.execute(this.state);
 
-    if (result?.payload?.finished) {
-      event.end();
-    }
+    if (result?.payload?.finished) event.end();
+
+    const outcome = { event: result, state: this.state };
+    this.emit(this.state, outcome);
+    return outcome;
+  }
+
+  continueCurrentEvent() {
+    if (this.state.isGameOver) return null;
+
+    const result = this.turnManager.continueEvent();
+    if (!result) return null;
 
     const outcome = {
       event: result,
+      gameEnd: this.state.isGameOver ? { reason: "no-cats" } : null,
       state: this.state
     };
 
     this.emit(this.state, outcome);
     return outcome;
+  }
+
+  hasActiveEvent() {
+    return this.eventManager.getCurrentEvent() !== null;
   }
 
   // Backward-compatible alias for existing UI/test callers.

@@ -25,7 +25,7 @@ export class GameController {
   }
 
   async roll() {
-    if (this.busy || this.game.state.isGameOver) return null;
+    if (this.busy || this.game.state.isGameOver || this.game.hasActiveEvent?.()) return null;
 
     this.busy = true;
     this.ui.setBusy(true);
@@ -48,7 +48,9 @@ export class GameController {
     this.ui.setBusy(true);
 
     try {
-      return this.game.stepMogumogu();
+      return this.game.hasActiveEvent?.()
+        ? this.game.continueCurrentEvent()
+        : this.game.stepMogumogu();
     } finally {
       this.busy = false;
       this.ui.setBusy(false);
@@ -56,7 +58,7 @@ export class GameController {
   }
 
   dropout() {
-    if (this.busy || this.game.state.isGameOver || this.game.state.hasDroppedOut) {
+    if (this.busy || this.game.state.isGameOver || this.game.state.hasDroppedOut || this.game.hasActiveEvent?.()) {
       return null;
     }
     return this.game.dropout();

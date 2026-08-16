@@ -250,6 +250,13 @@ export class MainScreen {
     }
 
     if (eventResult.eventId === "mogumogu") {
+      if (payload.phase === "offer") {
+        this.setText("mogumoguResult", "🍬 アリスが挑戦を持ちかけています");
+        this.setText("mogumoguReward", "");
+        this.showAliceMogumoguModal({ phase: "offer", success: true, successCount: 0, dice: null, reason: null, finished: false });
+        return;
+      }
+
       const success = payload.success === true;
       const dice = payload.dice;
       const successCount = payload.successCount ?? 0;
@@ -283,7 +290,28 @@ export class MainScreen {
     }
   }
 
-  showAliceMogumoguModal({ success, successCount, dice, reason = null, finished = false }) {
+  showAliceMogumoguModal({ phase = "result", success, successCount, dice, reason = null, finished = false }) {
+    if (phase === "offer") {
+      this.setText("eventTitle", "🍬 アリスが現れた！");
+      this.setText("eventMessage", "このキャラメルサイコロを振る勇気はある？");
+      const img = this.elements.eventModalImage;
+      if (img) {
+        AssetResolver.setImageWithFallback(img, AssetResolver.imageCandidates("alice_happy.png"), resolved => {
+          if (!resolved && img.isConnected) img.replaceWith(this.createAliceFallback());
+        });
+      }
+      this.elements.eventModalDice?.replaceChildren();
+      if (this.elements.eventModalDice) this.elements.eventModalDice.hidden = true;
+      if (this.elements.eventNext) {
+        this.elements.eventNext.hidden = false;
+        this.elements.eventNext.textContent = "🍬 アリスと挑戦する";
+      }
+      if (this.elements.eventClose) this.elements.eventClose.hidden = true;
+      if (this.elements.eventReset) this.elements.eventReset.hidden = false;
+      this.elements.eventModal?.classList.add("visible");
+      return;
+    }
+
     const canContinue = success && successCount < 5 && !finished;
     const ate = reason === "mogumogu";
     const diceFailure = reason === "dice";
@@ -413,9 +441,10 @@ export class MainScreen {
     const over =
       Boolean(state.isGameOver) ||
       (state.turn > 1 && state.getCats().length <= 0);
+    const eventActive = state.eventState?.status === "running";
 
     if (this.elements.roll) {
-      this.elements.roll.disabled = over;
+      this.elements.roll.disabled = over || eventActive;
     }
 
     if (this.elements.reset) {
@@ -424,7 +453,11 @@ export class MainScreen {
 
     if (this.elements.dropout) {
       this.elements.dropout.disabled =
-        over || Boolean(state.hasDroppedOut);
+        over || eventActive || Boolean(state.hasDroppedOut);
+    }
+
+    if (this.elements.mogumoguButton) {
+      this.elements.mogumoguButton.disabled = eventActive;
     }
   }
 

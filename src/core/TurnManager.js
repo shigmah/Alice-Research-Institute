@@ -31,6 +31,10 @@ export class TurnManager {
 
     const eventResult = this.checkEvent();
 
+    if (eventResult?.pending) {
+      return { mode: modeResult, event: eventResult };
+    }
+
     if (this.gameState.isGameOver || this.currentMode?.isFinished?.()) {
       this.gameState.isGameOver = true;
       this.currentMode?.terminate?.();
@@ -78,6 +82,21 @@ export class TurnManager {
     if (!this.eventManager?.checkEvent?.()) return null;
     if (!this.eventManager.startEvent()) return null;
 
+    const currentEvent = this.eventManager.getCurrentEvent();
+
+    if (currentEvent?.isInteractive?.()) {
+      const result = this.eventManager.executeEvent();
+      if (!result) return null;
+
+      if (currentEvent.isFinished?.()) {
+        this.eventManager.endEvent();
+        return result;
+      }
+
+      result.pending = true;
+      return result;
+    }
+
     let result = null;
 
     do {
@@ -92,6 +111,32 @@ export class TurnManager {
       this.eventManager.endEvent();
     }
 
+    return result;
+  }
+
+  continueEvent() {
+    const currentEvent = this.eventManager?.getCurrentEvent?.();
+    if (!currentEvent || !currentEvent.isInteractive?.() || this.gameState.isGameOver) {
+      return null;
+    }
+
+    const result = this.eventManager.executeEvent();
+    if (!result) return null;
+
+    if (!currentEvent.isFinished?.()) {
+      result.pending = true;
+      return result;
+    }
+
+    this.eventManager.endEvent();
+
+    if (this.gameState.isGameOver) return result;
+
+    this.updateGameState();
+
+    if (this.gameState.isGameOver) return result;
+
+    this.endTurn();
     return result;
   }
 

@@ -77,7 +77,7 @@ export class EventManager {
     }
 
     try {
-      selected.start?.();
+      selected.start?.(this.gameState);
       this.currentEvent = selected;
       this.eventTriggeredTurn = currentTurn;
 

@@ -47,6 +47,11 @@ console.assert(manager.checkEvent() === true, "event detected");
 console.assert(manager.startEvent() === true, "event started");
 console.assert(manager.getCurrentEvent()?.id === "mogumogu", "current event");
 
+// 自動イベントは「アリス登場」→ユーザー操作で1投ずつ進行する。
+const offer = manager.executeEvent();
+console.assert(offer?.payload?.phase === "offer", "event offer shown");
+
+manager.getCurrentEvent().beginChallenge();
 for (let i = 0; i < 5; i += 1) {
   manager.executeEvent();
 }
