@@ -16,7 +16,8 @@ export class GameController {
       onDropout: () => this.dropout(),
       onReset: () => this.reset(),
       onMogumogu: () => this.mogumogu(),
-      onEventReset: () => this.reset()
+      onEventDecline: () => this.declineEvent(),
+      onModeStart: () => this.startSelectedMode()
     });
   }
 
@@ -55,6 +56,26 @@ export class GameController {
       this.busy = false;
       this.ui.setBusy(false);
     }
+  }
+
+  declineEvent() {
+    if (this.busy) return null;
+    const result = this.game.declineCurrentEvent?.();
+    this.ui.hideEventModal?.();
+    return result;
+  }
+
+  startSelectedMode() {
+    if (this.busy) return null;
+    const { mode, targetTurns } = this.ui.getModeStartOptions?.() ?? { mode: "classic", targetTurns: 20 };
+    this.ui.hideEventModal?.();
+    this.ui.hideGameOverModal?.();
+    if (mode === "alice") {
+      this.game.startAliceMode(targetTurns);
+    } else {
+      this.game.startClassicMode();
+    }
+    return this.game.state;
   }
 
   dropout() {

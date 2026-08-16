@@ -18,6 +18,8 @@ export class GameState {
     this.isGameOver = false;
     this.hasDroppedOut = false;
     this.fixedCatCount = null;
+    this.gameEndReason = null;
+    this.targetTurns = 20;
   }
 
   reset() {

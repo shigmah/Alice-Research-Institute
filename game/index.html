@@ -16,7 +16,7 @@ h1{text-align:center;margin:8px 0 4px}.sub{text-align:center;color:#666;margin-b
 .actions{text-align:center}
 .action-buttons{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin-top:8px}
 button{font-size:18px;padding:12px 22px;margin:3px;border:0;border-radius:9px;cursor:pointer;background:#e74c3c;color:white;font-weight:700}
-button:disabled{background:#aaa;cursor:not-allowed}
+button:disabled{background:#aaa;cursor:not-allowed}.mode-controls{display:flex;align-items:end;justify-content:center;gap:10px;flex-wrap:wrap}.mode-controls label{display:flex;flex-direction:column;gap:4px;font-weight:700;font-size:14px}.mode-controls select,.mode-controls input{font:inherit;padding:8px 10px;border:1px solid #ccc;border-radius:8px;background:#fff}.mode-controls button{font-size:16px;padding:9px 16px}.mode-panel{margin-bottom:14px}
 #cats{display:flex;flex-wrap:wrap;gap:8px;min-height:70px}
 .cat{width:64px;height:64px;display:flex;align-items:center;justify-content:center;font-size:34px}.cat-image{width:64px;height:64px;object-fit:contain}
 .logo{text-align:center;margin-bottom:4px}.logo img{max-width:260px;max-height:90px;object-fit:contain}
@@ -67,6 +67,23 @@ button:disabled{background:#aaa;cursor:not-allowed}
 
 
 <div class="play-layout"><div class="play-main"><div class="game-layout">
+  <div class="panel mode-panel">
+    <h2>🎮 モード</h2>
+    <div class="mode-controls">
+      <label>モード
+        <select id="modeSelect">
+          <option value="classic" selected>クラシックモード</option>
+          <option value="alice">アリスモード</option>
+        </select>
+      </label>
+      <label id="targetTurnsField" hidden>目標ターン数
+        <input id="targetTurnsInput" type="number" min="1" max="999" value="20" inputmode="numeric">
+      </label>
+      <button id="modeStart" type="button">モードを開始</button>
+    </div>
+    <div id="modeDescription" class="notice">招き猫とサイコロで遊ぶ基本モードです。</div>
+  </div>
+
   <div class="game-main-column">
     <div id="gameHint" class="game-hint">まずはサイコロを振ってゲームを開始してください。</div>
 
@@ -129,7 +146,6 @@ button:disabled{background:#aaa;cursor:not-allowed}
     <div class="event-modal-actions">
       <button id="eventNext" type="button" hidden>🎲 次の一投を試す</button>
       <button id="eventClose">閉じる</button>
-      <button id="eventReset">リセット</button>
     </div>
   </div>
 </div>

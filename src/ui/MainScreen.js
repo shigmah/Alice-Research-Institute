@@ -20,7 +20,6 @@ export class MainScreen {
       eventTitle: documentRef.querySelector("#eventTitle"),
       eventMessage: documentRef.querySelector("#eventMessage"),
       eventClose: documentRef.querySelector("#eventClose"),
-      eventReset: documentRef.querySelector("#eventReset"),
       eventNext: documentRef.querySelector("#eventNext"),
       eventModalDice: documentRef.querySelector("#eventModalDice"),
       mogumoguPanel: documentRef.querySelector("#mogumoguPanel"),
@@ -33,14 +32,28 @@ export class MainScreen {
       gameOverMessage: documentRef.querySelector("#gameOverMessage"),
       gameOverBanner: documentRef.querySelector("#gameOverBanner"),
       gameOverReason: documentRef.querySelector("#gameOverReason"),
-      gameOverClose: documentRef.querySelector("#gameOverClose")
+      gameOverClose: documentRef.querySelector("#gameOverClose"),
+      modeSelect: documentRef.querySelector("#modeSelect"),
+      targetTurnsField: documentRef.querySelector("#targetTurnsField"),
+      targetTurnsInput: documentRef.querySelector("#targetTurnsInput"),
+      modeStart: documentRef.querySelector("#modeStart"),
+      modeDescription: documentRef.querySelector("#modeDescription")
     };
 
     this.lastShownEventKey = null;
 
     this.elements.eventClose?.addEventListener("click", () => {
+      if (this.elements.eventClose.textContent === "挑戦しない") {
+        this.onEventDecline?.();
+        return;
+      }
       this.hideEventModal();
     });
+
+    this.elements.modeSelect?.addEventListener("change", () => {
+      this.updateModeSetupUI();
+    });
+    this.updateModeSetupUI();
 
     this.elements.gameOverClose?.addEventListener("click", () => {
       this.hideGameOverModal();
@@ -55,13 +68,14 @@ export class MainScreen {
     }
   }
 
-  bindActions({ onRoll, onDropout, onReset, onMogumogu, onEventReset }) {
+  bindActions({ onRoll, onDropout, onReset, onMogumogu, onEventDecline, onModeStart }) {
     this.elements.roll?.addEventListener("click", onRoll);
     this.elements.dropout?.addEventListener("click", onDropout);
     this.elements.reset?.addEventListener("click", onReset);
     this.elements.mogumoguButton?.addEventListener("click", onMogumogu);
-    this.elements.eventReset?.addEventListener("click", onEventReset);
     this.elements.eventNext?.addEventListener("click", onMogumogu);
+    this.elements.modeStart?.addEventListener("click", onModeStart);
+    this.onEventDecline = onEventDecline;
   }
 
   setBusy(busy) {
@@ -69,6 +83,7 @@ export class MainScreen {
     if (this.elements.dropout) this.elements.dropout.disabled = busy;
     const button = this.elements.mogumoguPanel?.querySelector("button");
     if (button) button.disabled = busy;
+    if (this.elements.modeStart) this.elements.modeStart.disabled = busy;
   }
 
   async playDiceAnimation(diceCount) {
@@ -134,6 +149,7 @@ export class MainScreen {
     this.setText("turn", state.turn);
     this.setText("count", state.getCats().length);
     this.setText("dice", state.getCurrentDiceCount());
+    this.updateModeDisplay(state);
 
     const results = state.getDiceResults();
 
@@ -307,7 +323,10 @@ export class MainScreen {
         this.elements.eventNext.textContent = "🍬 アリスと挑戦する";
       }
       if (this.elements.eventClose) this.elements.eventClose.hidden = true;
-      if (this.elements.eventReset) this.elements.eventReset.hidden = false;
+      if (this.elements.eventClose) {
+        this.elements.eventClose.hidden = false;
+        this.elements.eventClose.textContent = "挑戦しない";
+      }
       this.elements.eventModal?.classList.add("visible");
       return;
     }
@@ -370,8 +389,8 @@ export class MainScreen {
       this.elements.eventClose.hidden = canContinue;
     }
 
-    if (this.elements.eventReset) {
-      this.elements.eventReset.hidden = false;
+    if (this.elements.eventClose) {
+      this.elements.eventClose.textContent = "閉じる";
     }
 
     this.elements.eventModal?.classList.add("visible");
@@ -415,6 +434,10 @@ export class MainScreen {
 
   showEventModal({ title, image, message }) {
     this.setText("eventTitle", title);
+    if (this.elements.eventClose) {
+      this.elements.eventClose.hidden = false;
+      this.elements.eventClose.textContent = "閉じる";
+    }
     this.setText("eventMessage", message);
 
     const img = this.elements.eventModalImage;
@@ -432,9 +455,41 @@ export class MainScreen {
     this.elements.eventModal?.classList.remove("visible");
 
     if (this.elements.eventNext) this.elements.eventNext.hidden = true;
-    if (this.elements.eventClose) this.elements.eventClose.hidden = false;
+    if (this.elements.eventClose) {
+      this.elements.eventClose.hidden = false;
+      this.elements.eventClose.textContent = "閉じる";
+    }
     this.elements.eventModalDice?.replaceChildren();
     if (this.elements.eventModalDice) this.elements.eventModalDice.hidden = true;
+  }
+
+  updateModeSetupUI() {
+    const mode = this.elements.modeSelect?.value ?? "classic";
+    const alice = mode === "alice";
+    if (this.elements.targetTurnsField) this.elements.targetTurnsField.hidden = !alice;
+    if (this.elements.modeDescription) {
+      this.elements.modeDescription.textContent = alice
+        ? "目標ターンまで招き猫を1匹以上残せば勝利します。デフォルトは20ターンです。"
+        : "招き猫とサイコロで遊ぶ基本モードです。";
+    }
+  }
+
+  updateModeDisplay(state) {
+    const mode = state.getGameMode?.() ?? "CLASSIC";
+    if (this.elements.modeSelect) {
+      this.elements.modeSelect.value = mode === "ALICE" ? "alice" : "classic";
+    }
+    this.updateModeSetupUI();
+    if (this.elements.targetTurnsInput && mode === "ALICE") {
+      this.elements.targetTurnsInput.value = state.targetTurns ?? 20;
+    }
+  }
+
+  getModeStartOptions() {
+    const mode = this.elements.modeSelect?.value ?? "classic";
+    const raw = Number(this.elements.targetTurnsInput?.value ?? 20);
+    const targetTurns = Number.isInteger(raw) ? Math.min(999, Math.max(1, raw)) : 20;
+    return { mode, targetTurns };
   }
 
   updateButtons(state) {
@@ -472,7 +527,9 @@ export class MainScreen {
       message.textContent =
         reason === "player-dropout"
           ? "ゲーム終了：ドロップアウトしました。"
-          : "ゲームオーバー：招き猫が0匹になりました。";
+          : reason === "alice-target-reached"
+            ? `アリスモード勝利：${state.targetTurns ?? 20}ターン到達！`
+            : "ゲームオーバー：招き猫が0匹になりました。";
     }
   }
 
@@ -484,14 +541,18 @@ export class MainScreen {
       return;
     }
 
-    const reason = outcome?.gameEnd?.reason ?? "no-cats";
+    const reason = outcome?.gameEnd?.reason ?? state.gameEndReason ?? "no-cats";
     const title = reason === "player-dropout"
       ? "🎲 ゲーム終了"
-      : "🐱 ゲームオーバー";
+      : reason === "alice-target-reached"
+        ? "🏆 アリスモード勝利！"
+        : "🐱 ゲームオーバー";
 
     const message = reason === "player-dropout"
       ? "ドロップアウトしました。"
-      : "招き猫が0匹になりました。";
+      : reason === "alice-target-reached"
+        ? `目標の${state.targetTurns ?? 20}ターンまで招き猫を守り抜きました！`
+        : "招き猫が0匹になりました。";
 
     this.setText("gameOverTitle", title);
     this.setText("gameOverMessage", message);

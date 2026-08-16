@@ -11,6 +11,7 @@ console.assert(screen.includes("showAliceMogumoguModal"), "Alice modal exists");
 console.assert(screen.includes("currentAliceImage"), "Alice image selection exists");
 console.assert(screen.includes("次の一投を試す"), "one-step button state exists");
 console.assert(html.includes('id="mogumoguButton"'), "Mogumogu button has id");
-console.assert(html.includes('id="eventReset"'), "event modal reset button exists");
+console.assert(!html.includes('id="eventReset"'), "event modal reset button removed");
+console.assert(html.includes("挑戦しない") || screen.includes("挑戦しない"), "Alice decline action exists");
 
 console.log("Alice Mogumogu UI tests: PASS");

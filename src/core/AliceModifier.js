@@ -1,18 +1,36 @@
 export class AliceModifier {
-  constructor(gameState, catManager, randomManager) {
+  constructor(gameState, catManager, randomManager, { targetTurns = 20 } = {}) {
     this.gameState = gameState;
     this.catManager = catManager;
     this.randomManager = randomManager;
+    this.targetTurns = this.normalizeTargetTurns(targetTurns);
 
     this.hunger = 0;
-    this.mood = 0;
+    this.mood = 50;
     this.enabled = false;
+  }
+
+  normalizeTargetTurns(value) {
+    const turns = Number(value);
+    if (!Number.isInteger(turns)) return 20;
+    return Math.min(999, Math.max(1, turns));
+  }
+
+  setTargetTurns(value) {
+    this.targetTurns = this.normalizeTargetTurns(value);
+    this.gameState.targetTurns = this.targetTurns;
+  }
+
+  getTargetTurns() {
+    return this.targetTurns;
   }
 
   initialize() {
     this.hunger = 0;
-    this.mood = 0;
+    this.mood = 50;
     this.enabled = true;
+    this.gameState.targetTurns = this.targetTurns;
+    this.gameState.gameEndReason = null;
   }
 
   beforeTurn() {
@@ -24,16 +42,32 @@ export class AliceModifier {
     // このターンのゲーム処理を継続しない。
     if (this.catManager.getCats().length <= 0) {
       this.gameState.isGameOver = true;
+      this.gameState.gameEndReason = "alice-no-cats";
+      return;
     }
   }
 
   afterTurn() {
     if (!this.enabled || this.gameState.isGameOver) return;
 
+    const currentTurn = this.gameState.getTurn();
+    for (const cat of this.catManager.getCats()) {
+      if (cat.createdAt === currentTurn && !Number.isFinite(cat.lifetime)) {
+        cat.lifetime = 6;
+      }
+    }
+
     this.catManager.updateCats();
 
     if (this.catManager.getCats().length <= 0) {
       this.gameState.isGameOver = true;
+      this.gameState.gameEndReason = "alice-no-cats";
+      return;
+    }
+
+    if (this.gameState.getTurn() >= this.targetTurns) {
+      this.gameState.isGameOver = true;
+      this.gameState.gameEndReason = "alice-target-reached";
     }
   }
 
