@@ -90,7 +90,7 @@ export class Game {
       this.eventManager,
       this.classicRule,
       this.catManager,
-      []
+      this.aliceModifier ? [this.aliceModifier] : []
     );
   }
 
@@ -167,6 +167,12 @@ export class Game {
       },
       event: turnResult?.event ?? null,
       mode: turnResult?.mode ?? null,
+      alice: this.aliceModifier
+        ? {
+            lifetimeChanges: this.aliceModifier.getLastLifetimeChanges(),
+            targetTurns: this.targetTurns
+          }
+        : null,
       gameEnd: this.state.isGameOver ? { reason: this.state.gameEndReason ?? "no-cats" } : null,
       state: this.state
     };

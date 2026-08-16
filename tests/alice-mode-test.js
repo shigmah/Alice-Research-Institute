@@ -34,3 +34,26 @@ import { Game } from "../src/core/Game.js";
 }
 
 console.log("Alice mode tests: PASS");
+
+// Game統合時もAliceModifierのターン前後処理が実行され、寿命が表示可能な状態になる。
+{
+  const game = new Game();
+  game.randomManager.rollDice = () => 3;
+  game.randomManager.checkProbability = () => false;
+  game.startAliceMode(20);
+  game.roll();
+  console.assert(game.state.getCats().length > 0, "Alice mode creates cats");
+  console.assert(game.state.getCats().every(cat => cat.lifetime === 6), "Alice mode cats have visible lifetime after creation turn");
+
+  const previous = game.state.getCats().map(cat => cat.lifetime);
+  game.roll();
+  const current = game.state.getCats();
+  console.assert(
+    current.every(cat => cat.lifetime <= 5),
+    "Alice mode decrements lifetime on the next turn"
+  );
+  console.assert(
+    game.aliceModifier.getLastLifetimeChanges().some(change => change.type === "decrement"),
+    "Alice mode records lifetime decrement for the log"
+  );
+}

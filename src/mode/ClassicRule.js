@@ -49,10 +49,6 @@ export class ClassicRule extends PlayRule {
 
     this.checkResult();
 
-    for (const modifier of this.modifiers) {
-      modifier.afterTurn?.();
-    }
-
     return phaseResult;
   }
 

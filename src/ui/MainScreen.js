@@ -615,6 +615,30 @@ export class MainScreen {
       lines.push(`素数なので${mode.removedCats}匹の招き猫をしまいました。`);
     }
 
+    if (outcome.alice?.lifetimeChanges?.length) {
+      const assigned = outcome.alice.lifetimeChanges.filter(change => change.type === "assigned").length;
+      const decremented = outcome.alice.lifetimeChanges.filter(change => change.type === "decrement").length;
+      const expired = outcome.alice.lifetimeChanges.filter(change => change.type === "expired").length;
+
+      if (assigned > 0) {
+        lines.push(`アリスモード：${assigned}匹の招き猫に寿命6ターンを設定しました。`);
+      }
+      if (decremented > 0) {
+        const finiteLifetimes = outcome.state.getCats()
+          .map(cat => cat.lifetime)
+          .filter(value => Number.isFinite(value));
+        const minLifetime = finiteLifetimes.length ? Math.min(...finiteLifetimes) : null;
+        lines.push(
+          minLifetime === null
+            ? `アリスモード：${decremented}匹の招き猫の寿命を1ターン減らしました。`
+            : `アリスモード：${decremented}匹の招き猫の寿命を1ターン減らしました（最短の残り寿命 ${minLifetime}ターン）。`
+        );
+      }
+      if (expired > 0) {
+        lines.push(`アリスモード：寿命が0になった${expired}匹の招き猫をしまいました。`);
+      }
+    }
+
     if (outcome.event?.message) {
       lines.push(outcome.event.message);
     }

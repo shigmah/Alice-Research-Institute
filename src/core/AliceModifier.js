@@ -8,6 +8,7 @@ export class AliceModifier {
     this.hunger = 0;
     this.mood = 50;
     this.enabled = false;
+    this.lastLifetimeChanges = [];
   }
 
   normalizeTargetTurns(value) {
@@ -31,10 +32,19 @@ export class AliceModifier {
     this.enabled = true;
     this.gameState.targetTurns = this.targetTurns;
     this.gameState.gameEndReason = null;
+    this.lastLifetimeChanges = [];
   }
 
   beforeTurn() {
     if (!this.enabled || this.gameState.isGameOver) return;
+
+    this.lastLifetimeChanges = [];
+
+    // 初回ターンは猫0匹から開始する仕様なので、
+    // 寿命判定によるゲームオーバーにはしない。
+    if (this.gameState.getTurn() === 1 && this.catManager.getCats().length === 0) {
+      return;
+    }
 
     this.updateCatLifetime();
 
@@ -54,6 +64,12 @@ export class AliceModifier {
     for (const cat of this.catManager.getCats()) {
       if (cat.createdAt === currentTurn && !Number.isFinite(cat.lifetime)) {
         cat.lifetime = 6;
+        this.lastLifetimeChanges.push({
+          type: "assigned",
+          catId: cat.id,
+          from: null,
+          to: 6
+        });
       }
     }
 
@@ -79,11 +95,32 @@ export class AliceModifier {
       if (cat.createdAt === currentTurn) continue;
 
       if (Number.isFinite(cat.lifetime)) {
+        const before = cat.lifetime;
         cat.lifetime -= 1;
+        this.lastLifetimeChanges.push({
+          type: "decrement",
+          catId: cat.id,
+          from: before,
+          to: cat.lifetime
+        });
+
+        // 寿命0になった猫は、このターン終了前に回収対象として記録する。
+        if (cat.lifetime <= 0) {
+          this.lastLifetimeChanges.push({
+            type: "expired",
+            catId: cat.id,
+            from: cat.lifetime,
+            to: 0
+          });
+        }
       }
     }
 
     this.catManager.deleteExpiredCats();
+  }
+
+  getLastLifetimeChanges() {
+    return this.lastLifetimeChanges.map(change => ({ ...change }));
   }
 
   modifyHunger(amount) {

@@ -10,3 +10,5 @@ console.assert(js.includes('残り${cat.lifetime}ターン'), "lifetime accessib
 console.assert(js.includes("寿命の数字＝その招き猫が残っていられるターン数"), "lifetime legend exists");
 
 console.log("Alice lifetime UI source test passed.");
+
+console.assert(js.includes("lifetimeChanges"), "lifetime changes are available to the UI log");
