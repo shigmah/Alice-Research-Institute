@@ -1,6 +1,6 @@
-docs/planning → 全体計画書
-docs/design/specification → 仕様書
-docs/design/detailed-design → 詳細設計
-docs/design/implementation-design → 実装設計
-docs/design/setting → 設定資料
-docs/archive → 過去資産
+- docs/planning → 全体計画書
+- docs/design/specification → 仕様書
+- docs/design/detailed-design → 詳細設計
+- docs/design/implementation-design → 実装設計
+- docs/design/setting → 設定資料
+- docs/archive → 過去資産
