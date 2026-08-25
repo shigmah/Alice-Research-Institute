@@ -3,8 +3,9 @@ import { PlayRule } from "../core/PlayRule.js";
 /**
  * Collector Mode rule for Ver.1.0.
  *
- * Cat lifetime management remains the responsibility of CatManager.
- * Collection persistence is intentionally kept outside this rule.
+ * Phase 1 uses one die and creates X cats according to the die result/color.
+ * Phase 2 follows the shared prime rule: prime totals remove cats, while
+ * non-prime totals keep the cat count unchanged and decrease the next die count.
  */
 export class CollectorRule extends PlayRule {
   constructor(gameState, catManager, randomManager, modifiers = [], eventManager = null) {
@@ -37,20 +38,37 @@ export class CollectorRule extends PlayRule {
     const diceCount = Math.max(1, this.gameState.getCurrentDiceCount());
     const results = this.rollDice(diceCount);
 
-    for (const value of results) {
-      this.generateCatsForRoll(value);
+    let generatedCats = 0;
+    let removedCats = 0;
+    let isPrime = null;
+
+    if (diceCount === 1) {
+      for (const value of results) {
+        this.generateCatsForRoll(value);
+        generatedCats += value;
+      }
+      this.gameState.setCurrentDiceCount(2);
+    } else {
+      isPrime = this.isPrime(this.gameState.getDiceTotal());
+      if (isPrime) {
+        removedCats = this.removeCatsByPrimeTotal(this.gameState.getDiceTotal());
+      }
+
+      const nextDiceCount = isPrime
+        ? diceCount + 1
+        : Math.max(1, diceCount - 1);
+      this.gameState.setCurrentDiceCount(nextDiceCount);
     }
 
     const result = this.checkResult();
-    if (result === "CONTINUE") {
-      this.advanceDicePhase(diceCount);
-    }
 
     return {
       diceResults: [...results],
-      generatedCats: results.reduce((sum, value) => sum + value, 0),
+      generatedCats,
+      removedCats,
       result,
       phase: diceCount === 1 ? 1 : 2,
+      isPrime,
       nextDiceCount: this.gameState.getCurrentDiceCount()
     };
   }
@@ -103,6 +121,21 @@ export class CollectorRule extends PlayRule {
     this.gameState.setDiceCount(diceCount);
 
     return results;
+  }
+
+  removeCatsByPrimeTotal(total) {
+    const currentCatCount = this.gameState.getCats().length;
+    const nextCount = Math.max(0, currentCatCount - Math.abs(total - currentCatCount));
+    const removeCount = currentCatCount - nextCount;
+
+    for (let i = 0; i < removeCount; i += 1) {
+      const oldest = this.catManager.getCats()[0];
+      if (!oldest) break;
+      this.catManager.removeCat(oldest);
+    }
+
+    this.catManager.updateCats();
+    return removeCount;
   }
 
   advanceDicePhase(diceCount) {
