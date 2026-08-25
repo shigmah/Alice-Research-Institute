@@ -36,28 +36,9 @@ button:disabled{background:#aaa;cursor:not-allowed}.mode-controls{display:flex;a
 .event-modal,.game-over-modal{position:fixed;inset:0;background:rgba(20,24,32,.72);display:none;align-items:center;justify-content:center;z-index:2000;padding:18px}
 .event-modal.visible,.game-over-modal.visible{display:flex}
 .event-modal-content,.game-over-content{background:#fff;border-radius:18px;padding:24px;max-width:520px;width:min(520px,92vw);text-align:center;box-shadow:0 10px 32px rgba(0,0,0,.3)}
-.event-image{max-width:260px;max-height:260px;object-fit:contain}.alice-fallback{font-size:120px;line-height:1;margin:8px auto}.event-modal-dice{margin:8px 0 2px;min-height:84px}.event-dice-image{width:84px;height:84px;object-fit:contain}.event-modal-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}.game-over-mark{font-size:52px}
-.event-modal-content button,.game-over-content button{margin-top:10px}
-@media (orientation:landscape) and (max-width:900px) and (min-height:360px){
-  main{width:calc(100% - 20px);max-width:none;padding:8px 10px}
-  .game-layout{grid-template-columns:minmax(0,1fr) minmax(250px,32vw);gap:10px}
-  .game-side-column{position:sticky;top:8px;max-height:calc(100vh - 16px);overflow:auto}
-  .panel{padding:12px;margin-bottom:10px}
-  .stats{gap:6px}.stat{padding:8px}.num{font-size:24px}
-  .game-hint{font-size:13px;margin-bottom:5px}
-  .action-buttons button{font-size:16px;padding:9px 15px}
-  #cats{min-height:58px}.cat{width:66px;min-height:78px}.cat-image{width:52px;height:52px}.cat-lifetime{min-width:20px;height:20px;font-size:12px;padding:0 5px}
-  #log{height:calc(100vh - 125px);min-height:180px}
-}
-@media (max-width:700px) and (orientation:portrait){
-  main{width:calc(100% - 20px);padding:8px 0 20px}
-  .game-layout{grid-template-columns:1fr}
-  .game-side-column{position:static;max-height:none;overflow:visible}
-  .panel{padding:14px}.stats{gap:6px}.stat{padding:8px}.num{font-size:24px}
-  .game-hint{font-size:13px;margin-bottom:5px}
-  .action-buttons{gap:4px}.action-buttons button{font-size:16px;padding:9px 14px}
-  #log{height:180px}.cat{width:64px;min-height:76px}.cat-image{width:52px;height:52px}.cat-lifetime{min-width:20px;height:20px;font-size:12px;padding:0 5px}
-}
+.event-image{max-width:260px;max-height:260px;object-fit:contain}.alice-fallback{font-size:120px;line-height:1;margin:8px auto}.event-modal-dice{margin:8px 0 2px;min-height:84px}.event-dice-image{width:84px;height:84px;object-fit:contain}.event-modal-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}.game-over-mark{font-size:52px}.event-modal-content button,.game-over-content button{margin-top:10px}
+@media (orientation:landscape) and (max-width:900px) and (min-height:360px){main{width:calc(100% - 20px);max-width:none;padding:8px 10px}.game-layout{grid-template-columns:minmax(0,1fr) minmax(250px,32vw);gap:10px}.game-side-column{position:sticky;top:8px;max-height:calc(100vh - 16px);overflow:auto}.panel{padding:12px;margin-bottom:10px}.stats{gap:6px}.stat{padding:8px}.num{font-size:24px}.game-hint{font-size:13px;margin-bottom:5px}.action-buttons button{font-size:16px;padding:9px 15px}#cats{min-height:58px}.cat{width:66px;min-height:78px}.cat-image{width:52px;height:52px}.cat-lifetime{min-width:20px;height:20px;font-size:12px;padding:0 5px}#log{height:calc(100vh - 125px);min-height:180px}}
+@media (max-width:700px) and (orientation:portrait){main{width:calc(100% - 20px);padding:8px 0 20px}.game-layout{grid-template-columns:1fr}.game-side-column{position:static;max-height:none;overflow:visible}.panel{padding:14px}.stats{gap:6px}.stat{padding:8px}.num{font-size:24px}.game-hint{font-size:13px;margin-bottom:5px}.action-buttons{gap:4px}.action-buttons button{font-size:16px;padding:9px 14px}#log{height:180px}.cat{width:64px;min-height:76px}.cat-image{width:52px;height:52px}.cat-lifetime{min-width:20px;height:20px;font-size:12px;padding:0 5px}}
 </style>
 </head>
 <body>
@@ -65,7 +46,6 @@ button:disabled{background:#aaa;cursor:not-allowed}.mode-controls{display:flex;a
 <div class="logo"><img alt="招き猫ゲーム" id="logoImage"/></div><h1>🐾 招き猫ゲーム</h1>
 <div class="sub">アリス研究所 ― 「面白い、を数学に。」</div>
 <div class="howto-link"><a href="./howto.html">📖 遊び方・ルール</a></div>
-
 
 <div class="play-layout"><div class="play-main"><div class="game-layout">
   <div class="game-main-column">
@@ -75,6 +55,7 @@ button:disabled{background:#aaa;cursor:not-allowed}.mode-controls{display:flex;a
         <label>モード
           <select id="modeSelect">
             <option value="classic" selected>クラシックモード</option>
+            <option value="collector">コレクターモード</option>
             <option value="alice">アリスモード</option>
           </select>
         </label>
@@ -115,56 +96,17 @@ button:disabled{background:#aaa;cursor:not-allowed}.mode-controls{display:flex;a
   </div>
 
   <aside class="game-side-column">
-    <section class="panel">
-      <h2>📜 ログ</h2>
-      <div id="log"></div>
-    </section>
-
+    <section class="panel"><h2>📜 ログ</h2><div id="log"></div></section>
     <section class="panel mogumogu-panel">
-      <div id="mogumoguPanel">
-        <div><strong>🍬 研究チャレンジ</strong></div>
-        <div id="mogumoguResult">もぐもぐチャレンジ</div>
-        <p class="mogumogu-description">
-          素数を5回連続で出すチャレンジ。<br>
-          ただし偶数が出ると、アリスが食べちゃうかも？
-        </p>
-
-        <div id="mogumoguDice"></div>
-        <div id="mogumoguReward"></div>
-        <button id="mogumoguButton" type="button">🍬 アリスと挑戦する</button>
-      </div>
+      <div id="mogumoguPanel"><div><strong>🍬 研究チャレンジ</strong></div><div id="mogumoguResult">もぐもぐチャレンジ</div><p class="mogumogu-description">素数を5回連続で出すチャレンジ。<br>ただし偶数が出ると、アリスが食べちゃうかも？</p><div id="mogumoguDice"></div><div id="mogumoguReward"></div><button id="mogumoguButton" type="button">🍬 アリスと挑戦する</button></div>
     </section>
   </aside>
 </div>
 
-<div id="eventModal" class="event-modal" role="dialog" aria-modal="true" aria-labelledby="eventTitle">
-  <div class="event-modal-content">
-    <img id="eventModalImage" class="event-image" alt="イベント">
-    <h2 id="eventTitle">🐈 イベント</h2>
-    <p id="eventMessage"></p>
-    <div id="eventModalDice" class="event-modal-dice" hidden></div>
-    <div class="event-modal-actions">
-      <button id="eventNext" type="button" hidden>🎲 次の一投を試す</button>
-      <button id="eventClose">閉じる</button>
-    </div>
-  </div>
+<div id="eventModal" class="event-modal" role="dialog" aria-modal="true" aria-labelledby="eventTitle"><div class="event-modal-content"><img id="eventModalImage" class="event-image" alt="イベント"><h2 id="eventTitle">🐈 イベント</h2><p id="eventMessage"></p><div id="eventModalDice" class="event-modal-dice" hidden></div><div class="event-modal-actions"><button id="eventNext" type="button" hidden>🎲 次の一投を試す</button><button id="eventClose">閉じる</button></div></div></div>
+<div id="gameOverModal" class="game-over-modal" role="dialog" aria-modal="true" aria-labelledby="gameOverTitle"><div class="game-over-content"><div class="game-over-mark">🐱</div><h2 id="gameOverTitle">ゲームオーバー</h2><p id="gameOverMessage">招き猫が0匹になりました。</p><p id="gameOverReason">リセットすると最初から遊び直せます。</p><button id="gameOverClose" type="button">閉じる</button><button id="gameOverReset" type="button">最初から遊ぶ</button></div></div>
 </div>
-
-<div id="gameOverModal" class="game-over-modal" role="dialog" aria-modal="true" aria-labelledby="gameOverTitle">
-  <div class="game-over-content">
-    <div class="game-over-mark">🐱</div>
-    <h2 id="gameOverTitle">ゲームオーバー</h2>
-    <p id="gameOverMessage">招き猫が0匹になりました。</p>
-    <p id="gameOverReason">リセットすると最初から遊び直せます。</p>
-    <button id="gameOverClose" type="button">閉じる</button>
-    <button id="gameOverReset" type="button">最初から遊ぶ</button>
-  </div>
-</div>
-</div>
-<section class="panel notice">
-<strong>Beta公開版</strong><br>
-クラシックモードを中心に、基本ターン処理・招き猫生成・もぐもぐチャレンジ・チェシャ猫イベント・ドロップアウトを統合しています。
-</section>
+<section class="panel notice"><strong>Beta公開版</strong><br>クラシックモードを中心に、基本ターン処理・招き猫生成・もぐもぐチャレンジ・チェシャ猫イベント・ドロップアウトを統合しています。</section>
 
 <script type="module">
 import { createMain } from "../src/main/Main.js";
