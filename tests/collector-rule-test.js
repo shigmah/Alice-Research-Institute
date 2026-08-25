@@ -92,8 +92,8 @@ test("phase 2 prime total removes cats according to the shared cat-count rule", 
 
   assert.equal(gameState.getDiceTotal(), 3);
   assert.equal(result.isPrime, true);
-  assert.equal(result.removedCats, 3);
-  assert.equal(gameState.getCats().length, 5);
+  assert.equal(result.removedCats, 5);
+  assert.equal(gameState.getCats().length, 3);
 });
 
 test("roll 1 creates one white cat", () => {
