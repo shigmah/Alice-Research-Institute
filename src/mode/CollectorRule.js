@@ -42,10 +42,16 @@ export class CollectorRule extends PlayRule {
     }
 
     const result = this.checkResult();
+    if (result === "CONTINUE") {
+      this.advanceDicePhase(diceCount);
+    }
+
     return {
       diceResults: [...results],
       generatedCats: results.reduce((sum, value) => sum + value, 0),
-      result
+      result,
+      phase: diceCount === 1 ? 1 : 2,
+      nextDiceCount: this.gameState.getCurrentDiceCount()
     };
   }
 
@@ -97,6 +103,32 @@ export class CollectorRule extends PlayRule {
     this.gameState.setDiceCount(diceCount);
 
     return results;
+  }
+
+  advanceDicePhase(diceCount) {
+    if (diceCount === 1) {
+      this.gameState.setCurrentDiceCount(2);
+      return;
+    }
+
+    const isPrime = this.isPrime(this.gameState.getDiceTotal());
+    const nextDiceCount = isPrime
+      ? diceCount + 1
+      : Math.max(1, diceCount - 1);
+
+    this.gameState.setCurrentDiceCount(nextDiceCount);
+  }
+
+  isPrime(value) {
+    if (!Number.isInteger(value) || value < 2) return false;
+    if (value === 2) return true;
+    if (value % 2 === 0) return false;
+
+    for (let divisor = 3; divisor * divisor <= value; divisor += 2) {
+      if (value % divisor === 0) return false;
+    }
+
+    return true;
   }
 
   getColorForRoll(value) {
