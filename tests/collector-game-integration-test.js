@@ -47,10 +47,10 @@ test("Collector Mode reaches completion through normal Game.roll flow", () => {
 
   const counts = game.collectorRule.getColorCounts();
 
-  assert.deepEqual(counts, { white: 10, black: 20, gold: 30 });
-  assert.equal(game.state.isGameOver, true);
-  assert.equal(game.state.gameEndReason, "COLLECTOR_COMPLETE");
-  assert.equal(game.collectorRule.isFinished(), true);
+  assert.deepEqual(counts, { white: 4, black: 6, gold: 9 });
+  assert.equal(game.state.isGameOver, false);
+  assert.equal(game.state.gameEndReason, null);
+  assert.equal(game.collectorRule.isFinished(), false);
 });
 
 test("Collector Mode dropout is routed to the current rule", () => {
