@@ -45,10 +45,12 @@ test("Collector Mode advances from phase 1 to phase 2 through Game.roll", () => 
   assert.equal(first.mode.phase, 1);
   assert.equal(game.state.getCurrentDiceCount(), 2);
 
-  game.randomManager.rollDice = () => 1;
+  let index = 0;
+  const secondRolls = [1, 3];
+  game.randomManager.rollDice = () => secondRolls[index++];
   const second = game.roll();
 
-  assert.deepEqual(second.result.values, [1, 1]);
+  assert.deepEqual(second.result.values, [1, 3]);
   assert.equal(second.mode.phase, 2);
   assert.equal(game.state.getCurrentDiceCount(), 1);
 });
