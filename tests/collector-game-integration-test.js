@@ -84,6 +84,28 @@ test("Collector Mode reaches completion through normal Game.roll flow", () => {
   assert.equal(game.state.gameEndReason, "COLLECTOR_COMPLETE");
 });
 
+test("Collector Mode ends normally when a prime result removes the last cat", () => {
+  const game = new Game();
+  game.startCollectorMode();
+  game.eventManager.checkEvent = () => false;
+
+  game.catManager.createCat({ color: "white" });
+  game.state.setCurrentDiceCount(2);
+
+  let index = 0;
+  const rolls = [1, 1];
+  game.randomManager.rollDice = () => rolls[index++];
+
+  const outcome = game.roll();
+
+  assert.notEqual(outcome, null);
+  assert.equal(outcome.result.total, 2);
+  assert.equal(outcome.mode.result, "CONTINUE");
+  assert.equal(game.state.getCats().length, 0);
+  assert.equal(game.state.isGameOver, true);
+  assert.equal(game.state.gameEndReason, "no-cats");
+});
+
 test("Collector Mode dropout is routed to the current rule", () => {
   const game = new Game();
   game.startCollectorMode();
