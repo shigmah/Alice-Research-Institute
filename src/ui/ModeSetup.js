@@ -68,3 +68,45 @@ export function ensureModeSetup(documentRef = document) {
 
   actions.parentNode.insertBefore(panel, actions);
 }
+
+export function installCollectorModeSupport(ui) {
+  if (!ui) return;
+
+  ui.updateModeSetupUI = () => {
+    const mode = ui.elements.modeSelect?.value ?? "classic";
+    const alice = mode === "alice";
+
+    if (ui.elements.targetTurnsField) {
+      ui.elements.targetTurnsField.hidden = !alice;
+    }
+
+    if (ui.elements.modeDescription) {
+      ui.elements.modeDescription.textContent =
+        mode === "collector"
+          ? "招き猫を3色集め、各色10匹以上にすることを目指すコレクターモードです。"
+          : alice
+            ? "目標ターンまで招き猫を1匹以上残せば勝利します。デフォルトは20ターンです。"
+            : "招き猫とサイコロで遊ぶ基本モードです。";
+    }
+  };
+
+  ui.updateModeDisplay = state => {
+    const mode = state.getGameMode?.() ?? "CLASSIC";
+    if (ui.elements.modeSelect) {
+      ui.elements.modeSelect.value =
+        mode === "COLLECTOR"
+          ? "collector"
+          : mode === "ALICE"
+            ? "alice"
+            : "classic";
+    }
+
+    ui.updateModeSetupUI();
+
+    if (ui.elements.targetTurnsInput && mode === "ALICE") {
+      ui.elements.targetTurnsInput.value = state.targetTurns ?? 20;
+    }
+  };
+
+  ui.updateModeSetupUI();
+}
