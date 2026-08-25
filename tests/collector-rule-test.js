@@ -79,6 +79,23 @@ test("phase 2 falls back to one die when the total is non-prime", () => {
   assert.equal(gameState.getCurrentDiceCount(), 1);
 });
 
+test("phase 2 prime total removes cats according to the shared cat-count rule", () => {
+  const { gameState, catManager, rule } = createRule([2, 1]);
+  rule.initialize();
+
+  for (let i = 0; i < 8; i += 1) {
+    catManager.createCat({ color: i % 3 === 0 ? "white" : i % 3 === 1 ? "black" : "gold" });
+  }
+  gameState.setCurrentDiceCount(2);
+
+  const result = rule.executeTurn();
+
+  assert.equal(gameState.getDiceTotal(), 3);
+  assert.equal(result.isPrime, true);
+  assert.equal(result.removedCats, 3);
+  assert.equal(gameState.getCats().length, 5);
+});
+
 test("roll 1 creates one white cat", () => {
   const { gameState, rule } = createRule([1]);
   rule.initialize();
