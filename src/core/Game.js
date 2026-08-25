@@ -280,8 +280,9 @@ export class Game {
   dropout() {
     if (this.state.isGameOver || this.state.hasDroppedOut) return null;
 
-    const droppedOut = this.currentRule.executeDropout?.();
-    if (!droppedOut) return null;
+    this.currentRule.executeDropout?.();
+
+    if (!this.state.hasDroppedOut) return null;
 
     const outcome = {
       action: { action: "dropout" },
