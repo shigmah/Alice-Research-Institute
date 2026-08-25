@@ -125,7 +125,6 @@ export class MainScreen {
       skip.addEventListener("click", finish, { once: true });
       video.addEventListener("ended", finish, { once: true });
 
-      // 素材のロードが遅い場合でも、最大1.5秒でゲームへ進む。
       loadTimer = setTimeout(finish, 1500);
 
       AssetResolver.setVideoWithFallback(
@@ -418,7 +417,18 @@ export class MainScreen {
       this.elements.eventClose.textContent = "閉じる";
     }
 
+    if (this.elements.eventModalDice) {
+      this.elements.eventModalDice.hidden = !dice;
+    }
+
     this.elements.eventModal?.classList.add("visible");
+  }
+
+  createAliceFallback() {
+    const fallback = this.document.createElement("div");
+    fallback.className = "alice-fallback";
+    fallback.textContent = "👧";
+    return fallback;
   }
 
   renderEventDice(value) {
