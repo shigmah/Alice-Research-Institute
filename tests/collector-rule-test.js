@@ -42,6 +42,43 @@ test("initialize sets Collector mode and clears cats", () => {
   assert.equal(gameState.getCats().length, 0);
 });
 
+test("phase 1 advances from one die to two dice", () => {
+  const { gameState, rule } = createRule([1]);
+  rule.initialize();
+
+  const result = rule.executeTurn();
+
+  assert.equal(result.phase, 1);
+  assert.equal(result.nextDiceCount, 2);
+  assert.equal(gameState.getCurrentDiceCount(), 2);
+});
+
+test("phase 2 advances to three dice when the total is prime", () => {
+  const { gameState, rule } = createRule([2, 1]);
+  rule.initialize();
+  gameState.setCurrentDiceCount(2);
+
+  const result = rule.executeTurn();
+
+  assert.equal(gameState.getDiceTotal(), 3);
+  assert.equal(result.phase, 2);
+  assert.equal(result.nextDiceCount, 3);
+  assert.equal(gameState.getCurrentDiceCount(), 3);
+});
+
+test("phase 2 falls back to one die when the total is non-prime", () => {
+  const { gameState, rule } = createRule([1, 1]);
+  rule.initialize();
+  gameState.setCurrentDiceCount(2);
+
+  const result = rule.executeTurn();
+
+  assert.equal(gameState.getDiceTotal(), 2);
+  assert.equal(result.phase, 2);
+  assert.equal(result.nextDiceCount, 1);
+  assert.equal(gameState.getCurrentDiceCount(), 1);
+});
+
 test("roll 1 creates one white cat", () => {
   const { gameState, rule } = createRule([1]);
   rule.initialize();
