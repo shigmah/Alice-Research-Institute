@@ -70,11 +70,15 @@ export class GameController {
     const { mode, targetTurns } = this.ui.getModeStartOptions?.() ?? { mode: "classic", targetTurns: 20 };
     this.ui.hideEventModal?.();
     this.ui.hideGameOverModal?.();
-    if (mode === "alice") {
+
+    if (mode === "collector") {
+      this.game.startCollectorMode();
+    } else if (mode === "alice") {
       this.game.startAliceMode(targetTurns);
     } else {
       this.game.startClassicMode();
     }
+
     return this.game.state;
   }
 
