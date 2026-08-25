@@ -67,13 +67,13 @@ test("phase 2 advances to three dice when the total is prime", () => {
 });
 
 test("phase 2 falls back to one die when the total is non-prime", () => {
-  const { gameState, rule } = createRule([1, 1]);
+  const { gameState, rule } = createRule([1, 3]);
   rule.initialize();
   gameState.setCurrentDiceCount(2);
 
   const result = rule.executeTurn();
 
-  assert.equal(gameState.getDiceTotal(), 2);
+  assert.equal(gameState.getDiceTotal(), 4);
   assert.equal(result.phase, 2);
   assert.equal(result.nextDiceCount, 1);
   assert.equal(gameState.getCurrentDiceCount(), 1);
