@@ -60,7 +60,7 @@ test("Collector Mode reaches completion through normal Game.roll flow", () => {
   game.startCollectorMode();
   game.eventManager.checkEvent = () => false;
 
-  for (let i = 0; i < 9; i += 1) {
+  for (let i = 0; i < 10; i += 1) {
     game.catManager.createCat({ color: "white" });
     game.catManager.createCat({ color: "black" });
     game.catManager.createCat({ color: "gold" });
@@ -77,8 +77,8 @@ test("Collector Mode reaches completion through normal Game.roll flow", () => {
   assert.equal(outcome.mode.result, "WIN");
   assert.deepEqual(game.collectorRule.getColorCounts(), {
     white: 10,
-    black: 11,
-    gold: 12
+    black: 10,
+    gold: 10
   });
   assert.equal(game.state.isGameOver, true);
   assert.equal(game.state.gameEndReason, "COLLECTOR_COMPLETE");
