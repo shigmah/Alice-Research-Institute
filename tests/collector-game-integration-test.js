@@ -28,8 +28,29 @@ test("Collector Mode roll uses CollectorRule through TurnManager", () => {
     game.state.getCats().map(cat => cat.color),
     ["gold", "gold", "gold"]
   );
+  assert.equal(game.state.getCurrentDiceCount(), 2);
   assert.equal(game.state.getTurn(), 2);
   assert.equal(game.state.isGameOver, false);
+});
+
+test("Collector Mode advances from phase 1 to phase 2 through Game.roll", () => {
+  const game = new Game();
+  game.startCollectorMode();
+  game.eventManager.checkEvent = () => false;
+  game.randomManager.rollDice = () => 1;
+
+  const first = game.roll();
+
+  assert.deepEqual(first.result.values, [1]);
+  assert.equal(first.mode.phase, 1);
+  assert.equal(game.state.getCurrentDiceCount(), 2);
+
+  game.randomManager.rollDice = () => 1;
+  const second = game.roll();
+
+  assert.deepEqual(second.result.values, [1, 1]);
+  assert.equal(second.mode.phase, 2);
+  assert.equal(game.state.getCurrentDiceCount(), 1);
 });
 
 test("Collector Mode reaches completion through normal Game.roll flow", () => {
@@ -37,20 +58,28 @@ test("Collector Mode reaches completion through normal Game.roll flow", () => {
   game.startCollectorMode();
   game.eventManager.checkEvent = () => false;
 
-  const rolls = [1, 2, 3];
-  let index = 0;
-  game.randomManager.rollDice = () => rolls[index++ % rolls.length];
-
-  for (let i = 0; i < 10; i += 1) {
-    game.roll();
+  for (let i = 0; i < 9; i += 1) {
+    game.catManager.createCat({ color: "white" });
+    game.catManager.createCat({ color: "black" });
+    game.catManager.createCat({ color: "gold" });
   }
 
-  const counts = game.collectorRule.getColorCounts();
+  game.state.setCurrentDiceCount(3);
+  const rolls = [1, 2, 3];
+  let index = 0;
+  game.randomManager.rollDice = () => rolls[index++];
 
-  assert.deepEqual(counts, { white: 4, black: 6, gold: 9 });
-  assert.equal(game.state.isGameOver, false);
-  assert.equal(game.state.gameEndReason, null);
-  assert.equal(game.collectorRule.isFinished(), false);
+  const outcome = game.roll();
+
+  assert.notEqual(outcome, null);
+  assert.equal(outcome.mode.result, "WIN");
+  assert.deepEqual(game.collectorRule.getColorCounts(), {
+    white: 10,
+    black: 11,
+    gold: 12
+  });
+  assert.equal(game.state.isGameOver, true);
+  assert.equal(game.state.gameEndReason, "COLLECTOR_COMPLETE");
 });
 
 test("Collector Mode dropout is routed to the current rule", () => {
