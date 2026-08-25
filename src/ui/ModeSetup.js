@@ -69,6 +69,81 @@ export function ensureModeSetup(documentRef = document) {
   actions.parentNode.insertBefore(panel, actions);
 }
 
+function ensureCollectorCountDisplay(ui) {
+  const count = ui.elements.count;
+  if (!count || !count.parentNode) return null;
+
+  let breakdown = ui.document.querySelector("#countBreakdown");
+  if (!breakdown) {
+    breakdown = ui.document.createElement("div");
+    breakdown.id = "countBreakdown";
+    breakdown.style.marginTop = "4px";
+    breakdown.style.fontSize = "13px";
+    breakdown.style.fontWeight = "700";
+    breakdown.style.lineHeight = "1.4";
+    breakdown.style.color = "#666";
+    count.parentNode.appendChild(breakdown);
+  }
+
+  return breakdown;
+}
+
+function getCollectorCounts(state) {
+  return state.getCats().reduce(
+    (counts, cat) => {
+      if (cat.color === "white") counts.white += 1;
+      if (cat.color === "black") counts.black += 1;
+      if (cat.color === "gold") counts.gold += 1;
+      return counts;
+    },
+    { white: 0, black: 0, gold: 0 }
+  );
+}
+
+function renderCollectorCounts(ui, state, outcome) {
+  const breakdown = ensureCollectorCountDisplay(ui);
+  if (!breakdown) return;
+
+  const mode = state.getGameMode?.() ?? "CLASSIC";
+  if (mode !== "COLLECTOR") {
+    breakdown.hidden = true;
+    return;
+  }
+
+  const counts = getCollectorCounts(state);
+  const total = state.getCats().length;
+  breakdown.hidden = false;
+  breakdown.textContent = `白${counts.white} / 黒${counts.black} / 金${counts.gold}`;
+
+  if (outcome && ui.elements.log) {
+    const line = ui.document.createElement("div");
+    line.textContent = `招き猫数: ${total}匹（白${counts.white} / 黒${counts.black} / 金${counts.gold}）`;
+    ui.elements.log.appendChild(line);
+  }
+}
+
+function renderCollectorGameOver(ui, state) {
+  if (state.getGameMode?.() !== "COLLECTOR" || state.gameEndReason !== "COLLECTOR_COMPLETE") {
+    return;
+  }
+
+  const banner = ui.elements.gameOverBanner;
+  if (banner) {
+    banner.hidden = false;
+    banner.textContent = "🏆 コレクターモード達成！ 白・黒・金の招き猫を各10匹以上集めました。";
+  }
+
+  ui.setText?.("gameOverTitle", "🏆 コレクターモード達成！");
+  ui.setText?.(
+    "gameOverMessage",
+    "白・黒・金の招き猫をすべて10匹以上集めました！"
+  );
+  ui.setText?.(
+    "gameOverReason",
+    "リセットすると最初から遊び直せます。"
+  );
+}
+
 export function installCollectorModeSupport(ui) {
   if (!ui) return;
 
@@ -106,6 +181,15 @@ export function installCollectorModeSupport(ui) {
     if (ui.elements.targetTurnsInput && mode === "ALICE") {
       ui.elements.targetTurnsInput.value = state.targetTurns ?? 20;
     }
+  };
+
+  ensureCollectorCountDisplay(ui);
+
+  const originalRender = ui.render.bind(ui);
+  ui.render = (state, outcome = null) => {
+    originalRender(state, outcome);
+    renderCollectorCounts(ui, state, outcome);
+    renderCollectorGameOver(ui, state);
   };
 
   ui.updateModeSetupUI();
