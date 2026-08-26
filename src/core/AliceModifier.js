@@ -1,9 +1,12 @@
 export class AliceModifier {
-  constructor(gameState, catManager, randomManager, { targetTurns = 20 } = {}) {
+  constructor(gameState, catManager, randomManager, { targetTurns = 20, lifetimeByColor = null } = {}) {
     this.gameState = gameState;
     this.catManager = catManager;
     this.randomManager = randomManager;
     this.targetTurns = this.normalizeTargetTurns(targetTurns);
+    this.lifetimeByColor = lifetimeByColor && typeof lifetimeByColor === "object"
+      ? { ...lifetimeByColor }
+      : null;
 
     this.hunger = 0;
     this.mood = 50;
@@ -24,6 +27,11 @@ export class AliceModifier {
 
   getTargetTurns() {
     return this.targetTurns;
+  }
+
+  getInitialLifetime(color) {
+    const configured = this.lifetimeByColor?.[color];
+    return Number.isFinite(configured) && configured > 0 ? configured : 6;
   }
 
   initialize() {
@@ -63,12 +71,13 @@ export class AliceModifier {
     const currentTurn = this.gameState.getTurn();
     for (const cat of this.catManager.getCats()) {
       if (cat.createdAt === currentTurn && !Number.isFinite(cat.lifetime)) {
-        cat.lifetime = 6;
+        const lifetime = this.getInitialLifetime(cat.color);
+        cat.lifetime = lifetime;
         this.lastLifetimeChanges.push({
           type: "assigned",
           catId: cat.id,
           from: null,
-          to: 6
+          to: lifetime
         });
       }
     }
