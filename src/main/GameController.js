@@ -73,6 +73,8 @@ export class GameController {
 
     if (mode === "collector") {
       this.game.startCollectorMode();
+    } else if (mode === "collector-alice") {
+      this.game.startCollectorAliceMode();
     } else if (mode === "alice") {
       this.game.startAliceMode(targetTurns);
     } else {
