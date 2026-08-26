@@ -20,7 +20,7 @@ export class Game {
   }
 
   reset(mode = this.modeType, { targetTurns = this.targetTurns } = {}) {
-    const normalizedMode = ["classic", "alice", "collector"].includes(mode)
+    const normalizedMode = ["classic", "alice", "collector", "collector-alice"].includes(mode)
       ? mode
       : "classic";
 
@@ -32,9 +32,15 @@ export class Game {
     this.catManager = new CatManager(this.state);
     this.randomManager = new RandomManager();
 
-    this.aliceModifier = this.modeType === "alice"
+    const isAliceMode = this.modeType === "alice";
+    const isCollectorAliceMode = this.modeType === "collector-alice";
+
+    this.aliceModifier = isAliceMode || isCollectorAliceMode
       ? new AliceModifier(this.state, this.catManager, this.randomManager, {
-          targetTurns: this.targetTurns
+          targetTurns: this.targetTurns,
+          lifetimeByColor: isCollectorAliceMode
+            ? { white: 4, black: 6, gold: 8 }
+            : null
         })
       : null;
 
@@ -54,14 +60,14 @@ export class Game {
       modifiers
     );
 
-    this.currentRule = this.modeType === "collector"
+    this.currentRule = this.modeType === "collector" || this.modeType === "collector-alice"
       ? this.collectorRule
       : this.classicRule;
 
     this.currentRule.initialize();
     this.state.setGameMode(
-      this.modeType === "collector"
-        ? "COLLECTOR"
+      this.modeType === "collector" || this.modeType === "collector-alice"
+        ? (this.modeType === "collector-alice" ? "COLLECTOR_ALICE" : "COLLECTOR")
         : this.modeType === "alice"
           ? "ALICE"
           : "CLASSIC"
@@ -138,6 +144,11 @@ export class Game {
     this.start();
   }
 
+  startCollectorAliceMode(targetTurns = 20) {
+    this.reset("collector-alice", { targetTurns });
+    this.start();
+  }
+
   getModeType() {
     return this.modeType;
   }
@@ -150,7 +161,7 @@ export class Game {
 
     if (this.state.getCats().length <= 0) {
       this.state.isGameOver = true;
-      this.state.gameEndReason = this.modeType === "alice" ? "alice-no-cats" : "no-cats";
+      this.state.gameEndReason = this.modeType === "alice" || this.modeType === "collector-alice" ? "alice-no-cats" : "no-cats";
       this.currentRule.terminate();
       return true;
     }
