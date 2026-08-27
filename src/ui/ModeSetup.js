@@ -22,7 +22,8 @@ export function ensureModeSetup(documentRef = document) {
   const options = [
     ["classic", "クラシックモード"],
     ["collector", "コレクターモード"],
-    ["alice", "アリスモード"]
+    ["alice", "アリスモード"],
+    ["collector-alice", "コレクター＋アリスモード"]
   ];
 
   for (const [value, label] of options) {
@@ -105,7 +106,7 @@ function renderCollectorCounts(ui, state, outcome) {
   if (!breakdown) return;
 
   const mode = state.getGameMode?.() ?? "CLASSIC";
-  if (mode !== "COLLECTOR") {
+  if (mode !== "COLLECTOR" && mode !== "COLLECTOR_ALICE") {
     breakdown.hidden = true;
     return;
   }
@@ -123,7 +124,14 @@ function renderCollectorCounts(ui, state, outcome) {
 }
 
 function renderCollectorGameOver(ui, state) {
-  if (state.getGameMode?.() !== "COLLECTOR" || state.gameEndReason !== "COLLECTOR_COMPLETE") {
+  if (
+    state.getGameMode?.() !== "COLLECTOR" &&
+    state.getGameMode?.() !== "COLLECTOR_ALICE"
+  ) {
+    return;
+  }
+
+  if (state.gameEndReason !== "COLLECTOR_COMPLETE") {
     return;
   }
 
@@ -159,9 +167,11 @@ export function installCollectorModeSupport(ui) {
       ui.elements.modeDescription.textContent =
         mode === "collector"
           ? "招き猫を3色集め、各色10匹以上にすることを目指すコレクターモードです。"
-          : alice
-            ? "目標ターンまで招き猫を1匹以上残せば勝利します。デフォルトは20ターンです。"
-            : "招き猫とサイコロで遊ぶ基本モードです。";
+          : mode === "collector-alice"
+            ? "コレクターモードにアリスの特殊ルールを組み合わせたモードです。"
+            : alice
+              ? "目標ターンまで招き猫を1匹以上残せば勝利します。デフォルトは20ターンです。"
+              : "招き猫とサイコロで遊ぶ基本モードです。";
     }
   };
 
@@ -169,7 +179,9 @@ export function installCollectorModeSupport(ui) {
     const mode = state.getGameMode?.() ?? "CLASSIC";
     if (ui.elements.modeSelect) {
       ui.elements.modeSelect.value =
-        mode === "COLLECTOR"
+       mode === "COLLECTOR_ALICE"
+        ? "collector-alice" 
+        : mode === "COLLECTOR"
           ? "collector"
           : mode === "ALICE"
             ? "alice"

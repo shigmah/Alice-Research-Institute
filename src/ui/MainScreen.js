@@ -510,11 +510,31 @@ export class MainScreen {
   }
 
   updateModeDisplay(state) {
-    const mode = state.getGameMode?.() ?? "CLASSIC";
+  const mode = state.getGameMode?.() ?? "CLASSIC";
+
     if (this.elements.modeSelect) {
-      this.elements.modeSelect.value = mode === "ALICE" ? "alice" : "classic";
+      switch (mode) {
+        case "COLLECTOR":
+          this.elements.modeSelect.value = "collector";
+          break;
+
+        case "ALICE":
+          this.elements.modeSelect.value = "alice";
+          break;
+
+        case "COLLECTOR_ALICE":
+          this.elements.modeSelect.value = "collector-alice";
+          break;
+
+        case "CLASSIC":
+        default:
+          this.elements.modeSelect.value = "classic";
+          break;
+      }
     }
+
     this.updateModeSetupUI();
+
     if (this.elements.targetTurnsInput && mode === "ALICE") {
       this.elements.targetTurnsInput.value = state.targetTurns ?? 20;
     }

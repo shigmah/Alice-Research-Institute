@@ -90,7 +90,10 @@ export class AliceModifier {
       return;
     }
 
-    if (this.gameState.getTurn() >= this.targetTurns) {
+    if (
+      this.gameState.getGameMode?.() === "ALICE" &&
+      this.gameState.getTurn() >= this.targetTurns
+    ) {
       this.gameState.isGameOver = true;
       this.gameState.gameEndReason = "alice-target-reached";
     }
