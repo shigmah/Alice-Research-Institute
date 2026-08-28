@@ -84,7 +84,7 @@ export class CollectorRule extends PlayRule {
   }
 
   isFinished() {
-    return this.gameState.isGameOver === true;
+    return this.gameState.isGameOver === true || this.gameState.getCats().length === 0;
   }
 
   terminate() {
