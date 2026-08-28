@@ -121,5 +121,5 @@ test("Collector Mode dropout is routed to the current rule", () => {
   assert.equal(game.state.fixedCatCount, before);
   assert.equal(game.state.hasDroppedOut, true);
   assert.equal(game.state.isGameOver, true);
-  assert.equal(game.state.gameEndReason, "DROPOUT");
+  assert.equal(game.state.gameEndReason, "player-dropout");
 });
