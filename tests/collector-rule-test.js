@@ -186,6 +186,6 @@ test("dropout marks the game as ended", () => {
   assert.equal(rule.executeDropout(), true);
   assert.equal(gameState.hasDroppedOut, true);
   assert.equal(gameState.isGameOver, true);
-  assert.equal(gameState.gameEndReason, "DROPOUT");
+  assert.equal(gameState.gameEndReason, "player-dropout");
   assert.equal(rule.canDropout(), false);
 });
