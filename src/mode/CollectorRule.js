@@ -101,7 +101,7 @@ export class CollectorRule extends PlayRule {
     this.gameState.fixedCatCount = this.gameState.getCats().length;
     this.gameState.hasDroppedOut = true;
     this.gameState.isGameOver = true;
-    this.gameState.gameEndReason = "DROPOUT";
+    this.gameState.gameEndReason = "player-dropout";
     return true;
   }
 
