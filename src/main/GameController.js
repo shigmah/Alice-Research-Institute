@@ -7,9 +7,13 @@ export class GameController {
     this.ui = ui;
     this.busy = false;
 
+    this.ui.onBattleContinue = () => this.battleContinue();
+    this.ui.onBattleDropout = () => this.battleDropout();
+
     this.unsubscribe = this.game.onChange((state, outcome) => {
       this.ui.render(state, outcome);
       this.ui.renderBattleStatus?.(this.game, state, outcome);
+      this.ui.renderBattleActions?.(this.game, state, outcome);
     });
 
     this.ui.bindActions({
@@ -30,11 +34,35 @@ export class GameController {
     this.ui.setBusy(true);
     try {
       await this.ui.playDiceAnimation(this.game.state.getCurrentDiceCount());
+      if (this.game.state.getGameMode?.() === "BATTLE") {
+        const activePlayer = this.game.battleMode?.getActivePlayer?.();
+        if (activePlayer?.setAction && activePlayer.constructor?.name !== "NpcPlayer") {
+          activePlayer.setAction({ action: "continue", source: "human" });
+        }
+      }
       return this.game.roll();
     } finally {
       this.busy = false;
       this.ui.setBusy(false);
     }
+  }
+
+  battleContinue() {
+    if (this.busy || this.game.state.isGameOver || this.game.hasActiveEvent?.()) return null;
+    const battle = this.game.battleMode;
+    const activePlayer = battle?.getActivePlayer?.();
+    if (!activePlayer || activePlayer.constructor?.name === "NpcPlayer") return null;
+    activePlayer.setAction?.({ action: "continue", source: "human" });
+    return this.roll();
+  }
+
+  battleDropout() {
+    if (this.busy || this.game.state.isGameOver || this.game.hasActiveEvent?.()) return null;
+    const battle = this.game.battleMode;
+    const activePlayer = battle?.getActivePlayer?.();
+    if (!activePlayer || activePlayer.constructor?.name === "NpcPlayer") return null;
+    activePlayer.setAction?.({ action: "dropout", source: "human" });
+    return this.game.roll();
   }
 
   mogumogu() {
