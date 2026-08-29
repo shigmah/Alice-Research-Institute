@@ -4,8 +4,11 @@ import { Game } from "../src/core/Game.js";
 
 function prepareBattle() {
   const game = new Game();
-  game.startBattleMode({ difficulty: "normal" });
+  game.startBattleMode({ difficulty: "easy" });
   game.eventManager.checkEvent = () => false;
+  // Keep the shared dice path deterministic and prevent a phase-2 prime
+  // from ending the battle before the turn-order assertion runs.
+  game.randomManager.random = () => 0.999999;
   return game;
 }
 
@@ -15,6 +18,7 @@ test("Battle alternates from Player 1 to the NPC on the next turn", () => {
   const npc = game.battleMode.player2;
 
   human.getAction = () => ({ action: "continue", source: "player1" });
+  npc.getAction = () => ({ type: "CONTINUE" });
 
   const first = game.roll();
   assert.equal(first?.mode?.player, human);
