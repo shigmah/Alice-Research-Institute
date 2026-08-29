@@ -6,20 +6,27 @@ export class Player {
     this.playRule = null;
     this.hasDroppedOut = false;
     this.fixedCatCount = null;
+    this.pendingAction = null;
   }
 
   initialize() {
     this.hasDroppedOut = false;
     this.fixedCatCount = null;
+    this.pendingAction = null;
   }
 
   update() {
     // Base Player has no concrete state-update logic.
   }
 
+  setAction(action) {
+    this.pendingAction = action ?? null;
+  }
+
   getAction() {
-    // Concrete player types provide the action-selection logic.
-    return null;
+    const action = this.pendingAction;
+    this.pendingAction = null;
+    return action;
   }
 
   reset() {
@@ -27,6 +34,7 @@ export class Player {
     this.playRule = null;
     this.hasDroppedOut = false;
     this.fixedCatCount = null;
+    this.pendingAction = null;
   }
 
   setDroppedOut(fixedCatCount) {
