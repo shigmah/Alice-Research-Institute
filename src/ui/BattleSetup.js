@@ -29,6 +29,27 @@ function ensureBattleStatusPanel(ui) {
     result.id = "battleResultLabel";
     panel.appendChild(result);
 
+    const actions = documentRef.createElement("div");
+    actions.id = "battleActionPanel";
+    actions.style.display = "flex";
+    actions.style.gap = "8px";
+    actions.style.marginTop = "10px";
+
+    const continueButton = documentRef.createElement("button");
+    continueButton.id = "battleContinue";
+    continueButton.type = "button";
+    continueButton.textContent = "🎲 続ける";
+    continueButton.addEventListener("click", () => ui.onBattleContinue?.());
+    actions.appendChild(continueButton);
+
+    const dropoutButton = documentRef.createElement("button");
+    dropoutButton.id = "battleDropout";
+    dropoutButton.type = "button";
+    dropoutButton.textContent = "↪ 脱落する";
+    dropoutButton.addEventListener("click", () => ui.onBattleDropout?.());
+    actions.appendChild(dropoutButton);
+
+    panel.appendChild(actions);
     modeSelect.parentNode.parentNode?.insertBefore(panel, modeSelect.parentNode.nextSibling);
   }
 
@@ -90,6 +111,9 @@ function renderBattleStatus(ui, game, state, outcome = null) {
   const turnLabel = documentRef.querySelector("#battleTurnLabel");
   const players = documentRef.querySelector("#battlePlayerStatus");
   const result = documentRef.querySelector("#battleResultLabel");
+  const actionPanel = documentRef.querySelector("#battleActionPanel");
+  const continueButton = documentRef.querySelector("#battleContinue");
+  const dropoutButton = documentRef.querySelector("#battleDropout");
 
   if (turnLabel) turnLabel.textContent = `ターン ${state.turn}：${activePlayer?.name ?? "---"} のターン`;
 
@@ -113,6 +137,11 @@ function renderBattleStatus(ui, game, state, outcome = null) {
       result.textContent = "";
     }
   }
+
+  const humanTurn = activePlayer && activePlayer.constructor?.name !== "NpcPlayer";
+  if (actionPanel) actionPanel.hidden = !humanTurn || Boolean(battleResult);
+  if (continueButton) continueButton.disabled = !humanTurn || Boolean(battleResult);
+  if (dropoutButton) dropoutButton.disabled = !humanTurn || Boolean(battleResult);
 }
 
 export function ensureBattleSetup(documentRef = document) {
@@ -149,6 +178,8 @@ export function ensureBattleSetup(documentRef = document) {
 export function installBattleModeSupport(ui) {
   if (!ui) return;
 
+  ensureBattleStatusPanel(ui);
+
   const originalUpdateModeSetupUI = ui.updateModeSetupUI?.bind(ui);
   ui.updateModeSetupUI = () => {
     originalUpdateModeSetupUI?.();
@@ -163,6 +194,10 @@ export function installBattleModeSupport(ui) {
   const originalUpdateModeDisplay = ui.updateModeDisplay?.bind(ui);
   ui.updateModeDisplay = state => {
     originalUpdateModeDisplay?.(state);
+    const mode = state?.getGameMode?.() ?? "CLASSIC";
+    if (mode === "BATTLE" && ui.elements.modeSelect) {
+      ui.elements.modeSelect.value = "battle";
+    }
     if (ui.elements.modeSelect?.value === "battle" && ui.elements.battleDifficultyField) {
       ui.elements.battleDifficultyField.hidden = false;
     }
@@ -178,6 +213,7 @@ export function installBattleModeSupport(ui) {
   };
 
   ui.renderBattleStatus = (game, state, outcome = null) => renderBattleStatus(ui, game, state, outcome);
+  ui.renderBattleActions = (game, state, outcome = null) => renderBattleStatus(ui, game, state, outcome);
 
   ui.elements.modeSelect?.addEventListener("change", () => ui.updateModeSetupUI());
   ui.updateModeSetupUI();
