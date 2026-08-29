@@ -90,6 +90,10 @@ export class BattleMode {
     this.playRule?.terminate?.();
   }
 
+  isDropoutAction(action) {
+    return action?.type === "DROP_OUT" || action?.action === "dropout";
+  }
+
   executeTurn() {
     if (this.isFinished()) return this.battleResult;
     if (!this.playRule) return null;
@@ -103,17 +107,26 @@ export class BattleMode {
     const action = activePlayer.getAction?.() ?? null;
     this.lastAction = action;
 
-    const modeResult = this.playRule.executeTurn?.(action);
-    this.lastTurnResult = modeResult ?? null;
+    let modeResult = null;
+    if (this.isDropoutAction(action)) {
+      const fixedCatCount = this.gameState.getCats().length;
+      activePlayer.setDroppedOut(fixedCatCount);
+      modeResult = { type: "DROP_OUT", fixedCatCount };
+    } else {
+      modeResult = this.playRule.executeTurn?.(action) ?? null;
+    }
+
+    this.lastTurnResult = modeResult;
 
     if (this.checkBattleEnd()) {
       this.finishBattle();
+      this.gameState.isGameOver = true;
     }
 
     return {
       player: activePlayer,
       action,
-      mode: modeResult ?? null,
+      mode: modeResult,
       battleResult: this.battleResult
     };
   }
