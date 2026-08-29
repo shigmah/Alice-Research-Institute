@@ -62,13 +62,11 @@ export class Game {
       modifiers
     );
 
-    this.battleMode = isBattleMode
-      ? new BattleMode(this.state)
-      : null;
-
     this.currentRule = this.modeType === "collector" || this.modeType === "collector-alice"
       ? this.collectorRule
       : this.classicRule;
+
+    this.battleMode = null;
 
     this.currentRule.initialize();
     this.state.setGameMode(
@@ -125,7 +123,7 @@ export class Game {
     this.turnManager = new TurnManager(
       this.state,
       this.eventManager,
-      isBattleMode ? this.battleMode : this.currentRule,
+      this.currentRule,
       this.catManager,
       modifiers
     );
