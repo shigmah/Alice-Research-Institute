@@ -4,6 +4,7 @@ import { RandomManager } from "./RandomManager.js";
 import { EventManager } from "./EventManager.js";
 import { TurnManager } from "./TurnManager.js";
 import { ClassicRule } from "../mode/ClassicRule.js";
+import { CollectorRule } from "../mode/CollectorRule.js";
 import { AliceModifier } from "./AliceModifier.js";
 import { CheshireEvent } from "../event/CheshireEvent.js";
 import { MogumoguJudge } from "../event/MogumoguJudge.js";
@@ -19,7 +20,11 @@ export class Game {
   }
 
   reset(mode = this.modeType, { targetTurns = this.targetTurns } = {}) {
-    this.modeType = mode === "alice" ? "alice" : "classic";
+    const normalizedMode = ["classic", "alice", "collector", "collector-alice"].includes(mode)
+      ? mode
+      : "classic";
+
+    this.modeType = normalizedMode;
     this.targetTurns = Number.isInteger(Number(targetTurns))
       ? Math.min(999, Math.max(1, Number(targetTurns)))
       : 20;
@@ -27,20 +32,46 @@ export class Game {
     this.catManager = new CatManager(this.state);
     this.randomManager = new RandomManager();
 
-    this.aliceModifier = this.modeType === "alice"
+    const isAliceMode = this.modeType === "alice";
+    const isCollectorAliceMode = this.modeType === "collector-alice";
+
+    this.aliceModifier = isAliceMode || isCollectorAliceMode
       ? new AliceModifier(this.state, this.catManager, this.randomManager, {
-          targetTurns: this.targetTurns
+          targetTurns: this.targetTurns,
+          lifetimeByColor: isCollectorAliceMode
+            ? { white: 4, black: 6, gold: 8 }
+            : null
         })
       : null;
+
+    const modifiers = this.aliceModifier ? [this.aliceModifier] : [];
 
     this.classicRule = new ClassicRule(
       this.state,
       this.catManager,
       this.randomManager,
-      this.aliceModifier ? [this.aliceModifier] : []
+      modifiers
     );
-    this.classicRule.initialize();
-    this.state.setGameMode(this.modeType === "alice" ? "ALICE" : "CLASSIC");
+
+    this.collectorRule = new CollectorRule(
+      this.state,
+      this.catManager,
+      this.randomManager,
+      modifiers
+    );
+
+    this.currentRule = this.modeType === "collector" || this.modeType === "collector-alice"
+      ? this.collectorRule
+      : this.classicRule;
+
+    this.currentRule.initialize();
+    this.state.setGameMode(
+      this.modeType === "collector" || this.modeType === "collector-alice"
+        ? (this.modeType === "collector-alice" ? "COLLECTOR_ALICE" : "COLLECTOR")
+        : this.modeType === "alice"
+          ? "ALICE"
+          : "CLASSIC"
+    );
     this.state.targetTurns = this.targetTurns;
 
     this.cheshireEvent = new CheshireEvent({
@@ -88,9 +119,9 @@ export class Game {
     this.turnManager = new TurnManager(
       this.state,
       this.eventManager,
-      this.classicRule,
+      this.currentRule,
       this.catManager,
-      this.aliceModifier ? [this.aliceModifier] : []
+      modifiers
     );
   }
 
@@ -108,17 +139,13 @@ export class Game {
     this.start();
   }
 
-  getModeType() {
-    return this.modeType;
-  }
-
-  startClassicMode() {
-    this.reset("classic");
+  startCollectorMode() {
+    this.reset("collector");
     this.start();
   }
 
-  startAliceMode(targetTurns = 20) {
-    this.reset("alice", { targetTurns });
+  startCollectorAliceMode(targetTurns = 20) {
+    this.reset("collector-alice", { targetTurns });
     this.start();
   }
 
@@ -134,8 +161,8 @@ export class Game {
 
     if (this.state.getCats().length <= 0) {
       this.state.isGameOver = true;
-      this.state.gameEndReason = this.modeType === "alice" ? "alice-no-cats" : "no-cats";
-      this.classicRule.terminate();
+      this.state.gameEndReason = this.modeType === "alice" || this.modeType === "collector-alice" ? "alice-no-cats" : "no-cats";
+      this.currentRule.terminate();
       return true;
     }
     return false;
@@ -204,6 +231,12 @@ export class Game {
 
     const outcome = {
       event: result,
+      alice: this.aliceModifier
+        ? {
+            lifetimeChanges: this.aliceModifier.getLastLifetimeChanges(),
+            targetTurns: this.targetTurns
+          }
+        : null,
       gameEnd: this.state.isGameOver ? { reason: this.state.gameEndReason ?? "no-cats" } : null,
       state: this.state
     };
@@ -228,28 +261,12 @@ export class Game {
         message: "もぐもぐチャレンジを見送りました。",
         payload: { declined: true, finished: true }
       },
-      state: this.state
-    };
-    this.emit(this.state, outcome);
-    return outcome;
-  }
-
-  declineCurrentEvent() {
-    if (this.state.isGameOver || !this.hasActiveEvent()) return null;
-
-    this.eventManager.endEvent();
-    this.turnManager.updateGameState();
-
-    if (this.state.isGameOver) return null;
-
-    this.turnManager.endTurn();
-
-    const outcome = {
-      event: {
-        eventId: "mogumogu",
-        message: "もぐもぐチャレンジを見送りました。",
-        payload: { declined: true, finished: true }
-      },
+      alice: this.aliceModifier
+        ? {
+            lifetimeChanges: this.aliceModifier.getLastLifetimeChanges(),
+            targetTurns: this.targetTurns
+          }
+        : null,
       state: this.state
     };
     this.emit(this.state, outcome);
@@ -286,11 +303,13 @@ export class Game {
   dropout() {
     if (this.state.isGameOver || this.state.hasDroppedOut) return null;
 
-    this.classicRule.executeDropout();
+    this.currentRule.executeDropout?.();
+
+    if (!this.state.hasDroppedOut) return null;
 
     const outcome = {
       action: { action: "dropout" },
-      gameEnd: { reason: "player-dropout" },
+      gameEnd: { reason: this.state.gameEndReason ?? "player-dropout" },
       state: this.state
     };
 

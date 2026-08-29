@@ -1,8 +1,9 @@
 import { readdirSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 
-const dir = new URL(".", import.meta.url).pathname;
+const dir = dirname(fileURLToPath(import.meta.url));
 const files = readdirSync(dir)
   .filter(name => name.endsWith(".js") && name !== "run-all-tests.mjs")
   .sort();
