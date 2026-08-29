@@ -129,6 +129,11 @@ export class Game {
       this.catManager,
       modifiers
     );
+
+    if (isBattleMode) {
+      this.battleMode = new BattleMode(this.state, this.turnManager);
+      this.battleMode.selectRule(this.currentRule);
+    }
   }
 
   start() {
