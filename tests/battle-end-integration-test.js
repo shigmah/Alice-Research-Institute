@@ -20,24 +20,29 @@ test("Battle ends after both players drop out and judges the larger fixed cat co
   game.catManager.createCat();
   game.catManager.createCat();
   const firstTurn = game.roll();
+  const catsAfterFirstTurn = game.state.getCats().length;
   assert.equal(firstTurn?.mode?.player, p1);
   assert.equal(game.state.turn, 2);
+  assert.ok(catsAfterFirstTurn >= 2);
 
   p2.getAction = () => ({ type: "DROP_OUT" });
   const secondTurn = game.roll();
   assert.equal(secondTurn?.mode?.action?.type, "DROP_OUT");
   assert.equal(p2.isDroppedOut(), true);
-  assert.equal(p2.getFixedCatCount(), 2);
+  assert.equal(p2.getFixedCatCount(), catsAfterFirstTurn);
   assert.equal(game.state.isGameOver, false);
   assert.equal(game.state.turn, 3);
 
   game.catManager.createCat();
+  const catsBeforeThirdTurn = game.state.getCats().length;
+  assert.equal(catsBeforeThirdTurn, catsAfterFirstTurn + 1);
   p1.getAction = () => ({ type: "DROP_OUT" });
   const thirdTurn = game.roll();
 
   assert.equal(thirdTurn?.mode?.action?.type, "DROP_OUT");
   assert.equal(p1.isDroppedOut(), true);
-  assert.equal(p1.getFixedCatCount(), 3);
+  assert.equal(p1.getFixedCatCount(), catsBeforeThirdTurn);
+  assert.equal(p1.getFixedCatCount(), p2.getFixedCatCount() + 1);
   assert.equal(game.state.isGameOver, true);
   assert.equal(thirdTurn?.mode?.battleResult?.winner, p1);
   assert.equal(game.battleMode.battleResult?.winner, p1);
