@@ -1,9 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import Game from "../src/core/Game.js";
+import { Game } from "../src/core/Game.js";
 import BattleMode from "../src/mode/BattleMode.js";
 
-test("Game creates BattleMode and keeps it separate from the classic rule", () => {
+test("Game creates BattleMode and routes TurnManager through it while preserving the classic rule", () => {
   const game = new Game();
   game.reset("battle");
 
@@ -11,7 +11,8 @@ test("Game creates BattleMode and keeps it separate from the classic rule", () =
   assert.equal(game.state.getGameMode(), "BATTLE");
   assert.ok(game.battleMode instanceof BattleMode);
   assert.equal(game.currentRule, game.classicRule);
-  assert.equal(game.turnManager.currentMode, game.currentRule);
+  assert.equal(game.battleMode.playRule, game.currentRule);
+  assert.equal(game.turnManager.currentMode, game.battleMode);
 });
 
 test("Game exposes a battle start entry point without changing the existing rule pipeline", () => {
@@ -26,6 +27,8 @@ test("Game exposes a battle start entry point without changing the existing rule
   assert.equal(state, game.state);
   assert.equal(game.getModeType(), "battle");
   assert.equal(game.state.getGameMode(), "BATTLE");
+  assert.ok(game.battleMode instanceof BattleMode);
+  assert.equal(game.battleMode.playRule, game.currentRule);
   assert.equal(emitted, null);
 });
 
@@ -41,7 +44,6 @@ test("GameController can select battle mode and invoke its start entry point", a
     setBusy() {}
   };
 
-  // Import lazily to keep this test focused on the controller's mode switch.
   const { GameController } = await import("../src/main/GameController.js");
   const controller = new GameController({ game, ui });
 
