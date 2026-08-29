@@ -1,11 +1,16 @@
 import { GameState } from "./GameState.js";
 import { CatManager } from "./CatManager.js";
 import { RandomManager } from "./RandomManager.js";
-import { EventManager } from "./EventManager.js";
 import { TurnManager } from "./TurnManager.js";
 import { ClassicRule } from "../mode/ClassicRule.js";
 import { CollectorRule } from "../mode/CollectorRule.js";
 import { BattleMode } from "../mode/BattleMode.js";
+import Player from "../player/Player.js";
+import NpcPlayer from "../player/NpcPlayer.js";
+import NpcAI from "../ai/NpcAI.js";
+import EasyStrategy from "../ai/strategy/EasyStrategy.js";
+import NormalStrategy from "../ai/strategy/NormalStrategy.js";
+import HardStrategy from "../ai/strategy/HardStrategy.js";
 import { AliceModifier } from "./AliceModifier.js";
 import { CheshireEvent } from "../event/CheshireEvent.js";
 import { MogumoguJudge } from "../event/MogumoguJudge.js";
@@ -123,7 +128,7 @@ export class Game {
     this.turnManager = new TurnManager(
       this.state,
       this.eventManager,
-      this.currentRule,
+      isBattleMode ? this.battleMode : this.currentRule,
       this.catManager,
       modifiers
     );
@@ -140,7 +145,58 @@ export class Game {
   startAliceMode(targetTurns = 20) { this.reset("alice", { targetTurns }); this.start(); }
   startCollectorMode() { this.reset("collector"); this.start(); }
   startCollectorAliceMode(targetTurns = 20) { this.reset("collector-alice", { targetTurns }); this.start(); }
-  startBattleMode() { this.reset("battle"); this.start(); return this.state; }
+
+  startBattleMode(options = {}) {
+    this.reset("battle");
+    this.setupBattlePlayers(options);
+    this.start();
+    return this.state;
+  }
+
+  setupBattlePlayers({
+    playerId = 1,
+    playerName = "Player 1",
+    npcId = 2,
+    npcName = "NPC",
+    difficulty = "easy"
+  } = {}) {
+    if (!this.battleMode) {
+      throw new Error("Battle mode must be started before players can be configured");
+    }
+
+    const strategies = {
+      easy: () => new EasyStrategy(() => this.randomManager.nextDouble()),
+      normal: () => new NormalStrategy(),
+      hard: () => new HardStrategy()
+    };
+
+    const normalizedDifficulty = String(difficulty).toLowerCase();
+    const createStrategy = strategies[normalizedDifficulty];
+    if (!createStrategy) {
+      throw new Error(`Unsupported battle difficulty: ${difficulty}`);
+    }
+
+    const player = new Player(playerId, playerName);
+    const npcAI = new NpcAI(this.state, createStrategy());
+    const npcPlayer = new NpcPlayer(npcId, npcName, normalizedDifficulty, npcAI);
+
+    for (const participant of [player, npcPlayer]) {
+      participant.currentState = this.state;
+      participant.playRule = this.currentRule;
+      participant.initialize();
+    }
+    npcAI.update(this.state);
+
+    this.battleMode.setPlayers(player, npcPlayer);
+
+    return {
+      player,
+      npcPlayer,
+      difficulty: normalizedDifficulty,
+      strategy: npcAI.getStrategy()
+    };
+  }
+
   getModeType() { return this.modeType; }
 
   ensureGameOverIfNoCats() {
