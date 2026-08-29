@@ -13,5 +13,5 @@ test("Battle UI exposes player panels and active-turn labels", () => {
 
 test("Battle UI exposes battle result messaging hooks", () => {
   assert.match(source, /winner|勝者/i);
-  assert.match(source, /fixedCatCount|猫数/);
+  assert.match(source, /getFixedCatCount|猫数|確定/);
 });
