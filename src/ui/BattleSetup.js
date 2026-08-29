@@ -1,29 +1,31 @@
 function ensureBattleStatusPanel(ui) {
-  const modeSelect = ui.document.querySelector("#modeSelect");
+  const documentRef = ui?.document;
+  if (!documentRef?.querySelector) return null;
+  const modeSelect = documentRef.querySelector("#modeSelect");
   if (!modeSelect?.parentNode) return null;
 
-  let panel = ui.document.querySelector("#battleStatusPanel");
+  let panel = documentRef.querySelector("#battleStatusPanel");
   if (!panel) {
-    panel = ui.document.createElement("section");
+    panel = documentRef.createElement("section");
     panel.id = "battleStatusPanel";
     panel.hidden = true;
     panel.className = "panel battle-status-panel";
     panel.style.marginTop = "12px";
 
-    const title = ui.document.createElement("h3");
+    const title = documentRef.createElement("h3");
     title.id = "battleStatusTitle";
     title.textContent = "⚔️ バトル状況";
     panel.appendChild(title);
 
-    const turn = ui.document.createElement("p");
+    const turn = documentRef.createElement("p");
     turn.id = "battleTurnLabel";
     panel.appendChild(turn);
 
-    const players = ui.document.createElement("div");
+    const players = documentRef.createElement("div");
     players.id = "battlePlayerStatus";
     panel.appendChild(players);
 
-    const result = ui.document.createElement("p");
+    const result = documentRef.createElement("p");
     result.id = "battleResultLabel";
     panel.appendChild(result);
 
@@ -35,21 +37,22 @@ function ensureBattleStatusPanel(ui) {
 
 function renderBattlePlayer(ui, player, activePlayer) {
   if (!player) return null;
-  const row = ui.document.createElement("div");
+  const documentRef = ui.document;
+  const row = documentRef.createElement("div");
   row.className = "battle-player-row";
 
-  const name = ui.document.createElement("strong");
+  const name = documentRef.createElement("strong");
   name.textContent = player.name ?? `Player ${player.id ?? ""}`;
   row.appendChild(name);
 
   if (player === activePlayer) {
-    const active = ui.document.createElement("span");
+    const active = documentRef.createElement("span");
     active.textContent = " ← あなたのターン";
     row.appendChild(active);
   }
 
   if (player.isDroppedOut?.()) {
-    const dropout = ui.document.createElement("span");
+    const dropout = documentRef.createElement("span");
     const fixed = player.getFixedCatCount?.();
     dropout.textContent = Number.isFinite(fixed)
       ? ` （脱落・確定${fixed}匹）`
@@ -61,8 +64,9 @@ function renderBattlePlayer(ui, player, activePlayer) {
 }
 
 function renderBattleStatus(ui, game, state, outcome = null) {
+  const documentRef = ui?.document;
   const panel = ensureBattleStatusPanel(ui);
-  if (!panel) return;
+  if (!panel || !documentRef?.querySelector) return;
 
   const isBattle = state?.getGameMode?.() === "BATTLE";
   panel.hidden = !isBattle;
@@ -70,9 +74,9 @@ function renderBattleStatus(ui, game, state, outcome = null) {
 
   const battle = game?.battleMode;
   const activePlayer = battle?.getActivePlayer?.() ?? outcome?.mode?.player ?? null;
-  const turnLabel = ui.document.querySelector("#battleTurnLabel");
-  const players = ui.document.querySelector("#battlePlayerStatus");
-  const result = ui.document.querySelector("#battleResultLabel");
+  const turnLabel = documentRef.querySelector("#battleTurnLabel");
+  const players = documentRef.querySelector("#battlePlayerStatus");
+  const result = documentRef.querySelector("#battleResultLabel");
 
   if (turnLabel) turnLabel.textContent = `ターン ${state.turn}：${activePlayer?.name ?? "---"} のターン`;
 
@@ -145,7 +149,7 @@ export function installBattleModeSupport(ui) {
   const originalUpdateModeDisplay = ui.updateModeDisplay?.bind(ui);
   ui.updateModeDisplay = state => {
     originalUpdateModeDisplay?.(state);
-    if (ui.elements.modeSelect?.value === "battle") {
+    if (ui.elements.modeSelect?.value === "battle" && ui.elements.battleDifficultyField) {
       ui.elements.battleDifficultyField.hidden = false;
     }
   };
