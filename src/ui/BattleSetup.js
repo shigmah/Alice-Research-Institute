@@ -35,7 +35,7 @@ function ensureBattleStatusPanel(ui) {
   return panel;
 }
 
-function renderBattlePlayer(ui, player, activePlayer) {
+function renderBattlePlayer(ui, player, activePlayer, currentCatCount = null) {
   if (!player) return null;
   const documentRef = ui.document;
   const row = documentRef.createElement("div");
@@ -45,18 +45,31 @@ function renderBattlePlayer(ui, player, activePlayer) {
   name.textContent = player.name ?? `Player ${player.id ?? ""}`;
   row.appendChild(name);
 
+  const identity = documentRef.createElement("span");
+  identity.textContent = player instanceof Object && player.constructor?.name === "NpcPlayer" ? " 🤖" : " 🧑";
+  row.appendChild(identity);
+
   if (player === activePlayer) {
     const active = documentRef.createElement("span");
     active.textContent = " ← あなたのターン";
     row.appendChild(active);
   }
 
+  const fixedCatCount = player.getFixedCatCount?.();
+  const catCount = Number.isFinite(fixedCatCount)
+    ? fixedCatCount
+    : player === activePlayer && Number.isFinite(currentCatCount)
+      ? currentCatCount
+      : null;
+  if (Number.isFinite(catCount)) {
+    const cats = documentRef.createElement("span");
+    cats.textContent = ` （猫${catCount}匹）`;
+    row.appendChild(cats);
+  }
+
   if (player.isDroppedOut?.()) {
     const dropout = documentRef.createElement("span");
-    const fixed = player.getFixedCatCount?.();
-    dropout.textContent = Number.isFinite(fixed)
-      ? ` （脱落・確定${fixed}匹）`
-      : " （脱落）";
+    dropout.textContent = " （脱落）";
     row.appendChild(dropout);
   }
 
@@ -82,8 +95,8 @@ function renderBattleStatus(ui, game, state, outcome = null) {
 
   if (players) {
     players.replaceChildren();
-    const player1 = renderBattlePlayer(ui, battle?.player1, activePlayer);
-    const player2 = renderBattlePlayer(ui, battle?.player2, activePlayer);
+    const player1 = renderBattlePlayer(ui, battle?.player1, activePlayer, state.getCats?.().length);
+    const player2 = renderBattlePlayer(ui, battle?.player2, activePlayer, state.getCats?.().length);
     if (player1) players.appendChild(player1);
     if (player2) players.appendChild(player2);
   }
@@ -92,8 +105,9 @@ function renderBattleStatus(ui, game, state, outcome = null) {
   if (result) {
     if (battleResult) {
       const winner = battleResult.winner;
+      const winnerCount = winner?.getFixedCatCount?.();
       result.textContent = winner
-        ? `🏆 勝者：${winner.name ?? "プレイヤー"}`
+        ? `🏆 勝者：${winner.name ?? "プレイヤー"}${Number.isFinite(winnerCount) ? `（確定${winnerCount}匹）` : ""}`
         : "🤝 引き分け";
     } else {
       result.textContent = "";
