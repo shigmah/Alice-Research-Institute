@@ -6,7 +6,9 @@ console.assert(game.state.turn === 1, "initial turn");
 console.assert(game.state.getCats().length === 0, "initial cats");
 console.assert(game.state.getCurrentDiceCount() === 1, "initial dice count");
 
-// 乱数に依存するため、まず「実行される」ことと、状態の基本整合性を確認。
+// 通常ターンの進行だけを検証するため、自動イベント発生は無効化する。
+game.eventManager.checkEvent = () => false;
+
 const outcome = game.roll();
 
 console.assert(outcome !== null, "roll returns outcome");
