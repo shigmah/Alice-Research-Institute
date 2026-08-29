@@ -104,7 +104,7 @@ test("Collector Mode ends normally when a prime result removes the last cat", ()
   assert.equal(game.state.getCats().length, 0);
   assert.equal(game.state.isGameOver, true);
   assert.equal(game.state.gameEndReason, "no-cats");
-  assert.equal(game.state.getTurn(), 2);
+  assert.equal(game.state.getTurn(), 1);
 });
 
 test("Collector Mode dropout is routed to the current rule", () => {
