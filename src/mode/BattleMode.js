@@ -36,8 +36,12 @@ export class BattleMode {
   }
 
   getActivePlayer() {
-    if (this.player1 && !this.player1.isDroppedOut?.()) return this.player1;
-    if (this.player2 && !this.player2.isDroppedOut?.()) return this.player2;
+    const turn = Number.isInteger(this.gameState?.turn) ? this.gameState.turn : 1;
+    const preferredPlayer = turn % 2 === 1 ? this.player1 : this.player2;
+    const alternatePlayer = preferredPlayer === this.player1 ? this.player2 : this.player1;
+
+    if (preferredPlayer && !preferredPlayer.isDroppedOut?.()) return preferredPlayer;
+    if (alternatePlayer && !alternatePlayer.isDroppedOut?.()) return alternatePlayer;
     return null;
   }
 
