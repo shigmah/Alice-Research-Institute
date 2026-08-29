@@ -24,8 +24,8 @@ test("Human Battle actions are queued before Game.roll", () => {
   assert.match(playerSource, /pendingAction/);
   assert.match(controllerSource, /battleContinue\(\)/);
   assert.match(controllerSource, /battleDropout\(\)/);
-  assert.match(controllerSource, /setAction\(\{ action: "continue", source: "human" \}\)/);
-  assert.match(controllerSource, /setAction\(\{ action: "dropout", source: "human" \}\)/);
+  assert.match(controllerSource, /setAction(?:\?\.)?\(\{ action: "continue", source: "human" \}\)/);
+  assert.match(controllerSource, /setAction(?:\?\.)?\(\{ action: "dropout", source: "human" \}\)/);
 });
 
 console.log("Battle action UI tests: PASS");
