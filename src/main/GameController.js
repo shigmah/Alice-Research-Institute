@@ -21,20 +21,14 @@ export class GameController {
     });
   }
 
-  start() {
-    this.game.start();
-  }
+  start() { this.game.start(); }
 
   async roll() {
     if (this.busy || this.game.state.isGameOver || this.game.hasActiveEvent?.()) return null;
-
     this.busy = true;
     this.ui.setBusy(true);
-
     try {
-      await this.ui.playDiceAnimation(
-        this.game.state.getCurrentDiceCount()
-      );
+      await this.ui.playDiceAnimation(this.game.state.getCurrentDiceCount());
       return this.game.roll();
     } finally {
       this.busy = false;
@@ -44,14 +38,10 @@ export class GameController {
 
   mogumogu() {
     if (this.busy || this.game.state.isGameOver) return null;
-
     this.busy = true;
     this.ui.setBusy(true);
-
     try {
-      return this.game.hasActiveEvent?.()
-        ? this.game.continueCurrentEvent()
-        : this.game.stepMogumogu();
+      return this.game.hasActiveEvent?.() ? this.game.continueCurrentEvent() : this.game.stepMogumogu();
     } finally {
       this.busy = false;
       this.ui.setBusy(false);
@@ -77,6 +67,8 @@ export class GameController {
       this.game.startCollectorAliceMode();
     } else if (mode === "alice") {
       this.game.startAliceMode(targetTurns);
+    } else if (mode === "battle") {
+      this.game.startBattleMode();
     } else {
       this.game.startClassicMode();
     }
@@ -85,9 +77,7 @@ export class GameController {
   }
 
   dropout() {
-    if (this.busy || this.game.state.isGameOver || this.game.state.hasDroppedOut || this.game.hasActiveEvent?.()) {
-      return null;
-    }
+    if (this.busy || this.game.state.isGameOver || this.game.state.hasDroppedOut || this.game.hasActiveEvent?.()) return null;
     return this.game.dropout();
   }
 
@@ -99,7 +89,5 @@ export class GameController {
     this.game.start();
   }
 
-  destroy() {
-    this.unsubscribe?.();
-  }
+  destroy() { this.unsubscribe?.(); }
 }
