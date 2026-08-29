@@ -46,14 +46,12 @@ export class BattleMode {
   }
 
   checkBattleEnd() {
-    // The battle starts with an empty field. Allow the first player to take
-    // the opening turn so the shared PlayRule can generate the initial cats.
     if (this.gameState.turn === 1 && this.gameState.getCats().length === 0) {
       return this.player1?.isDroppedOut?.() && this.player2?.isDroppedOut?.();
     }
 
-    if (this.playRule?.isFinished?.() === true) return true;
     if (this.player1?.isDroppedOut?.() && this.player2?.isDroppedOut?.()) return true;
+    if (this.playRule?.isFinished?.() === true) return true;
     return false;
   }
 
