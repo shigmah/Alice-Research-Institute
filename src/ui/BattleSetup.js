@@ -1,3 +1,102 @@
+function ensureBattleStatusPanel(ui) {
+  const modeSelect = ui.document.querySelector("#modeSelect");
+  if (!modeSelect?.parentNode) return null;
+
+  let panel = ui.document.querySelector("#battleStatusPanel");
+  if (!panel) {
+    panel = ui.document.createElement("section");
+    panel.id = "battleStatusPanel";
+    panel.hidden = true;
+    panel.className = "panel battle-status-panel";
+    panel.style.marginTop = "12px";
+
+    const title = ui.document.createElement("h3");
+    title.id = "battleStatusTitle";
+    title.textContent = "⚔️ バトル状況";
+    panel.appendChild(title);
+
+    const turn = ui.document.createElement("p");
+    turn.id = "battleTurnLabel";
+    panel.appendChild(turn);
+
+    const players = ui.document.createElement("div");
+    players.id = "battlePlayerStatus";
+    panel.appendChild(players);
+
+    const result = ui.document.createElement("p");
+    result.id = "battleResultLabel";
+    panel.appendChild(result);
+
+    modeSelect.parentNode.parentNode?.insertBefore(panel, modeSelect.parentNode.nextSibling);
+  }
+
+  return panel;
+}
+
+function renderBattlePlayer(ui, player, activePlayer) {
+  if (!player) return null;
+  const row = ui.document.createElement("div");
+  row.className = "battle-player-row";
+
+  const name = ui.document.createElement("strong");
+  name.textContent = player.name ?? `Player ${player.id ?? ""}`;
+  row.appendChild(name);
+
+  if (player === activePlayer) {
+    const active = ui.document.createElement("span");
+    active.textContent = " ← あなたのターン";
+    row.appendChild(active);
+  }
+
+  if (player.isDroppedOut?.()) {
+    const dropout = ui.document.createElement("span");
+    const fixed = player.getFixedCatCount?.();
+    dropout.textContent = Number.isFinite(fixed)
+      ? ` （脱落・確定${fixed}匹）`
+      : " （脱落）";
+    row.appendChild(dropout);
+  }
+
+  return row;
+}
+
+function renderBattleStatus(ui, game, state, outcome = null) {
+  const panel = ensureBattleStatusPanel(ui);
+  if (!panel) return;
+
+  const isBattle = state?.getGameMode?.() === "BATTLE";
+  panel.hidden = !isBattle;
+  if (!isBattle) return;
+
+  const battle = game?.battleMode;
+  const activePlayer = battle?.getActivePlayer?.() ?? outcome?.mode?.player ?? null;
+  const turnLabel = ui.document.querySelector("#battleTurnLabel");
+  const players = ui.document.querySelector("#battlePlayerStatus");
+  const result = ui.document.querySelector("#battleResultLabel");
+
+  if (turnLabel) turnLabel.textContent = `ターン ${state.turn}：${activePlayer?.name ?? "---"} のターン`;
+
+  if (players) {
+    players.replaceChildren();
+    const player1 = renderBattlePlayer(ui, battle?.player1, activePlayer);
+    const player2 = renderBattlePlayer(ui, battle?.player2, activePlayer);
+    if (player1) players.appendChild(player1);
+    if (player2) players.appendChild(player2);
+  }
+
+  const battleResult = battle?.battleResult ?? outcome?.mode?.battleResult;
+  if (result) {
+    if (battleResult) {
+      const winner = battleResult.winner;
+      result.textContent = winner
+        ? `🏆 勝者：${winner.name ?? "プレイヤー"}`
+        : "🤝 引き分け";
+    } else {
+      result.textContent = "";
+    }
+  }
+}
+
 export function ensureBattleSetup(documentRef = document) {
   if (documentRef.querySelector("#battleDifficultyField")) return;
 
@@ -39,6 +138,8 @@ export function installBattleModeSupport(ui) {
     if (ui.elements.battleDifficultyField) {
       ui.elements.battleDifficultyField.hidden = mode !== "battle";
     }
+    const panel = ensureBattleStatusPanel(ui);
+    if (panel) panel.hidden = mode !== "battle";
   };
 
   const originalUpdateModeDisplay = ui.updateModeDisplay?.bind(ui);
@@ -57,6 +158,8 @@ export function installBattleModeSupport(ui) {
       difficulty: ui.elements.battleDifficultySelect?.value ?? "easy"
     };
   };
+
+  ui.renderBattleStatus = (game, state, outcome = null) => renderBattleStatus(ui, game, state, outcome);
 
   ui.elements.modeSelect?.addEventListener("change", () => ui.updateModeSetupUI());
   ui.updateModeSetupUI();
