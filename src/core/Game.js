@@ -142,7 +142,7 @@ export class Game {
   startAliceMode(targetTurns = 20) { this.reset("alice", { targetTurns }); this.start(); }
   startCollectorMode() { this.reset("collector"); this.start(); }
   startCollectorAliceMode(targetTurns = 20) { this.reset("collector-alice", { targetTurns }); this.start(); }
-  startBattleMode() { this.reset("battle"); this.start(); }
+  startBattleMode() { this.reset("battle"); this.start(); return this.state; }
   getModeType() { return this.modeType; }
 
   ensureGameOverIfNoCats() {
