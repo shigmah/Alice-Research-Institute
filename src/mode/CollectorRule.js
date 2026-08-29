@@ -84,7 +84,16 @@ export class CollectorRule extends PlayRule {
   }
 
   isFinished() {
-    return this.gameState.isGameOver === true || this.gameState.getCats().length === 0;
+    if (this.gameState.isGameOver === true) {
+      return true;
+    }
+
+    if (this.gameState.getCats().length === 0) {
+      this.gameState.gameEndReason = "no-cats";
+      return true;
+    }
+
+    return false;
   }
 
   terminate() {
