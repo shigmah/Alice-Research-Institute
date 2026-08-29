@@ -6,12 +6,16 @@ export class BattleMode {
     this.player1 = null;
     this.player2 = null;
     this.battleResult = null;
-    this.isFinished = false;
+    this.finished = false;
+    this.lastAction = null;
+    this.lastTurnResult = null;
   }
 
   initialize() {
-    this.isFinished = false;
+    this.finished = false;
     this.battleResult = null;
+    this.lastAction = null;
+    this.lastTurnResult = null;
   }
 
   selectRule(playRule) {
@@ -56,13 +60,56 @@ export class BattleMode {
     return null;
   }
 
+  isFinished() {
+    return this.finished || this.checkBattleEnd();
+  }
+
+  finishBattle() {
+    if (!this.checkBattleEnd()) return null;
+
+    this.battleResult = {
+      winner: this.judgeWinner(),
+      player1: this.player1,
+      player2: this.player2
+    };
+    return this.battleResult;
+  }
+
   terminate() {
-    this.isFinished = true;
+    this.finished = true;
     this.playRule?.terminate?.();
   }
 
+  executeTurn() {
+    if (this.isFinished()) return this.battleResult;
+    if (!this.playRule) return null;
+
+    const activePlayer = this.getActivePlayer();
+    if (!activePlayer) {
+      this.finishBattle();
+      return this.battleResult;
+    }
+
+    const action = activePlayer.getAction?.() ?? null;
+    this.lastAction = action;
+
+    const modeResult = this.playRule.executeTurn?.(action);
+    this.lastTurnResult = modeResult ?? null;
+
+    if (this.checkBattleEnd()) {
+      this.finishBattle();
+    }
+
+    return {
+      player: activePlayer,
+      action,
+      mode: modeResult ?? null,
+      battleResult: this.battleResult
+    };
+  }
+
   executeBattle() {
-    if (this.isFinished) return this.battleResult;
+    if (this.finished) return this.battleResult;
 
     this.initialize();
 
@@ -70,13 +117,8 @@ export class BattleMode {
 
     this.playRule.initialize?.();
 
-    const battleEnded = this.checkBattleEnd();
-    if (battleEnded) {
-      this.battleResult = {
-        winner: this.judgeWinner(),
-        player1: this.player1,
-        player2: this.player2
-      };
+    if (this.checkBattleEnd()) {
+      this.finishBattle();
       this.terminate();
     }
 
