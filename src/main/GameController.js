@@ -9,6 +9,7 @@ export class GameController {
 
     this.unsubscribe = this.game.onChange((state, outcome) => {
       this.ui.render(state, outcome);
+      this.ui.renderBattleStatus?.(this.game, state, outcome);
     });
 
     this.ui.bindActions({
