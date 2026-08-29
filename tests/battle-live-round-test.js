@@ -32,6 +32,7 @@ test("Battle executes a human continue, then an NPC turn", () => {
 
 test("Battle ends when the human chooses dropout and the NPC later drops out", () => {
   const game = prepareBattle();
+  game.catManager.createCat({ color: "white" });
   const human = game.battleMode.player1;
   const npc = game.battleMode.player2;
 
