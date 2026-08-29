@@ -20,9 +20,10 @@ test("Game battle setup executes a human player action through BattleMode", () =
 
   const result = game.roll();
 
-  assert.equal(result?.mode?.action?.source, "human");
   assert.equal(game.battleMode.lastAction?.source, "human");
-  assert.ok(result?.mode?.mode);
+  assert.deepEqual(game.battleMode.lastAction, { action: "continue", source: "human" });
+  assert.ok(game.battleMode.lastTurnResult);
+  assert.ok(result?.mode);
 });
 
 test("Game battle setup executes an Easy NPC strategy through BattleMode", () => {
@@ -33,11 +34,12 @@ test("Game battle setup executes an Easy NPC strategy through BattleMode", () =>
   assert.equal(npc.difficulty, "easy");
   assert.equal(npc.npcAI.getStrategy().constructor.name, "EasyStrategy");
 
+  game.battleMode.player1.setDroppedOut(0);
   const result = game.roll();
 
-  assert.ok(result?.mode?.action);
-  assert.deepEqual(result?.mode?.action, { type: "CONTINUE" });
   assert.deepEqual(game.battleMode.lastAction, { type: "CONTINUE" });
+  assert.ok(game.battleMode.lastTurnResult);
+  assert.ok(result?.mode);
 });
 
 test("Game battle setup selects Normal and Hard NPC strategies in live battle setup", () => {
@@ -47,8 +49,11 @@ test("Game battle setup selects Normal and Hard NPC strategies in live battle se
 
     assert.equal(npc.npcAI.getStrategy().constructor.name, `${difficulty[0].toUpperCase()}${difficulty.slice(1)}Strategy`);
 
+    game.battleMode.player1.setDroppedOut(0);
     const result = game.roll();
-    assert.ok(result?.mode?.action);
-    assert.deepEqual(result.mode.action, { type: "CONTINUE" });
+
+    assert.deepEqual(game.battleMode.lastAction, { type: "CONTINUE" });
+    assert.ok(game.battleMode.lastTurnResult);
+    assert.ok(result?.mode);
   }
 });
