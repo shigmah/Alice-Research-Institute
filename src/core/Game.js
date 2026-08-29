@@ -1,6 +1,7 @@
 import { GameState } from "./GameState.js";
 import { CatManager } from "./CatManager.js";
 import { RandomManager } from "./RandomManager.js";
+import { EventManager } from "./EventManager.js";
 import { TurnManager } from "./TurnManager.js";
 import { ClassicRule } from "../mode/ClassicRule.js";
 import { CollectorRule } from "../mode/CollectorRule.js";
@@ -128,7 +129,7 @@ export class Game {
     this.turnManager = new TurnManager(
       this.state,
       this.eventManager,
-      isBattleMode ? this.battleMode : this.currentRule,
+      this.currentRule,
       this.catManager,
       modifiers
     );
