@@ -46,13 +46,20 @@ export class BattleMode {
   }
 
   checkBattleEnd() {
+    const player1Dropped = this.player1?.isDroppedOut?.() === true;
+    const player2Dropped = this.player2?.isDroppedOut?.() === true;
+
+    // Both players dropping out always ends the battle, even if the shared
+    // PlayRule has not reached its own terminal condition.
+    if (player1Dropped && player2Dropped) return true;
+
+    // The battle starts with an empty field. Allow the opening turn to use
+    // the shared PlayRule so it can generate the initial cats.
     if (this.gameState.turn === 1 && this.gameState.getCats().length === 0) {
-      return this.player1?.isDroppedOut?.() && this.player2?.isDroppedOut?.();
+      return false;
     }
 
-    if (this.player1?.isDroppedOut?.() && this.player2?.isDroppedOut?.()) return true;
-    if (this.playRule?.isFinished?.() === true) return true;
-    return false;
+    return this.playRule?.isFinished?.() === true;
   }
 
   judgeWinner() {
@@ -80,6 +87,7 @@ export class BattleMode {
       player1: this.player1,
       player2: this.player2
     };
+    this.finished = true;
     return this.battleResult;
   }
 
@@ -118,7 +126,6 @@ export class BattleMode {
 
     if (this.checkBattleEnd()) {
       this.finishBattle();
-      this.gameState.isGameOver = true;
     }
 
     return {
