@@ -14,6 +14,7 @@ import { Game } from "../src/core/Game.js";
 {
   const game = new Game();
   game.randomManager.rollDice = () => 3;
+  game.eventManager.checkEvent = () => false;
   game.startAliceMode(1);
   const outcome = game.roll();
 
