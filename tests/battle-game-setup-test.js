@@ -21,10 +21,11 @@ test("Game exposes a battle mode start entry point", () => {
   assert.ok(game.battleMode instanceof BattleMode);
 });
 
-test("battle mode keeps the existing play rule layer unchanged", () => {
+test("battle mode preserves the existing rule layer through BattleMode", () => {
   const game = new Game();
   game.reset("battle");
 
   assert.ok(game.currentRule);
-  assert.equal(game.battleMode.playRule, null);
+  assert.equal(game.battleMode.playRule, game.currentRule);
+  assert.equal(game.turnManager.currentMode, game.battleMode);
 });
