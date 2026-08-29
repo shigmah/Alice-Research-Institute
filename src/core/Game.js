@@ -5,6 +5,7 @@ import { EventManager } from "./EventManager.js";
 import { TurnManager } from "./TurnManager.js";
 import { ClassicRule } from "../mode/ClassicRule.js";
 import { CollectorRule } from "../mode/CollectorRule.js";
+import { BattleMode } from "../mode/BattleMode.js";
 import { AliceModifier } from "./AliceModifier.js";
 import { CheshireEvent } from "../event/CheshireEvent.js";
 import { MogumoguJudge } from "../event/MogumoguJudge.js";
@@ -20,7 +21,7 @@ export class Game {
   }
 
   reset(mode = this.modeType, { targetTurns = this.targetTurns } = {}) {
-    const normalizedMode = ["classic", "alice", "collector", "collector-alice"].includes(mode)
+    const normalizedMode = ["classic", "alice", "collector", "collector-alice", "battle"].includes(mode)
       ? mode
       : "classic";
 
@@ -34,6 +35,7 @@ export class Game {
 
     const isAliceMode = this.modeType === "alice";
     const isCollectorAliceMode = this.modeType === "collector-alice";
+    const isBattleMode = this.modeType === "battle";
 
     this.aliceModifier = isAliceMode || isCollectorAliceMode
       ? new AliceModifier(this.state, this.catManager, this.randomManager, {
@@ -60,6 +62,10 @@ export class Game {
       modifiers
     );
 
+    this.battleMode = isBattleMode
+      ? new BattleMode(this.state)
+      : null;
+
     this.currentRule = this.modeType === "collector" || this.modeType === "collector-alice"
       ? this.collectorRule
       : this.classicRule;
@@ -70,7 +76,9 @@ export class Game {
         ? (this.modeType === "collector-alice" ? "COLLECTOR_ALICE" : "COLLECTOR")
         : this.modeType === "alice"
           ? "ALICE"
-          : "CLASSIC"
+          : this.modeType === "battle"
+            ? "BATTLE"
+            : "CLASSIC"
     );
     this.state.targetTurns = this.targetTurns;
 
@@ -99,8 +107,6 @@ export class Game {
         : { hunger: 0, mood: 50 }
     });
 
-    // UIから任意に開始する「研究チャレンジ」用の独立インスタンス。
-    // 自動イベントの1ターン1回制限とは分離し、1投ずつ継続できる。
     this.manualMogumoguEvent = new MogumoguEvent({
       randomManager: this.randomManager,
       judge: this.mogumoguJudge,
@@ -149,12 +155,16 @@ export class Game {
     this.start();
   }
 
+  startBattleMode() {
+    this.reset("battle");
+    this.start();
+  }
+
   getModeType() {
     return this.modeType;
   }
 
   ensureGameOverIfNoCats() {
-    // 初回ターン（turn=1）は猫0匹から開始する仕様なので、ここでは終了扱いにしない。
     if (this.state.turn === 1 && this.state.getCats().length === 0) {
       return false;
     }
@@ -277,7 +287,6 @@ export class Game {
     return this.eventManager.getCurrentEvent() !== null;
   }
 
-  // Backward-compatible alias for existing UI/test callers.
   startMogumoguForTest() {
     return this.stepMogumogu();
   }
