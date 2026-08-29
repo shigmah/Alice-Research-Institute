@@ -231,6 +231,12 @@ export class Game {
 
     const outcome = {
       event: result,
+      alice: this.aliceModifier
+        ? {
+            lifetimeChanges: this.aliceModifier.getLastLifetimeChanges(),
+            targetTurns: this.targetTurns
+          }
+        : null,
       gameEnd: this.state.isGameOver ? { reason: this.state.gameEndReason ?? "no-cats" } : null,
       state: this.state
     };
@@ -255,6 +261,12 @@ export class Game {
         message: "もぐもぐチャレンジを見送りました。",
         payload: { declined: true, finished: true }
       },
+      alice: this.aliceModifier
+        ? {
+            lifetimeChanges: this.aliceModifier.getLastLifetimeChanges(),
+            targetTurns: this.targetTurns
+          }
+        : null,
       state: this.state
     };
     this.emit(this.state, outcome);
