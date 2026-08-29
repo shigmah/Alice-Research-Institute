@@ -52,7 +52,7 @@ test("TurnManager routes the current battle player's action through BattleMode",
   });
   assert.equal(result.mode.player, player1);
   assert.deepEqual(result.mode.action, rule.actions[0]);
-  assert.deepEqual(result.mode.rule, { acceptedAction: rule.actions[0] });
+  assert.deepEqual(result.mode.mode, { acceptedAction: rule.actions[0] });
   assert.equal(rule.initialized, false);
 });
 
