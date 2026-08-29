@@ -80,20 +80,17 @@ export class CollectorRule extends PlayRule {
       return "WIN";
     }
 
+    if (this.gameState.getCats().length === 0) {
+      this.gameState.gameEndReason = "no-cats";
+      this.terminate();
+      return "CONTINUE";
+    }
+
     return "CONTINUE";
   }
 
   isFinished() {
-    if (this.gameState.isGameOver === true) {
-      return true;
-    }
-
-    if (this.gameState.getCats().length === 0) {
-      this.gameState.gameEndReason = "no-cats";
-      return true;
-    }
-
-    return false;
+    return this.gameState.isGameOver === true;
   }
 
   terminate() {
