@@ -4,7 +4,7 @@ import { Game } from "../src/core/Game.js";
 
 function prepareBattle() {
   const game = new Game();
-  game.startBattleMode({ difficulty: "easy" });
+  game.startBattleMode({ difficulty: "normal" });
   game.eventManager.checkEvent = () => false;
   return game;
 }
