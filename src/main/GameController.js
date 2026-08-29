@@ -57,7 +57,11 @@ export class GameController {
 
   startSelectedMode() {
     if (this.busy) return null;
-    const { mode, targetTurns } = this.ui.getModeStartOptions?.() ?? { mode: "classic", targetTurns: 20 };
+    const { mode, targetTurns, difficulty } = this.ui.getModeStartOptions?.() ?? {
+      mode: "classic",
+      targetTurns: 20,
+      difficulty: "easy"
+    };
     this.ui.hideEventModal?.();
     this.ui.hideGameOverModal?.();
 
@@ -68,7 +72,7 @@ export class GameController {
     } else if (mode === "alice") {
       this.game.startAliceMode(targetTurns);
     } else if (mode === "battle") {
-      this.game.startBattleMode();
+      this.game.startBattleMode({ difficulty });
     } else {
       this.game.startClassicMode();
     }
