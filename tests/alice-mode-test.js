@@ -41,6 +41,7 @@ console.log("Alice mode tests: PASS");
   const game = new Game();
   game.randomManager.rollDice = () => 3;
   game.randomManager.checkProbability = () => false;
+  game.eventManager.checkEvent = () => false;
   game.startAliceMode(20);
   game.roll();
   console.assert(game.state.getCats().length > 0, "Alice mode creates cats");
