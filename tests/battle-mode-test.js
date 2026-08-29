@@ -2,10 +2,21 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import BattleMode from "../src/mode/BattleMode.js";
 import Player from "../src/player/Player.js";
+import { GameState } from "../src/core/GameState.js";
+import { TurnManager } from "../src/core/TurnManager.js";
 
 class StubRule {
-  constructor() { this.finished = false; this.initialized = false; this.terminated = false; }
+  constructor() {
+    this.finished = false;
+    this.initialized = false;
+    this.terminated = false;
+    this.receivedAction = undefined;
+  }
   initialize() { this.initialized = true; }
+  executeTurn(action) {
+    this.receivedAction = action;
+    return { ok: true, action };
+  }
   isFinished() { return this.finished; }
   terminate() { this.terminated = true; }
 }
@@ -66,6 +77,31 @@ test("initializes rule and finishes when rule is already complete", () => {
   rule.finished = true;
   const result = battle.executeBattle();
   assert.equal(result.winner, null);
-  assert.equal(battle.isFinished, true);
+  assert.equal(battle.finished, true);
   assert.equal(rule.terminated, true);
+});
+
+test("integrates with TurnManager and routes the active player's action to the rule", () => {
+  const state = new GameState();
+  const rule = new StubRule();
+  const battle = new BattleMode(state);
+  const player = new Player(1, "P1");
+  const expectedAction = { type: "CONTINUE" };
+  player.getAction = () => expectedAction;
+  battle.setPlayer1(player);
+  battle.selectRule(rule);
+  battle.initialize();
+
+  const eventManager = { checkEvent() { return false; } };
+  const catManager = { updateCats() {} };
+  const manager = new TurnManager(state, eventManager, battle, catManager);
+  battle.turnManager = manager;
+
+  const outcome = manager.executeTurn();
+
+  assert.equal(rule.receivedAction, expectedAction);
+  assert.equal(outcome.mode.action, expectedAction);
+  assert.equal(outcome.mode.player, player);
+  assert.equal(state.turn, 2);
+  assert.equal(battle.isFinished(), false);
 });
