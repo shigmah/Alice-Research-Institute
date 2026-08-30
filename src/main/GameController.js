@@ -28,13 +28,13 @@ export class GameController {
 
   start() { this.game.start(); }
 
-  async roll() {
+  async roll({ assignHumanAction = true } = {}) {
     if (this.busy || this.game.state.isGameOver || this.game.hasActiveEvent?.()) return null;
     this.busy = true;
     this.ui.setBusy(true);
     try {
       await this.ui.playDiceAnimation(this.game.state.getCurrentDiceCount());
-      if (this.game.state.getGameMode?.() === "BATTLE") {
+      if (assignHumanAction && this.game.state.getGameMode?.() === "BATTLE") {
         const activePlayer = this.game.battleMode?.getActivePlayer?.();
         if (activePlayer?.setAction && activePlayer.constructor?.name !== "NpcPlayer") {
           activePlayer.setAction({ action: "continue", source: "human" });
@@ -54,12 +54,12 @@ export class GameController {
     if (!activePlayer || activePlayer.constructor?.name === "NpcPlayer") return null;
 
     activePlayer.setAction?.({ action: "continue", source: "human" });
-    const humanResult = await this.roll();
+    const humanResult = await this.roll({ assignHumanAction: false });
     if (!humanResult || this.game.state.isGameOver || this.game.hasActiveEvent?.()) return humanResult;
 
     const nextPlayer = battle?.getActivePlayer?.();
     if (nextPlayer?.constructor?.name === "NpcPlayer") {
-      return this.roll();
+      return this.roll({ assignHumanAction: false });
     }
     return humanResult;
   }
@@ -71,12 +71,12 @@ export class GameController {
     if (!activePlayer || activePlayer.constructor?.name === "NpcPlayer") return null;
 
     activePlayer.setAction?.({ action: "dropout", source: "human" });
-    const humanResult = await this.game.roll();
+    const humanResult = await this.roll({ assignHumanAction: false });
     if (!humanResult || this.game.state.isGameOver || this.game.hasActiveEvent?.()) return humanResult;
 
     const nextPlayer = battle?.getActivePlayer?.();
     if (nextPlayer?.constructor?.name === "NpcPlayer") {
-      return this.roll();
+      return this.roll({ assignHumanAction: false });
     }
     return humanResult;
   }
