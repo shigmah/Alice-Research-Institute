@@ -18,14 +18,14 @@ test("Battle dice progression exposes a deterministic 1→2 transition on the op
   const human = game.battleMode.player1;
 
   human.getAction = () => ({ action: "continue", source: "human" });
-  game.randomManager.rollDice = count => Array.from({ length: count }, () => 1);
+  game.randomManager.rollDice = () => 1;
 
   const before = game.state.getCurrentDiceCount();
-  const result = game.roll();
+  const outcome = game.roll();
   const after = game.state.getCurrentDiceCount();
 
   assert.equal(before, 1);
-  assert.equal(result?.mode?.phase, 1);
+  assert.equal(outcome?.result?.phase, 1);
   assert.equal(after, 2);
 });
 
@@ -38,11 +38,13 @@ test("Battle dice progression can enter the 1→2→1 loop when a two-dice non-p
   human.getAction = () => ({ action: "continue", source: "human" });
   npc.getAction = () => ({ action: "continue", source: "npc" });
 
-  game.randomManager.rollDice = () => [1];
+  // Opening phase-1 turn: one die, then next-dice count becomes two.
+  game.randomManager.rollDice = () => 6;
   counts.push(game.state.getCurrentDiceCount());
   game.roll();
 
-  game.randomManager.rollDice = () => [1, 1];
+  // Phase 2: 1 + 1 = 2 is non-prime, so two dice becomes one die.
+  game.randomManager.rollDice = () => 1;
   counts.push(game.state.getCurrentDiceCount());
   game.roll();
 
@@ -59,11 +61,14 @@ test("Battle dice progression can recover above two when prime outcomes occur", 
   human.getAction = () => ({ action: "continue", source: "human" });
   npc.getAction = () => ({ action: "continue", source: "npc" });
 
-  game.randomManager.rollDice = () => [1];
+  // Seed enough cats that the prime phase-2 result cannot immediately end the game.
+  game.randomManager.rollDice = () => 6;
   game.roll();
   assert.equal(game.state.getCurrentDiceCount(), 2);
 
-  game.randomManager.rollDice = () => [1, 2];
+  // 1 + 2 = 3 is prime, so two dice becomes three dice.
+  let values = [1, 2, 1, 1, 1];
+  game.randomManager.rollDice = () => values.shift() ?? 1;
   game.roll();
   assert.equal(game.state.getCurrentDiceCount(), 3);
 });
@@ -79,8 +84,29 @@ test("Battle dice progression measures the distribution and records the longest 
   const frequencies = new Map();
   let lowRun = 0;
   let maxLowRun = 0;
+  let simulatedTurns = 0;
+  let randomState = 0x12345678;
 
-  for (let turn = 0; turn < 1000; turn += 1) {
+  const nextInt = () => {
+    randomState = (Math.imul(randomState, 1664525) + 1013904223) >>> 0;
+    return randomState;
+  };
+
+  game.randomManager.rollDice = () => 1 + (nextInt() % 6);
+
+  while (simulatedTurns < 1000) {
+    if (game.state.isGameOver) {
+      game.startBattleMode({ difficulty: "easy" });
+      game.eventManager.checkEvent = () => false;
+      game.battleMode.player1.getAction = () => ({ action: "continue", source: "human" });
+      game.battleMode.player2.getAction = () => ({ action: "continue", source: "npc" });
+      game.randomManager.rollDice = () => 6;
+      game.roll();
+      game.randomManager.rollDice = () => 1 + (nextInt() % 6);
+      lowRun = 0;
+      continue;
+    }
+
     const diceCount = game.state.getCurrentDiceCount();
     frequencies.set(diceCount, (frequencies.get(diceCount) ?? 0) + 1);
 
@@ -91,18 +117,8 @@ test("Battle dice progression measures the distribution and records the longest 
       lowRun = 0;
     }
 
-    game.randomManager.rollDice = count => Array.from(
-      { length: count },
-      () => 1 + Math.floor(Math.random() * 6)
-    );
-
     game.roll();
-
-    if (game.state.isGameOver) break;
-
-    if (game.state.getCats().length === 0) {
-      game.catManager.createCat();
-    }
+    simulatedTurns += 1;
   }
 
   assert.ok(frequencies.get(1) >= 1);
