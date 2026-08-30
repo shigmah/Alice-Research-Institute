@@ -47,22 +47,38 @@ export class GameController {
     }
   }
 
-  battleContinue() {
+  async battleContinue() {
     if (this.busy || this.game.state.isGameOver || this.game.hasActiveEvent?.()) return null;
     const battle = this.game.battleMode;
     const activePlayer = battle?.getActivePlayer?.();
     if (!activePlayer || activePlayer.constructor?.name === "NpcPlayer") return null;
+
     activePlayer.setAction?.({ action: "continue", source: "human" });
-    return this.roll();
+    const humanResult = await this.roll();
+    if (!humanResult || this.game.state.isGameOver || this.game.hasActiveEvent?.()) return humanResult;
+
+    const nextPlayer = battle?.getActivePlayer?.();
+    if (nextPlayer?.constructor?.name === "NpcPlayer") {
+      return this.roll();
+    }
+    return humanResult;
   }
 
-  battleDropout() {
+  async battleDropout() {
     if (this.busy || this.game.state.isGameOver || this.game.hasActiveEvent?.()) return null;
     const battle = this.game.battleMode;
     const activePlayer = battle?.getActivePlayer?.();
     if (!activePlayer || activePlayer.constructor?.name === "NpcPlayer") return null;
+
     activePlayer.setAction?.({ action: "dropout", source: "human" });
-    return this.game.roll();
+    const humanResult = await this.game.roll();
+    if (!humanResult || this.game.state.isGameOver || this.game.hasActiveEvent?.()) return humanResult;
+
+    const nextPlayer = battle?.getActivePlayer?.();
+    if (nextPlayer?.constructor?.name === "NpcPlayer") {
+      return this.roll();
+    }
+    return humanResult;
   }
 
   mogumogu() {
