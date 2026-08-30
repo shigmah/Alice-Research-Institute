@@ -43,8 +43,9 @@ test("Battle dice progression can enter the 1→2→1 loop when a two-dice non-p
   counts.push(game.state.getCurrentDiceCount());
   game.roll();
 
-  // Phase 2: 1 + 1 = 2 is non-prime, so two dice becomes one die.
-  game.randomManager.rollDice = () => 1;
+  // Phase 2: 1 + 3 = 4 is non-prime, so two dice becomes one die.
+  let values = [1, 3];
+  game.randomManager.rollDice = () => values.shift() ?? 1;
   counts.push(game.state.getCurrentDiceCount());
   game.roll();
 
