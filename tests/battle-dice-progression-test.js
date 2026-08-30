@@ -38,12 +38,10 @@ test("Battle dice progression can enter the 1→2→1 loop when a two-dice non-p
   human.getAction = () => ({ action: "continue", source: "human" });
   npc.getAction = () => ({ action: "continue", source: "npc" });
 
-  // Turn 1: one die (1) -> phase 1 advances the shared next count to two.
   game.randomManager.rollDice = () => [1];
   counts.push(game.state.getCurrentDiceCount());
   game.roll();
 
-  // Turn 2: two dice (1, 1) -> non-prime sum, so phase 2 decrements to one.
   game.randomManager.rollDice = () => [1, 1];
   counts.push(game.state.getCurrentDiceCount());
   game.roll();
@@ -61,13 +59,59 @@ test("Battle dice progression can recover above two when prime outcomes occur", 
   human.getAction = () => ({ action: "continue", source: "human" });
   npc.getAction = () => ({ action: "continue", source: "npc" });
 
-  // Opening phase 1: 1 die -> 2 dice.
   game.randomManager.rollDice = () => [1];
   game.roll();
   assert.equal(game.state.getCurrentDiceCount(), 2);
 
-  // Two-dice prime sum (1 + 2 = 3) -> increment.
   game.randomManager.rollDice = () => [1, 2];
   game.roll();
   assert.equal(game.state.getCurrentDiceCount(), 3);
+});
+
+test("Battle dice progression measures the distribution and records the longest low-count run", () => {
+  const game = prepareBattle();
+  const human = game.battleMode.player1;
+  const npc = game.battleMode.player2;
+
+  human.getAction = () => ({ action: "continue", source: "human" });
+  npc.getAction = () => ({ action: "continue", source: "npc" });
+
+  const frequencies = new Map();
+  let lowRun = 0;
+  let maxLowRun = 0;
+
+  for (let turn = 0; turn < 1000; turn += 1) {
+    const diceCount = game.state.getCurrentDiceCount();
+    frequencies.set(diceCount, (frequencies.get(diceCount) ?? 0) + 1);
+
+    if (diceCount <= 2) {
+      lowRun += 1;
+      maxLowRun = Math.max(maxLowRun, lowRun);
+    } else {
+      lowRun = 0;
+    }
+
+    game.randomManager.rollDice = count => Array.from(
+      { length: count },
+      () => 1 + Math.floor(Math.random() * 6)
+    );
+
+    game.roll();
+
+    if (game.state.isGameOver) break;
+
+    if (game.state.getCats().length === 0) {
+      game.catManager.createCat();
+    }
+  }
+
+  assert.ok(frequencies.get(1) >= 1);
+  assert.ok(frequencies.get(2) >= 1);
+  assert.ok(maxLowRun >= 2);
+
+  console.log(
+    "Battle dice distribution:",
+    Object.fromEntries([...frequencies.entries()].sort((a, b) => a[0] - b[0]))
+  );
+  console.log("Longest dice-count ≤ 2 run:", maxLowRun);
 });
