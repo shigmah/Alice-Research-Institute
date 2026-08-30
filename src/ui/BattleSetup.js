@@ -56,6 +56,18 @@ function ensureBattleStatusPanel(ui) {
   return panel;
 }
 
+function ensureBattleModeOption(documentRef) {
+  const modeSelect = documentRef?.querySelector?.("#modeSelect");
+  if (!modeSelect?.appendChild) return;
+  const existing = Array.from(modeSelect.children ?? []).find(option => option.value === "battle");
+  if (existing) return;
+
+  const option = documentRef.createElement("option");
+  option.value = "battle";
+  option.textContent = "バトルモード";
+  modeSelect.appendChild(option);
+}
+
 function renderBattlePlayer(ui, player, activePlayer, currentCatCount = null) {
   if (!player) return null;
   const documentRef = ui.document;
@@ -85,6 +97,7 @@ function renderBattlePlayer(ui, player, activePlayer, currentCatCount = null) {
   if (Number.isFinite(catCount)) {
     const cats = documentRef.createElement("span");
     cats.textContent = ` （猫${catCount}匹）`;
+    cats.setAttribute("data-fixed-cat-count", String(catCount));
     row.appendChild(cats);
   }
 
@@ -114,6 +127,8 @@ function renderBattleStatus(ui, game, state, outcome = null) {
   const actionPanel = documentRef.querySelector("#battleActionPanel");
   const continueButton = documentRef.querySelector("#battleContinue");
   const dropoutButton = documentRef.querySelector("#battleDropout");
+  const normalRoll = documentRef.querySelector("#roll");
+  const normalDropout = documentRef.querySelector("#dropout");
 
   if (turnLabel) turnLabel.textContent = `ターン ${state.turn}：${activePlayer?.name ?? "---"} のターン`;
 
@@ -142,13 +157,20 @@ function renderBattleStatus(ui, game, state, outcome = null) {
   if (actionPanel) actionPanel.hidden = !humanTurn || Boolean(battleResult);
   if (continueButton) continueButton.disabled = !humanTurn || Boolean(battleResult);
   if (dropoutButton) dropoutButton.disabled = !humanTurn || Boolean(battleResult);
+  if (normalRoll) normalRoll.hidden = true;
+  if (normalDropout) normalDropout.hidden = true;
 }
 
 export function ensureBattleSetup(documentRef = document) {
-  if (documentRef.querySelector("#battleDifficultyField")) return;
+  if (documentRef.querySelector("#battleDifficultyField")) {
+    ensureBattleModeOption(documentRef);
+    return;
+  }
 
   const modeSelect = documentRef.querySelector("#modeSelect");
   if (!modeSelect?.parentNode) return;
+
+  ensureBattleModeOption(documentRef);
 
   const field = documentRef.createElement("label");
   field.id = "battleDifficultyField";
@@ -178,17 +200,22 @@ export function ensureBattleSetup(documentRef = document) {
 export function installBattleModeSupport(ui) {
   if (!ui) return;
 
+  const documentRef = ui.document;
+  ensureBattleSetup(documentRef);
   ensureBattleStatusPanel(ui);
 
   const originalUpdateModeSetupUI = ui.updateModeSetupUI?.bind(ui);
   ui.updateModeSetupUI = () => {
     originalUpdateModeSetupUI?.();
     const mode = ui.elements.modeSelect?.value ?? "classic";
-    if (ui.elements.battleDifficultyField) {
-      ui.elements.battleDifficultyField.hidden = mode !== "battle";
-    }
+    const difficultyField = documentRef?.querySelector?.("#battleDifficultyField");
+    if (difficultyField) difficultyField.hidden = mode !== "battle";
     const panel = ensureBattleStatusPanel(ui);
     if (panel) panel.hidden = mode !== "battle";
+    ensureBattleModeOption(documentRef);
+    if (ui.elements.modeDescription && mode === "battle") {
+      ui.elements.modeDescription.textContent = "Player 1とNPCが交互に行動し、招き猫の数を競う対戦モードです。";
+    }
   };
 
   const originalUpdateModeDisplay = ui.updateModeDisplay?.bind(ui);
@@ -196,20 +223,20 @@ export function installBattleModeSupport(ui) {
     originalUpdateModeDisplay?.(state);
     const mode = state?.getGameMode?.() ?? "CLASSIC";
     if (mode === "BATTLE" && ui.elements.modeSelect) {
+      ensureBattleModeOption(documentRef);
       ui.elements.modeSelect.value = "battle";
     }
-    if (ui.elements.modeSelect?.value === "battle" && ui.elements.battleDifficultyField) {
-      ui.elements.battleDifficultyField.hidden = false;
+    const difficultyField = documentRef?.querySelector?.("#battleDifficultyField");
+    if (difficultyField && ui.elements.modeSelect?.value === "battle") {
+      difficultyField.hidden = false;
     }
   };
 
   const originalGetModeStartOptions = ui.getModeStartOptions?.bind(ui);
   ui.getModeStartOptions = () => {
     const options = originalGetModeStartOptions?.() ?? { mode: "classic", targetTurns: 20 };
-    return {
-      ...options,
-      difficulty: ui.elements.battleDifficultySelect?.value ?? "easy"
-    };
+    const difficulty = documentRef?.querySelector?.("#battleDifficultySelect")?.value ?? "easy";
+    return { ...options, difficulty };
   };
 
   ui.renderBattleStatus = (game, state, outcome = null) => renderBattleStatus(ui, game, state, outcome);
