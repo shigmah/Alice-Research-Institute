@@ -161,24 +161,27 @@ function renderBattleStatus(ui, game, state, outcome = null) {
   if (normalDropout) normalDropout.hidden = true;
 }
 
-export function ensureBattleSetup(documentRef = document) {
-  if (documentRef.querySelector("#battleDifficultyField")) {
-    ensureBattleModeOption(documentRef);
+export function ensureBattleSetup(documentRef = null) {
+  const documentTarget = documentRef;
+  if (!documentTarget?.querySelector) return;
+
+  if (documentTarget.querySelector("#battleDifficultyField")) {
+    ensureBattleModeOption(documentTarget);
     return;
   }
 
-  const modeSelect = documentRef.querySelector("#modeSelect");
+  const modeSelect = documentTarget.querySelector("#modeSelect");
   if (!modeSelect?.parentNode) return;
 
-  ensureBattleModeOption(documentRef);
+  ensureBattleModeOption(documentTarget);
 
-  const field = documentRef.createElement("label");
+  const field = documentTarget.createElement("label");
   field.id = "battleDifficultyField";
   field.hidden = true;
   field.style.marginLeft = "12px";
   field.textContent = "NPC難易度：";
 
-  const select = documentRef.createElement("select");
+  const select = documentTarget.createElement("select");
   select.id = "battleDifficultySelect";
   select.setAttribute("aria-label", "NPC難易度");
   select.style.fontSize = "16px";
@@ -187,7 +190,7 @@ export function ensureBattleSetup(documentRef = document) {
   select.style.border = "1px solid #ddd";
 
   for (const [value, label] of [["easy", "Easy"], ["normal", "Normal"], ["hard", "Hard"]]) {
-    const option = documentRef.createElement("option");
+    const option = documentTarget.createElement("option");
     option.value = value;
     option.textContent = label;
     select.appendChild(option);
