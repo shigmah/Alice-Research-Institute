@@ -19,37 +19,61 @@ function ensureBattleStatusPanel(ui) {
     title.textContent = "⚔️ バトル状況";
     panel.appendChild(title);
 
-    const turn = documentRef.createElement("p");
-    turn.id = "battleTurnLabel";
-    turn.style.margin = "6px 0";
-    panel.appendChild(turn);
-
-    const fieldCats = documentRef.createElement("p");
-    fieldCats.id = "battleFieldCatCount";
-    fieldCats.style.margin = "6px 0 10px";
-    fieldCats.style.fontWeight = "700";
-    panel.appendChild(fieldCats);
+    const board = documentRef.createElement("div");
+    board.id = "battleBoard";
+    board.style.display = "grid";
+    board.style.gridTemplateColumns = "minmax(0, 1fr) minmax(0, 1fr)";
+    board.style.gridTemplateAreas = '"players players" "action field"';
+    board.style.gap = "14px";
+    board.style.alignItems = "stretch";
+    board.style.marginTop = "10px";
+    panel.appendChild(board);
 
     const players = documentRef.createElement("div");
     players.id = "battlePlayerStatus";
     players.className = "battle-player-grid";
+    players.style.gridArea = "players";
     players.style.display = "grid";
     players.style.gridTemplateColumns = "repeat(2, minmax(0, 1fr))";
     players.style.gap = "12px";
-    players.style.margin = "10px 0";
-    panel.appendChild(players);
+    board.appendChild(players);
 
-    const result = documentRef.createElement("p");
+    const actionCard = documentRef.createElement("section");
+    actionCard.id = "battleActionCard";
+    actionCard.style.gridArea = "action";
+    actionCard.style.boxSizing = "border-box";
+    actionCard.style.padding = "16px";
+    actionCard.style.border = "1px solid #e5dfd2";
+    actionCard.style.borderRadius = "12px";
+    actionCard.style.background = "#fbfaf6";
+
+    const actionTitle = documentRef.createElement("h4");
+    actionTitle.textContent = "🎲 アクション";
+    actionTitle.style.margin = "0 0 10px";
+    actionCard.appendChild(actionTitle);
+
+    const turn = documentRef.createElement("div");
+    turn.id = "battleTurnLabel";
+    turn.style.fontWeight = "700";
+    turn.style.marginBottom = "6px";
+    actionCard.appendChild(turn);
+
+    const actionHint = documentRef.createElement("div");
+    actionHint.id = "battleActionHint";
+    actionHint.style.marginBottom = "10px";
+    actionCard.appendChild(actionHint);
+
+    const result = documentRef.createElement("div");
     result.id = "battleResultLabel";
-    result.style.margin = "10px 0 0";
     result.style.fontWeight = "800";
-    panel.appendChild(result);
+    result.style.marginTop = "10px";
+    actionCard.appendChild(result);
 
     const actions = documentRef.createElement("div");
     actions.id = "battleActionPanel";
     actions.style.display = "flex";
     actions.style.flexWrap = "wrap";
-    actions.style.justifyContent = "center";
+    actions.style.justifyContent = "flex-start";
     actions.style.gap = "8px";
     actions.style.marginTop = "12px";
 
@@ -66,8 +90,42 @@ function ensureBattleStatusPanel(ui) {
     dropoutButton.textContent = "↪ 脱落する";
     dropoutButton.addEventListener("click", () => ui.onBattleDropout?.());
     actions.appendChild(dropoutButton);
+    actionCard.appendChild(actions);
+    board.appendChild(actionCard);
 
-    panel.appendChild(actions);
+    const fieldCard = documentRef.createElement("section");
+    fieldCard.id = "battleFieldCard";
+    fieldCard.style.gridArea = "field";
+    fieldCard.style.boxSizing = "border-box";
+    fieldCard.style.padding = "16px";
+    fieldCard.style.border = "1px solid #e5dfd2";
+    fieldCard.style.borderRadius = "12px";
+    fieldCard.style.background = "#fbfaf6";
+
+    const fieldTitle = documentRef.createElement("h4");
+    fieldTitle.textContent = "🐱 招き猫フィールド";
+    fieldTitle.style.margin = "0 0 10px";
+    fieldCard.appendChild(fieldTitle);
+
+    const fieldCats = documentRef.createElement("div");
+    fieldCats.id = "battleFieldCatCount";
+    fieldCats.style.fontWeight = "700";
+    fieldCats.style.marginBottom = "10px";
+    fieldCard.appendChild(fieldCats);
+
+    const fieldStatus = documentRef.createElement("div");
+    fieldStatus.id = "battleFieldStatus";
+    fieldStatus.textContent = "フィールド上の招き猫";
+    fieldStatus.style.marginBottom = "6px";
+    fieldCard.appendChild(fieldStatus);
+
+    const normalCats = documentRef.createElement("div");
+    normalCats.id = "battleFieldCats";
+    normalCats.style.display = "flex";
+    normalCats.style.flexWrap = "wrap";
+    normalCats.style.gap = "8px";
+    fieldCard.appendChild(normalCats);
+    board.appendChild(fieldCard);
 
     const controls = modeSelect.parentNode;
     const host = controls?.parentNode;
@@ -134,18 +192,15 @@ function renderBattlePlayer(ui, player, activePlayer) {
   card.appendChild(status);
 
   const fixedCatCount = player.getFixedCatCount?.();
+  const cats = documentRef.createElement("div");
+  cats.style.marginTop = "6px";
+  cats.textContent = Number.isFinite(fixedCatCount)
+    ? `確定猫数：${fixedCatCount}匹`
+    : "確定猫数：未確定";
   if (Number.isFinite(fixedCatCount)) {
-    const cats = documentRef.createElement("div");
-    cats.textContent = `確定猫数：${fixedCatCount}匹`;
-    cats.style.marginTop = "6px";
     cats.setAttribute("data-fixed-cat-count", String(fixedCatCount));
-    card.appendChild(cats);
-  } else {
-    const cats = documentRef.createElement("div");
-    cats.textContent = "確定猫数：未確定";
-    cats.style.marginTop = "6px";
-    card.appendChild(cats);
   }
+  card.appendChild(cats);
 
   if (player.isDroppedOut?.()) {
     const dropout = documentRef.createElement("div");
@@ -170,8 +225,11 @@ function renderBattleStatus(ui, game, state, outcome = null) {
   const activePlayer = battle?.getActivePlayer?.() ?? outcome?.mode?.player ?? null;
   const turnLabel = documentRef.querySelector("#battleTurnLabel");
   const fieldCats = documentRef.querySelector("#battleFieldCatCount");
+  const fieldStatus = documentRef.querySelector("#battleFieldStatus");
+  const fieldContainer = documentRef.querySelector("#battleFieldCats");
   const players = documentRef.querySelector("#battlePlayerStatus");
   const result = documentRef.querySelector("#battleResultLabel");
+  const actionHint = documentRef.querySelector("#battleActionHint");
   const actionPanel = documentRef.querySelector("#battleActionPanel");
   const continueButton = documentRef.querySelector("#battleContinue");
   const dropoutButton = documentRef.querySelector("#battleDropout");
@@ -181,9 +239,46 @@ function renderBattleStatus(ui, game, state, outcome = null) {
   const isNpcTurn = activePlayer?.constructor?.name === "NpcPlayer";
   const activeLabel = isNpcTurn ? "NPCのターン" : activePlayer ? "あなたのターン" : "---";
   if (turnLabel) turnLabel.textContent = `ターン ${state.turn}：${activeLabel}`;
-  if (fieldCats) {
-    const currentCatCount = state.getCats?.().length;
-    fieldCats.textContent = Number.isFinite(currentCatCount) ? `現在の場の猫：${currentCatCount}匹` : "現在の場の猫：-";
+  if (actionHint) {
+    actionHint.textContent = isNpcTurn
+      ? "NPCが考えています…"
+      : "あなたの番です。サイコロを振るか、脱落できます。";
+  }
+
+  const currentCats = state.getCats?.() ?? [];
+  if (fieldCats) fieldCats.textContent = `現在の場の猫：${currentCats.length}匹`;
+  if (fieldStatus) fieldStatus.textContent = currentCats.length
+    ? "現在、場に存在している招き猫"
+    : "場に招き猫はいません";
+  if (fieldContainer) {
+    fieldContainer.replaceChildren();
+    for (const cat of currentCats) {
+      const wrapper = documentRef.createElement("div");
+      wrapper.className = "battle-field-cat";
+      wrapper.style.display = "flex";
+      wrapper.style.alignItems = "center";
+      wrapper.style.gap = "4px";
+      const image = documentRef.createElement("img");
+      image.className = "cat-image";
+      image.alt = `${cat.color} 招き猫`;
+      image.style.width = "44px";
+      image.style.height = "44px";
+      AssetResolver.setImageWithFallback(
+        image,
+        AssetResolver.imageCandidates(ui.getCatAsset?.(cat.color) ?? "white_cat.png"),
+        resolved => {
+          if (!resolved) image.replaceWith(documentRef.createTextNode(ui.getCatGlyph?.(cat.color) ?? "🐱"));
+        }
+      );
+      wrapper.appendChild(image);
+      if (Number.isFinite(cat.lifetime)) {
+        const life = documentRef.createElement("span");
+        life.textContent = String(cat.lifetime);
+        life.style.fontSize = "12px";
+        wrapper.appendChild(life);
+      }
+      fieldContainer.appendChild(wrapper);
+    }
   }
 
   if (players) {
