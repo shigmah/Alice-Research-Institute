@@ -128,7 +128,9 @@ button:disabled{background:#aaa;cursor:not-allowed}.mode-controls{display:flex;a
 
 <script type="module">
 import { createMain } from "../src/main/Main.js";
+import { installBattleResultDisplay } from "../src/ui/BattleResultDisplay.js";
 const app = createMain(document);
+installBattleResultDisplay(app.ui);
 document.querySelector("#gameOverReset")?.addEventListener("click", () => app.controller.reset());
 app.controller.start();
 </script>
