@@ -212,7 +212,8 @@ export function installBattleModeSupport(ui) {
   ui.updateModeSetupUI = () => {
     originalUpdateModeSetupUI?.();
     const mode = ui.elements.modeSelect?.value ?? "classic";
-    const difficultyField = documentRef?.querySelector?.("#battleDifficultyField");
+    const difficultyField = ui.elements.battleDifficultyField
+      ?? documentRef?.querySelector?.("#battleDifficultyField");
     if (difficultyField) difficultyField.hidden = mode !== "battle";
     const panel = ensureBattleStatusPanel(ui);
     if (panel) panel.hidden = mode !== "battle";
@@ -230,7 +231,8 @@ export function installBattleModeSupport(ui) {
       ensureBattleModeOption(documentRef);
       ui.elements.modeSelect.value = "battle";
     }
-    const difficultyField = documentRef?.querySelector?.("#battleDifficultyField");
+    const difficultyField = ui.elements.battleDifficultyField
+      ?? documentRef?.querySelector?.("#battleDifficultyField");
     if (difficultyField && ui.elements.modeSelect?.value === "battle") {
       difficultyField.hidden = false;
     }
@@ -239,8 +241,9 @@ export function installBattleModeSupport(ui) {
   const originalGetModeStartOptions = ui.getModeStartOptions?.bind(ui);
   ui.getModeStartOptions = () => {
     const options = originalGetModeStartOptions?.() ?? { mode: "classic", targetTurns: 20 };
-    const difficultySelect = ui.elements.battleDifficultySelect;
-    const difficulty = difficultySelect?.value ?? documentRef?.querySelector?.("#battleDifficultySelect")?.value ?? "easy";
+    const difficultySelect = ui.elements.battleDifficultySelect
+      ?? documentRef?.querySelector?.("#battleDifficultySelect");
+    const difficulty = difficultySelect?.value ?? "easy";
     return { ...options, difficulty };
   };
 
