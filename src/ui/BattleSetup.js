@@ -134,8 +134,9 @@ function renderBattleStatus(ui, game, state, outcome = null) {
 
   if (players) {
     players.replaceChildren();
-    const player1 = renderBattlePlayer(ui, battle?.player1, activePlayer, state.getCats?.().length);
-    const player2 = renderBattlePlayer(ui, battle?.player2, activePlayer, state.getCats?.().length);
+    const currentCatCount = state.getCats?.().length;
+    const player1 = renderBattlePlayer(ui, battle?.player1, activePlayer, currentCatCount);
+    const player2 = renderBattlePlayer(ui, battle?.player2, activePlayer, currentCatCount);
     if (player1) players.appendChild(player1);
     if (player2) players.appendChild(player2);
   }
@@ -238,7 +239,8 @@ export function installBattleModeSupport(ui) {
   const originalGetModeStartOptions = ui.getModeStartOptions?.bind(ui);
   ui.getModeStartOptions = () => {
     const options = originalGetModeStartOptions?.() ?? { mode: "classic", targetTurns: 20 };
-    const difficulty = documentRef?.querySelector?.("#battleDifficultySelect")?.value ?? "easy";
+    const difficultySelect = ui.elements.battleDifficultySelect;
+    const difficulty = difficultySelect?.value ?? documentRef?.querySelector?.("#battleDifficultySelect")?.value ?? "easy";
     return { ...options, difficulty };
   };
 
