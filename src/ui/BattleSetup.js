@@ -11,6 +11,8 @@ function ensureBattleStatusPanel(ui) {
     panel.hidden = true;
     panel.className = "panel battle-status-panel";
     panel.style.marginTop = "12px";
+    panel.style.width = "100%";
+    panel.style.boxSizing = "border-box";
 
     const title = documentRef.createElement("h3");
     title.id = "battleStatusTitle";
@@ -19,21 +21,37 @@ function ensureBattleStatusPanel(ui) {
 
     const turn = documentRef.createElement("p");
     turn.id = "battleTurnLabel";
+    turn.style.margin = "6px 0";
     panel.appendChild(turn);
+
+    const fieldCats = documentRef.createElement("p");
+    fieldCats.id = "battleFieldCatCount";
+    fieldCats.style.margin = "6px 0 10px";
+    fieldCats.style.fontWeight = "700";
+    panel.appendChild(fieldCats);
 
     const players = documentRef.createElement("div");
     players.id = "battlePlayerStatus";
+    players.className = "battle-player-grid";
+    players.style.display = "grid";
+    players.style.gridTemplateColumns = "repeat(2, minmax(0, 1fr))";
+    players.style.gap = "12px";
+    players.style.margin = "10px 0";
     panel.appendChild(players);
 
     const result = documentRef.createElement("p");
     result.id = "battleResultLabel";
+    result.style.margin = "10px 0 0";
+    result.style.fontWeight = "800";
     panel.appendChild(result);
 
     const actions = documentRef.createElement("div");
     actions.id = "battleActionPanel";
     actions.style.display = "flex";
+    actions.style.flexWrap = "wrap";
+    actions.style.justifyContent = "center";
     actions.style.gap = "8px";
-    actions.style.marginTop = "10px";
+    actions.style.marginTop = "12px";
 
     const continueButton = documentRef.createElement("button");
     continueButton.id = "battleContinue";
@@ -50,7 +68,10 @@ function ensureBattleStatusPanel(ui) {
     actions.appendChild(dropoutButton);
 
     panel.appendChild(actions);
-    modeSelect.parentNode.parentNode?.insertBefore(panel, modeSelect.parentNode.nextSibling);
+
+    const controls = modeSelect.parentNode;
+    const host = controls?.parentNode;
+    host?.insertBefore(panel, controls.nextSibling);
   }
 
   return panel;
@@ -68,46 +89,72 @@ function ensureBattleModeOption(documentRef) {
   modeSelect.appendChild(option);
 }
 
-function renderBattlePlayer(ui, player, activePlayer, currentCatCount = null) {
+function renderBattlePlayer(ui, player, activePlayer) {
   if (!player) return null;
   const documentRef = ui.document;
-  const row = documentRef.createElement("div");
-  row.className = "battle-player-row";
+  const isNpc = player.constructor?.name === "NpcPlayer";
+  const card = documentRef.createElement("div");
+  card.className = "battle-player-card";
+  card.setAttribute("data-player-id", String(player.id ?? ""));
+  card.setAttribute("data-player-type", isNpc ? "npc" : "human");
+  card.style.boxSizing = "border-box";
+  card.style.minWidth = "0";
+  card.style.padding = "12px";
+  card.style.border = "1px solid #e5dfd2";
+  card.style.borderRadius = "12px";
+  card.style.background = "#fbfaf6";
+
+  const header = documentRef.createElement("div");
+  header.style.display = "flex";
+  header.style.alignItems = "center";
+  header.style.justifyContent = "space-between";
+  header.style.gap = "8px";
 
   const name = documentRef.createElement("strong");
   name.textContent = player.name ?? `Player ${player.id ?? ""}`;
-  row.appendChild(name);
+  name.style.fontSize = "18px";
+  header.appendChild(name);
 
-  const identity = documentRef.createElement("span");
-  identity.textContent = player instanceof Object && player.constructor?.name === "NpcPlayer" ? " 🤖" : " 🧑";
-  row.appendChild(identity);
+  const role = documentRef.createElement("span");
+  role.textContent = isNpc ? "🤖 NPC" : "🧑 あなた";
+  role.style.fontWeight = "700";
+  header.appendChild(role);
+  card.appendChild(header);
 
+  const status = documentRef.createElement("div");
+  status.style.marginTop = "8px";
+  status.style.fontWeight = "700";
   if (player === activePlayer) {
-    const active = documentRef.createElement("span");
-    active.textContent = " ← あなたのターン";
-    row.appendChild(active);
+    status.textContent = isNpc ? "← NPCのターン" : "← あなたのターン";
+  } else if (player.isDroppedOut?.()) {
+    status.textContent = "脱落";
+  } else {
+    status.textContent = "待機中";
   }
+  card.appendChild(status);
 
   const fixedCatCount = player.getFixedCatCount?.();
-  const catCount = Number.isFinite(fixedCatCount)
-    ? fixedCatCount
-    : player === activePlayer && Number.isFinite(currentCatCount)
-      ? currentCatCount
-      : null;
-  if (Number.isFinite(catCount)) {
-    const cats = documentRef.createElement("span");
-    cats.textContent = ` （猫${catCount}匹）`;
-    cats.setAttribute("data-fixed-cat-count", String(catCount));
-    row.appendChild(cats);
+  if (Number.isFinite(fixedCatCount)) {
+    const cats = documentRef.createElement("div");
+    cats.textContent = `確定猫数：${fixedCatCount}匹`;
+    cats.style.marginTop = "6px";
+    cats.setAttribute("data-fixed-cat-count", String(fixedCatCount));
+    card.appendChild(cats);
+  } else {
+    const cats = documentRef.createElement("div");
+    cats.textContent = "確定猫数：未確定";
+    cats.style.marginTop = "6px";
+    card.appendChild(cats);
   }
 
   if (player.isDroppedOut?.()) {
-    const dropout = documentRef.createElement("span");
-    dropout.textContent = " （脱落）";
-    row.appendChild(dropout);
+    const dropout = documentRef.createElement("div");
+    dropout.textContent = "（脱落）";
+    dropout.style.marginTop = "4px";
+    card.appendChild(dropout);
   }
 
-  return row;
+  return card;
 }
 
 function renderBattleStatus(ui, game, state, outcome = null) {
@@ -122,6 +169,7 @@ function renderBattleStatus(ui, game, state, outcome = null) {
   const battle = game?.battleMode;
   const activePlayer = battle?.getActivePlayer?.() ?? outcome?.mode?.player ?? null;
   const turnLabel = documentRef.querySelector("#battleTurnLabel");
+  const fieldCats = documentRef.querySelector("#battleFieldCatCount");
   const players = documentRef.querySelector("#battlePlayerStatus");
   const result = documentRef.querySelector("#battleResultLabel");
   const actionPanel = documentRef.querySelector("#battleActionPanel");
@@ -130,13 +178,18 @@ function renderBattleStatus(ui, game, state, outcome = null) {
   const normalRoll = documentRef.querySelector("#roll");
   const normalDropout = documentRef.querySelector("#dropout");
 
-  if (turnLabel) turnLabel.textContent = `ターン ${state.turn}：${activePlayer?.name ?? "---"} のターン`;
+  const isNpcTurn = activePlayer?.constructor?.name === "NpcPlayer";
+  const activeLabel = isNpcTurn ? "NPCのターン" : activePlayer ? "あなたのターン" : "---";
+  if (turnLabel) turnLabel.textContent = `ターン ${state.turn}：${activeLabel}`;
+  if (fieldCats) {
+    const currentCatCount = state.getCats?.().length;
+    fieldCats.textContent = Number.isFinite(currentCatCount) ? `現在の場の猫：${currentCatCount}匹` : "現在の場の猫：-";
+  }
 
   if (players) {
     players.replaceChildren();
-    const currentCatCount = state.getCats?.().length;
-    const player1 = renderBattlePlayer(ui, battle?.player1, activePlayer, currentCatCount);
-    const player2 = renderBattlePlayer(ui, battle?.player2, activePlayer, currentCatCount);
+    const player1 = renderBattlePlayer(ui, battle?.player1, activePlayer);
+    const player2 = renderBattlePlayer(ui, battle?.player2, activePlayer);
     if (player1) players.appendChild(player1);
     if (player2) players.appendChild(player2);
   }
@@ -154,7 +207,7 @@ function renderBattleStatus(ui, game, state, outcome = null) {
     }
   }
 
-  const humanTurn = activePlayer && activePlayer.constructor?.name !== "NpcPlayer";
+  const humanTurn = activePlayer && !isNpcTurn;
   if (actionPanel) actionPanel.hidden = !humanTurn || Boolean(battleResult);
   if (continueButton) continueButton.disabled = !humanTurn || Boolean(battleResult);
   if (dropoutButton) dropoutButton.disabled = !humanTurn || Boolean(battleResult);
