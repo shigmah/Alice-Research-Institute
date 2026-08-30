@@ -39,7 +39,16 @@ export class GameController {
     activePlayer.pendingAction = null;
     const action = activePlayer.getAction?.();
     activePlayer.setAction?.(action ?? { action: "continue", source: "npc" });
-    return this.game.roll();
+    const result = this.game.roll();
+
+    if (result && !this.game.state.isGameOver && !this.game.hasActiveEvent?.()) {
+      const next = this.game.battleMode?.getActivePlayer?.();
+      if (next?.constructor?.name === "NpcPlayer") {
+        return this.runNpcTurnIfNeeded();
+      }
+    }
+
+    return result;
   }
 
   async roll({ assignHumanAction = true, advanceNpc = true } = {}) {
@@ -75,8 +84,7 @@ export class GameController {
     if (!activePlayer || activePlayer.constructor?.name === "NpcPlayer") return null;
 
     activePlayer.setAction?.({ action: "continue", source: "human" });
-    const result = await this.roll({ assignHumanAction: false, advanceNpc: true });
-    return result;
+    return this.roll({ assignHumanAction: false, advanceNpc: true });
   }
 
   async battleDropout() {
