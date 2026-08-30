@@ -28,7 +28,21 @@ export class GameController {
 
   start() { this.game.start(); }
 
-  async roll({ assignHumanAction = true } = {}) {
+  async runNpcTurnIfNeeded() {
+    if (this.game.state.isGameOver || this.game.hasActiveEvent?.()) return null;
+    if (this.game.state.getGameMode?.() !== "BATTLE") return null;
+
+    const battle = this.game.battleMode;
+    const activePlayer = battle?.getActivePlayer?.();
+    if (!activePlayer || activePlayer.constructor?.name !== "NpcPlayer") return null;
+
+    activePlayer.pendingAction = null;
+    const action = activePlayer.getAction?.();
+    activePlayer.setAction?.(action ?? { action: "continue", source: "npc" });
+    return this.game.roll();
+  }
+
+  async roll({ assignHumanAction = true, advanceNpc = true } = {}) {
     if (this.busy || this.game.state.isGameOver || this.game.hasActiveEvent?.()) return null;
     this.busy = true;
     this.ui.setBusy(true);
@@ -40,7 +54,14 @@ export class GameController {
           activePlayer.setAction({ action: "continue", source: "human" });
         }
       }
-      return this.game.roll();
+      const result = this.game.roll();
+      if (advanceNpc && result && !this.game.state.isGameOver && !this.game.hasActiveEvent?.()) {
+        const next = this.game.battleMode?.getActivePlayer?.();
+        if (next?.constructor?.name === "NpcPlayer") {
+          return this.runNpcTurnIfNeeded();
+        }
+      }
+      return result;
     } finally {
       this.busy = false;
       this.ui.setBusy(false);
@@ -54,14 +75,8 @@ export class GameController {
     if (!activePlayer || activePlayer.constructor?.name === "NpcPlayer") return null;
 
     activePlayer.setAction?.({ action: "continue", source: "human" });
-    const humanResult = await this.roll({ assignHumanAction: false });
-    if (!humanResult || this.game.state.isGameOver || this.game.hasActiveEvent?.()) return humanResult;
-
-    const nextPlayer = battle?.getActivePlayer?.();
-    if (nextPlayer?.constructor?.name === "NpcPlayer") {
-      return this.roll({ assignHumanAction: false });
-    }
-    return humanResult;
+    const result = await this.roll({ assignHumanAction: false, advanceNpc: true });
+    return result;
   }
 
   async battleDropout() {
@@ -71,14 +86,9 @@ export class GameController {
     if (!activePlayer || activePlayer.constructor?.name === "NpcPlayer") return null;
 
     activePlayer.setAction?.({ action: "dropout", source: "human" });
-    const humanResult = await this.roll({ assignHumanAction: false });
+    const humanResult = await this.roll({ assignHumanAction: false, advanceNpc: false });
     if (!humanResult || this.game.state.isGameOver || this.game.hasActiveEvent?.()) return humanResult;
-
-    const nextPlayer = battle?.getActivePlayer?.();
-    if (nextPlayer?.constructor?.name === "NpcPlayer") {
-      return this.roll({ assignHumanAction: false });
-    }
-    return humanResult;
+    return this.runNpcTurnIfNeeded();
   }
 
   mogumogu() {
