@@ -1,3 +1,5 @@
+import { AssetResolver } from "./AssetResolver.js";
+
 function ensureBattleStatusPanel(ui) {
   const documentRef = ui?.document;
   if (!documentRef?.querySelector) return null;
