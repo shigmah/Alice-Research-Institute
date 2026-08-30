@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Battle Browser E2E</title>
+<style>
+body{margin:0;font-family:system-ui,-apple-system,"Yu Gothic",Meiryo,sans-serif;background:#f7f5f0;color:#333}
+main{max-width:900px;margin:0 auto;padding:20px}
+.panel{background:#fff;border:1px solid #e5dfd2;border-radius:14px;padding:18px;margin-bottom:14px}
+.pass{color:#176b2c}.fail{color:#a51d1d}.running{color:#7a5a00}
+iframe{width:100%;height:720px;border:1px solid #ddd;border-radius:12px;background:#fff}
+button{font-size:16px;padding:9px 14px;border:0;border-radius:8px;cursor:pointer}
+</style>
+</head>
+<body>
+<main>
+<section class="panel">
+<h1>⚔️ Battle ブラウザE2E確認</h1>
+<p id="status" class="running">準備中…</p>
+<div id="checks"></div>
+</section>
+<iframe id="gameFrame" title="招き猫ゲーム Battle"></iframe>
+</main>
+<script type="module">
+const status = document.querySelector("#status");
+const checks = document.querySelector("#checks");
+const frame = document.querySelector("#gameFrame");
+
+function addCheck(label, ok, detail = "") {
+  const line = document.createElement("div");
+  line.className = ok ? "pass" : "fail";
+  line.textContent = `${ok ? "✔" : "✖"} ${label}${detail ? ` — ${detail}` : ""}`;
+  checks.appendChild(line);
+  return ok;
+}
+
+async function boot() {
+  try {
+    const html = await (await fetch("./index.html")).text();
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    frame.contentDocument.replaceChildren(...Array.from(doc.childNodes));
+    const docTarget = frame.contentDocument;
+    for (const script of [...docTarget.querySelectorAll("script")]) script.remove();
+
+    const { createMain } = await import("../src/main/Main.js");
+    const app = createMain(docTarget);
+    frame.contentWindow.__aliceResearchApp = app;
+
+    app.game.randomManager.rollDice = () => 2;
+    app.game.randomManager.checkProbability = () => false;
+    app.game.eventManager.checkEvent = () => false;
+    app.game.startBattleMode({ difficulty: "easy" });
+    app.game.catManager.createCat({ color: "white" });
+
+    addCheck("Battleモード開始", app.game.state.getGameMode() === "BATTLE");
+    addCheck("Player 1が存在", Boolean(app.game.battleMode?.player1));
+    addCheck("NPCが存在", Boolean(app.game.battleMode?.player2));
+    addCheck("初期猫数が1", app.game.state.getCats().length === 1);
+
+    app.game.battleMode.player2.getAction = () => ({ action: "continue", source: "npc" });
+    frame.contentDocument.querySelector("#battleContinue")?.click();
+    await new Promise(resolve => setTimeout(resolve, 30));
+
+    addCheck("Human → NPCへ自動進行", app.game.state.turn === 3, `現在ターン=${app.game.state.turn}`);
+    addCheck("Battle状態パネル表示", Boolean(frame.contentDocument.querySelector("#battleStatusPanel")));
+    addCheck("ターン表示あり", Boolean(frame.contentDocument.querySelector("#battleTurnLabel")?.textContent));
+    addCheck("Player表示あり", Boolean(frame.contentDocument.querySelector("#battlePlayerStatus")?.textContent));
+
+    status.className = "pass";
+    status.textContent = "ブラウザE2E確認 完了";
+  } catch (error) {
+    status.className = "fail";
+    status.textContent = `ブラウザE2E確認 失敗: ${error?.message ?? error}`;
+    console.error(error);
+  }
+}
+
+boot();
+</script>
+</body>
+</html>
