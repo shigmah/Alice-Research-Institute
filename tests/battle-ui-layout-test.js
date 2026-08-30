@@ -20,3 +20,14 @@ test("Battle player cards distinguish human and NPC status", () => {
   assert.match(source, /確定猫数/);
   assert.match(source, /現在の場の猫/);
 });
+
+test("Battle board places action and field side by side", () => {
+  assert.match(source, /battleBoard/);
+  assert.match(source, /gridTemplateAreas/);
+  assert.match(source, /players players/);
+  assert.match(source, /action field/);
+  assert.match(source, /id = \"battleActionCard\"/);
+  assert.match(source, /id = \"battleFieldCard\"/);
+  assert.match(source, /gridArea = \"action\"/);
+  assert.match(source, /gridArea = \"field\"/);
+});
