@@ -162,7 +162,7 @@ function renderBattlePlayer(ui, player, activePlayer) {
   card.style.padding = "12px";
   card.style.border = "1px solid #e5dfd2";
   card.style.borderRadius = "12px";
-  card.style.background = "#fbfaf6";
+  card.style.background = isNpc ? "#f4f7fb" : "#fbfaf6";
 
   const header = documentRef.createElement("div");
   header.style.display = "flex";
@@ -199,9 +199,7 @@ function renderBattlePlayer(ui, player, activePlayer) {
   cats.textContent = Number.isFinite(fixedCatCount)
     ? `確定猫数：${fixedCatCount}匹`
     : "確定猫数：未確定";
-  if (Number.isFinite(fixedCatCount)) {
-    cats.setAttribute("data-fixed-cat-count", String(fixedCatCount));
-  }
+  if (Number.isFinite(fixedCatCount)) cats.setAttribute("data-fixed-cat-count", String(fixedCatCount));
   card.appendChild(cats);
 
   if (player.isDroppedOut?.()) {
@@ -210,7 +208,6 @@ function renderBattlePlayer(ui, player, activePlayer) {
     dropout.style.marginTop = "4px";
     card.appendChild(dropout);
   }
-
   return card;
 }
 
@@ -241,17 +238,11 @@ function renderBattleStatus(ui, game, state, outcome = null) {
   const isNpcTurn = activePlayer?.constructor?.name === "NpcPlayer";
   const activeLabel = isNpcTurn ? "NPCのターン" : activePlayer ? "あなたのターン" : "---";
   if (turnLabel) turnLabel.textContent = `ターン ${state.turn}：${activeLabel}`;
-  if (actionHint) {
-    actionHint.textContent = isNpcTurn
-      ? "NPCが考えています…"
-      : "あなたの番です。サイコロを振るか、脱落できます。";
-  }
+  if (actionHint) actionHint.textContent = isNpcTurn ? "NPCが自動で行動します…" : "あなたの番です。サイコロを振るか、脱落できます。";
 
   const currentCats = state.getCats?.() ?? [];
   if (fieldCats) fieldCats.textContent = `現在の場の猫：${currentCats.length}匹`;
-  if (fieldStatus) fieldStatus.textContent = currentCats.length
-    ? "現在、場に存在している招き猫"
-    : "場に招き猫はいません";
+  if (fieldStatus) fieldStatus.textContent = currentCats.length ? "現在、場に存在している招き猫" : "場に招き猫はいません";
   if (fieldContainer) {
     fieldContainer.replaceChildren();
     for (const cat of currentCats) {
@@ -315,15 +306,12 @@ function renderBattleStatus(ui, game, state, outcome = null) {
 export function ensureBattleSetup(documentRef = null) {
   const documentTarget = documentRef;
   if (!documentTarget?.querySelector) return;
-
   if (documentTarget.querySelector("#battleDifficultyField")) {
     ensureBattleModeOption(documentTarget);
     return;
   }
-
   const modeSelect = documentTarget.querySelector("#modeSelect");
   if (!modeSelect?.parentNode) return;
-
   ensureBattleModeOption(documentTarget);
 
   const field = documentTarget.createElement("label");
@@ -346,14 +334,12 @@ export function ensureBattleSetup(documentRef = null) {
     option.textContent = label;
     select.appendChild(option);
   }
-
   field.appendChild(select);
   modeSelect.parentNode.insertBefore(field, modeSelect.nextSibling);
 }
 
 export function installBattleModeSupport(ui) {
   if (!ui) return;
-
   const documentRef = ui.document;
   ensureBattleSetup(documentRef);
   ensureBattleStatusPanel(ui);
@@ -362,8 +348,7 @@ export function installBattleModeSupport(ui) {
   ui.updateModeSetupUI = () => {
     originalUpdateModeSetupUI?.();
     const mode = ui.elements.modeSelect?.value ?? "classic";
-    const difficultyField = ui.elements.battleDifficultyField
-      ?? documentRef?.querySelector?.("#battleDifficultyField");
+    const difficultyField = ui.elements.battleDifficultyField ?? documentRef?.querySelector?.("#battleDifficultyField");
     if (difficultyField) difficultyField.hidden = mode !== "battle";
     const panel = ensureBattleStatusPanel(ui);
     if (panel) panel.hidden = mode !== "battle";
@@ -381,25 +366,19 @@ export function installBattleModeSupport(ui) {
       ensureBattleModeOption(documentRef);
       ui.elements.modeSelect.value = "battle";
     }
-    const difficultyField = ui.elements.battleDifficultyField
-      ?? documentRef?.querySelector?.("#battleDifficultyField");
-    if (difficultyField && ui.elements.modeSelect?.value === "battle") {
-      difficultyField.hidden = false;
-    }
+    const difficultyField = ui.elements.battleDifficultyField ?? documentRef?.querySelector?.("#battleDifficultyField");
+    if (difficultyField && ui.elements.modeSelect?.value === "battle") difficultyField.hidden = false;
   };
 
   const originalGetModeStartOptions = ui.getModeStartOptions?.bind(ui);
   ui.getModeStartOptions = () => {
     const options = originalGetModeStartOptions?.() ?? { mode: "classic", targetTurns: 20 };
-    const difficultySelect = ui.elements.battleDifficultySelect
-      ?? documentRef?.querySelector?.("#battleDifficultySelect");
-    const difficulty = difficultySelect?.value ?? "easy";
-    return { ...options, difficulty };
+    const difficultySelect = ui.elements.battleDifficultySelect ?? documentRef?.querySelector?.("#battleDifficultySelect");
+    return { ...options, difficulty: difficultySelect?.value ?? "easy" };
   };
 
   ui.renderBattleStatus = (game, state, outcome = null) => renderBattleStatus(ui, game, state, outcome);
   ui.renderBattleActions = (game, state, outcome = null) => renderBattleStatus(ui, game, state, outcome);
-
   ui.elements.modeSelect?.addEventListener("change", () => ui.updateModeSetupUI());
   ui.updateModeSetupUI();
 }
