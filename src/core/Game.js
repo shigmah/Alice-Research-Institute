@@ -235,6 +235,11 @@ export class Game {
       this.state.nextTurn();
 
       const battleResult = turnResult?.battleResult ?? this.battleMode.battleResult;
+      if (battleResult) {
+        this.state.isGameOver = true;
+        this.state.gameEndReason = "battle-end";
+      }
+
       const outcome = {
         result: {
           values,
