@@ -33,15 +33,21 @@ test("Battle dice progression exposes a deterministic 1→2 transition on the op
 test("Battle dice progression can enter the 1→2→1 loop when a two-dice non-prime result occurs", () => {
   const game = prepareBattle();
   const human = game.battleMode.player1;
+  const npc = game.battleMode.player2;
   const humanContext = game.battleMode.getPlayerContext(human);
+  const npcContext = game.battleMode.getPlayerContext(npc);
   const counts = [];
 
   human.setAction({ action: "continue", source: "human" });
-
   humanContext.randomManager.rollDice = () => 6;
   counts.push(humanContext.state.getCurrentDiceCount());
   game.roll();
 
+  npc.setAction({ action: "continue", source: "npc" });
+  npcContext.randomManager.rollDice = () => 6;
+  game.roll();
+
+  human.setAction({ action: "continue", source: "human" });
   const values = [1, 3];
   humanContext.randomManager.rollDice = () => values.shift() ?? 1;
   counts.push(humanContext.state.getCurrentDiceCount());
@@ -55,14 +61,20 @@ test("Battle dice progression can enter the 1→2→1 loop when a two-dice non-p
 test("Battle dice progression can recover above two when prime outcomes occur", () => {
   const game = prepareBattle();
   const human = game.battleMode.player1;
+  const npc = game.battleMode.player2;
   const humanContext = game.battleMode.getPlayerContext(human);
+  const npcContext = game.battleMode.getPlayerContext(npc);
 
   human.setAction({ action: "continue", source: "human" });
-
   humanContext.randomManager.rollDice = () => 6;
   game.roll();
   assert.equal(humanContext.state.getCurrentDiceCount(), 2);
 
+  npc.setAction({ action: "continue", source: "npc" });
+  npcContext.randomManager.rollDice = () => 6;
+  game.roll();
+
+  human.setAction({ action: "continue", source: "human" });
   let values = [1, 2];
   humanContext.randomManager.rollDice = () => values.shift() ?? 1;
   game.roll();
