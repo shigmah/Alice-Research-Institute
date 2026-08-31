@@ -8,7 +8,7 @@ const mainSource = await readFile(new URL("../src/main/Main.js", import.meta.url
 test("Battle player board keeps Human and NPC status side by side", () => {
   assert.match(source, /battle-player-board-v2/);
   assert.match(source, /gridTemplateColumns\s*=\s*["']minmax\(0, 1fr\) minmax\(0, 1fr\)["']/);
-  assert.match(source, /data-player-type/);
+  assert.match(source, /data-player-type|dataset\.playerType/);
   assert.match(source, /あなた/);
   assert.match(source, /NPC/);
 });
