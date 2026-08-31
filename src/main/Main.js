@@ -58,6 +58,47 @@ function createPlayer1RenderState(state, game) {
   });
 }
 
+function showBattleResultModal(ui, game, outcome) {
+  const modal = ui?.elements?.gameOverModal;
+  if (!modal) return;
+
+  const battleResult = game?.battleMode?.battleResult ?? outcome?.battleResult;
+  if (!battleResult) return;
+
+  const counts = battleResult.finalCatCounts ?? {};
+  const winner = battleResult.winner;
+  const player1 = game?.battleMode?.player1;
+  const player2 = game?.battleMode?.player2;
+  const winnerName = winner?.playerName ?? winner?.name ?? "プレイヤー";
+  const countText = `Player 1：${counts.player1 ?? "?"}匹 / NPC：${counts.player2 ?? "?"}匹`;
+
+  ui.setText?.("gameOverTitle", "⚔️ バトル終了");
+  ui.setText?.("gameOverMessage", winner ? `${winnerName}の勝利！ ${countText}` : `引き分け！ ${countText}`);
+  ui.setText?.("gameOverReason", "リセットすると最初から遊び直せます。");
+  ui.elements.gameOverClose?.removeAttribute?.("hidden");
+  modal.classList.add("visible");
+
+  const result = ui.document?.querySelector?.("#battleResultLabel");
+  if (result) {
+    const winnerId = winner ? (winner.playerId ?? winner.id) : null;
+    const winnerCount = winnerId === player1?.playerId
+      ? counts.player1
+      : winnerId === player2?.playerId
+        ? counts.player2
+        : null;
+    result.textContent = winner
+      ? `🏆 勝者：${winnerName}${Number.isFinite(winnerCount) ? `（${winnerCount}匹）` : ""}`
+      : `🤝 引き分け（${countText}）`;
+  }
+
+  const turnLabel = ui.document?.querySelector?.("#battleTurnLabel");
+  if (turnLabel) turnLabel.textContent = "バトル終了";
+  const actionHint = ui.document?.querySelector?.("#battleActionHint");
+  if (actionHint) actionHint.textContent = "バトルが終了しました。結果を確認してください。";
+  const actionPanel = ui.document?.querySelector?.("#battleActionPanel");
+  if (actionPanel) actionPanel.hidden = true;
+}
+
 function updateBattlePresentation(ui, game, outcome = null) {
   const documentRef = ui?.document;
   if (!documentRef?.querySelector || game?.state?.getGameMode?.() !== "BATTLE") return;
@@ -65,12 +106,13 @@ function updateBattlePresentation(ui, game, outcome = null) {
   const fieldTitle = documentRef.querySelector("#battleFieldCard h4");
   if (fieldTitle) fieldTitle.textContent = "🐱 NPCの招き猫フィールド";
 
+  const npcState = outcome?.playerState ?? game?.battleMode?.player2?.currentState;
   const fieldCats = documentRef.querySelector("#battleFieldCatCount");
-  if (fieldCats) fieldCats.textContent = `現在のNPCの猫：${outcome?.playerState?.getCats?.()?.length ?? 0}匹`;
+  if (fieldCats) fieldCats.textContent = `現在のNPCの猫：${npcState?.getCats?.()?.length ?? 0}匹`;
 
   const fieldStatus = documentRef.querySelector("#battleFieldStatus");
   if (fieldStatus) {
-    const count = outcome?.playerState?.getCats?.()?.length ?? 0;
+    const count = npcState?.getCats?.()?.length ?? 0;
     fieldStatus.textContent = count
       ? "現在、NPCの場に存在している招き猫"
       : "NPCの場に招き猫はいません";
@@ -83,33 +125,9 @@ function updateBattlePresentation(ui, game, outcome = null) {
     dropoutButton.title = "降りる";
   }
 
-  const battleResult = game?.battleMode?.battleResult ?? outcome?.battleResult;
-  if (battleResult) {
-    const result = documentRef.querySelector("#battleResultLabel");
-    const counts = battleResult.finalCatCounts ?? {};
-    const winner = battleResult.winner;
-    const winnerId = winner ? (winner.playerId ?? winner.id) : null;
-    const winnerCount = winnerId === game?.battleMode?.player1?.playerId
-      ? counts.player1
-      : winnerId === game?.battleMode?.player2?.playerId
-        ? counts.player2
-        : winner?.getFixedCatCount?.();
-    if (result) {
-      result.textContent = winner
-        ? `🏆 勝者：${winner.playerName ?? winner.name ?? "プレイヤー"}${Number.isFinite(winnerCount) ? `（${winnerCount}匹）` : ""}`
-        : `🤝 引き分け（Player 1：${counts.player1 ?? "?"}匹 / NPC：${counts.player2 ?? "?"}匹）`;
-    }
-    ui.updateGameOverModal?.(stateForGameOver(ui, game, outcome), true, {
-      ...outcome,
-      gameEnd: { reason: "battle-end" }
-    });
+  if (outcome?.battleResult || game?.battleMode?.battleResult) {
+    showBattleResultModal(ui, game, outcome);
   }
-}
-
-function stateForGameOver(ui, game, outcome) {
-  const state = game?.state;
-  const renderState = createPlayer1RenderState(state, game);
-  return renderState ?? outcome?.playerState ?? state;
 }
 
 export function createMain(documentRef = document) {
@@ -143,14 +161,7 @@ export function createMain(documentRef = document) {
     const renderState = createPlayer1RenderState(state, game);
     originalRender(renderState, outcome);
     if (outcome?.battleResult) {
-      ui.updateGameOverMessage?.(renderState, true, {
-        ...outcome,
-        gameEnd: { reason: "battle-end" }
-      });
-      ui.updateGameOverModal?.(renderState, true, {
-        ...outcome,
-        gameEnd: { reason: "battle-end" }
-      });
+      showBattleResultModal(ui, game, outcome);
     }
   };
 

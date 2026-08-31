@@ -39,7 +39,6 @@ test("finished Battle preserves a deterministic winner from final cat counts", (
 
 test("NPC timer does not run after Battle has finished", async () => {
   const calls = [];
-  const human = { constructor: { name: "Player" } };
   const npc = { constructor: { name: "NpcPlayer" } };
   let rollCount = 0;
   const game = {
@@ -69,7 +68,7 @@ test("Battle presentation explicitly identifies NPC and Player 1 fields", async 
   assert.match(source, /現在のNPCの猫/);
   assert.match(source, /Player 1/);
   assert.match(source, /createPlayer1RenderState/);
-  assert.match(source, /updateGameOverModal/);
+  assert.match(source, /showBattleResultModal/);
 
   const board = await readFile(new URL("../src/ui/BattleBoard.js", import.meta.url), "utf8");
   assert.match(board, /降りる/);
