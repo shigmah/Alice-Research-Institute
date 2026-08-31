@@ -47,6 +47,21 @@ export function createMain(documentRef = document) {
   const ui = new MainScreen(documentRef);
   installCollectorModeSupport(ui);
   installBattleModeSupport(ui);
+
+  const originalBattleStatus = ui.renderBattleStatus?.bind(ui);
+  if (originalBattleStatus) {
+    ui.renderBattleStatus = (battleGame, state, outcome = null) => {
+      originalBattleStatus(battleGame, createBattleRenderState(state, outcome), outcome);
+    };
+  }
+
+  const originalBattleActions = ui.renderBattleActions?.bind(ui);
+  if (originalBattleActions) {
+    ui.renderBattleActions = (battleGame, state, outcome = null) => {
+      originalBattleActions(battleGame, createBattleRenderState(state, outcome), outcome);
+    };
+  }
+
   installBattlePlayerBoard(ui);
 
   const originalRender = ui.render.bind(ui);
