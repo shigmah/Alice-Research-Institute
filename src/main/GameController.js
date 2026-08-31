@@ -12,6 +12,11 @@ export class GameController {
     this.ui.onBattleDropout = () => this.battleDropout();
 
     this.unsubscribe = this.game.onChange((state, outcome) => {
+      if (outcome?.battleResult || this.game.battleMode?.isFinished?.()) {
+        this.clearNpcTimer();
+        this.busy = false;
+        this.ui.setBusy(false);
+      }
       this.ui.render(state, outcome);
       this.ui.renderBattleStatus?.(this.game, state, outcome);
       this.ui.renderBattleActions?.(this.game, state, outcome);
@@ -29,11 +34,19 @@ export class GameController {
 
   start() { this.game.start(); }
 
+  clearNpcTimer() {
+    if (this.npcTimer !== null) {
+      clearTimeout(this.npcTimer);
+      this.npcTimer = null;
+    }
+  }
+
   async runNpcTurnIfNeeded() {
     if (this.game.state.isGameOver || this.game.hasActiveEvent?.()) return null;
     if (this.game.state.getGameMode?.() !== "BATTLE") return null;
 
     const battle = this.game.battleMode;
+    if (battle?.isFinished?.()) return null;
     const activePlayer = battle?.getActivePlayer?.();
     if (!activePlayer || activePlayer.constructor?.name !== "NpcPlayer") return null;
 
@@ -48,14 +61,20 @@ export class GameController {
     if (this.game.state.isGameOver || this.game.hasActiveEvent?.()) return;
     if (this.game.state.getGameMode?.() !== "BATTLE") return;
 
-    const activePlayer = this.game.battleMode?.getActivePlayer?.();
+    const battle = this.game.battleMode;
+    if (battle?.isFinished?.()) return;
+    const activePlayer = battle?.getActivePlayer?.();
     if (!activePlayer || activePlayer.constructor?.name !== "NpcPlayer") return;
 
     this.ui.setBusy(true);
     this.npcTimer = setTimeout(async () => {
       this.npcTimer = null;
       try {
-        if (this.game.state.isGameOver || this.game.hasActiveEvent?.()) return;
+        if (
+          this.game.state.isGameOver ||
+          this.game.hasActiveEvent?.() ||
+          this.game.battleMode?.isFinished?.()
+        ) return;
         await this.runNpcTurnIfNeeded();
       } finally {
         this.ui.setBusy(false);
@@ -93,6 +112,7 @@ export class GameController {
   async battleContinue() {
     if (this.busy || this.game.state.isGameOver || this.game.hasActiveEvent?.()) return null;
     const battle = this.game.battleMode;
+    if (battle?.isFinished?.()) return null;
     const activePlayer = battle?.getActivePlayer?.();
     if (!activePlayer || activePlayer.constructor?.name === "NpcPlayer") return null;
 
@@ -105,6 +125,7 @@ export class GameController {
   async battleDropout() {
     if (this.busy || this.game.state.isGameOver || this.game.hasActiveEvent?.()) return null;
     const battle = this.game.battleMode;
+    if (battle?.isFinished?.()) return null;
     const activePlayer = battle?.getActivePlayer?.();
     if (!activePlayer || activePlayer.constructor?.name === "NpcPlayer") return null;
 
@@ -165,10 +186,7 @@ export class GameController {
   }
 
   reset() {
-    if (this.npcTimer !== null) {
-      clearTimeout(this.npcTimer);
-      this.npcTimer = null;
-    }
+    this.clearNpcTimer();
     this.game.reset();
     this.ui.setBusy(false);
     this.ui.hideEventModal?.();
@@ -177,10 +195,7 @@ export class GameController {
   }
 
   destroy() {
-    if (this.npcTimer !== null) {
-      clearTimeout(this.npcTimer);
-      this.npcTimer = null;
-    }
+    this.clearNpcTimer();
     this.unsubscribe?.();
   }
 }
