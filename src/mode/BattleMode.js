@@ -71,15 +71,17 @@ export class BattleMode {
   }
 
   checkBattleEnd() {
-    const player1Dropped = this.player1?.isDroppedOut?.() === true;
-    const player2Dropped = this.player2?.isDroppedOut?.() === true;
-
-    if (player1Dropped && player2Dropped) return true;
+    const isPlayerFinished = player => {
+      if (!player) return true;
+      if (player.isDroppedOut?.() === true) return true;
+      const context = this.getPlayerContext(player);
+      return context?.state?.isGameOver === true;
+    };
 
     if (this.hasIndependentPlayerStates()) {
-      const player1Finished = this.getPlayerContext(this.player1)?.state?.isGameOver === true;
-      const player2Finished = this.getPlayerContext(this.player2)?.state?.isGameOver === true;
-      return player1Finished && player2Finished;
+      // Battle is complete only when both individual games have finished.
+      // A player may finish by dropout or by their own GameState reaching game-over.
+      return isPlayerFinished(this.player1) && isPlayerFinished(this.player2);
     }
 
     if (this.gameState.turn === 1 && this.gameState.getCats?.().length === 0) {
