@@ -54,6 +54,8 @@ export class BattleMode {
   }
 
   getActivePlayer() {
+    if (this.finished || this.battleResult) return null;
+
     const turn = Number.isInteger(this.gameState?.turn) ? this.gameState.turn : 1;
     const preferredPlayer = turn % 2 === 1 ? this.player1 : this.player2;
     const alternatePlayer = preferredPlayer === this.player1 ? this.player2 : this.player1;
@@ -97,9 +99,9 @@ export class BattleMode {
 
     const context = this.getPlayerContext(player);
     const state = context?.state ?? player.currentState ?? null;
-    if (state?.isGameOver) {
-      const cats = state.getCats?.();
-      if (Array.isArray(cats)) return cats.length;
+    const cats = state?.getCats?.();
+    if (Array.isArray(cats) && (state?.isGameOver === true || this.checkBattleEnd())) {
+      return cats.length;
     }
 
     return null;
@@ -119,14 +121,28 @@ export class BattleMode {
   }
 
   isFinished() {
-    return this.finished || this.checkBattleEnd();
+    return this.finished || Boolean(this.battleResult) || this.checkBattleEnd();
   }
 
   finishBattle() {
     if (!this.checkBattleEnd()) return null;
 
+    const count1 = this.getFinalCatCount(this.player1);
+    const count2 = this.getFinalCatCount(this.player2);
+    const winner = Number.isFinite(count1) && Number.isFinite(count2)
+      ? count1 > count2
+        ? this.player1
+        : count2 > count1
+          ? this.player2
+          : null
+      : null;
+
     this.battleResult = {
-      winner: this.judgeWinner(),
+      winner,
+      finalCatCounts: {
+        player1: Number.isFinite(count1) ? count1 : null,
+        player2: Number.isFinite(count2) ? count2 : null
+      },
       player1: this.player1,
       player2: this.player2
     };
