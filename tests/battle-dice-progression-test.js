@@ -16,21 +16,14 @@ function sequenceLabel(values) {
 test("Battle dice progression exposes a deterministic 1→2 transition on the opening phase-1 turn", () => {
   const game = prepareBattle();
   const human = game.battleMode.player1;
-  const humanState = human.currentState;
+  const humanContext = game.battleMode.getPlayerContext(human);
 
-  human.setAction = () => ({ action: "continue", source: "human" });
-  human.currentState.getCats().length = 0;
-  human.currentState.currentDiceCount = 1;
-  human.currentState.getCats().push(...[]);
-  human.currentState.getDiceResults().length = 0;
-  human.currentState.getDiceTotal;
-  human.currentState.setCurrentDiceCount(1);
-  human.currentStateRandomManager;
-  game.battleMode.getPlayerContext(human).randomManager.rollDice = () => 1;
+  human.setAction({ action: "continue", source: "human" });
+  humanContext.randomManager.rollDice = () => 1;
 
-  const before = humanState.getCurrentDiceCount();
+  const before = humanContext.state.getCurrentDiceCount();
   const outcome = game.roll();
-  const after = humanState.getCurrentDiceCount();
+  const after = humanContext.state.getCurrentDiceCount();
 
   assert.equal(before, 1);
   assert.equal(outcome?.result?.phase, 1);
@@ -40,25 +33,21 @@ test("Battle dice progression exposes a deterministic 1→2 transition on the op
 test("Battle dice progression can enter the 1→2→1 loop when a two-dice non-prime result occurs", () => {
   const game = prepareBattle();
   const human = game.battleMode.player1;
-  const npc = game.battleMode.player2;
   const humanContext = game.battleMode.getPlayerContext(human);
   const counts = [];
 
-  human.setAction = () => ({ action: "continue", source: "human" });
-  npc.setAction = () => ({ action: "continue", source: "npc" });
+  human.setAction({ action: "continue", source: "human" });
 
   humanContext.randomManager.rollDice = () => 6;
-  counts.push(human.currentState.getCurrentDiceCount());
+  counts.push(humanContext.state.getCurrentDiceCount());
   game.roll();
 
-  humanContext.randomManager.rollDice = (() => {
-    const values = [1, 3];
-    return () => values.shift() ?? 1;
-  })();
-  counts.push(human.currentState.getCurrentDiceCount());
+  const values = [1, 3];
+  humanContext.randomManager.rollDice = () => values.shift() ?? 1;
+  counts.push(humanContext.state.getCurrentDiceCount());
   game.roll();
 
-  counts.push(human.currentState.getCurrentDiceCount());
+  counts.push(humanContext.state.getCurrentDiceCount());
 
   assert.deepEqual(counts, [1, 2, 1], sequenceLabel(counts));
 });
@@ -68,62 +57,55 @@ test("Battle dice progression can recover above two when prime outcomes occur", 
   const human = game.battleMode.player1;
   const humanContext = game.battleMode.getPlayerContext(human);
 
-  human.setAction = () => ({ action: "continue", source: "human" });
+  human.setAction({ action: "continue", source: "human" });
 
   humanContext.randomManager.rollDice = () => 6;
   game.roll();
-  assert.equal(human.currentState.getCurrentDiceCount(), 2);
+  assert.equal(humanContext.state.getCurrentDiceCount(), 2);
 
-  let values = [1, 2, 1, 1, 1];
+  let values = [1, 2];
   humanContext.randomManager.rollDice = () => values.shift() ?? 1;
   game.roll();
-  assert.equal(human.currentState.getCurrentDiceCount(), 3);
+  assert.equal(humanContext.state.getCurrentDiceCount(), 3);
 });
 
 test("Battle dice progression measures the distribution and records the longest low-count run", () => {
   const game = prepareBattle();
-  const human = game.battleMode.player1;
-  const npc = game.battleMode.player2;
-  const humanContext = game.battleMode.getPlayerContext(human);
-  const npcContext = game.battleMode.getPlayerContext(npc);
-
-  human.setAction = () => ({ action: "continue", source: "human" });
-  npc.setAction = () => ({ action: "continue", source: "npc" });
-
   const frequencies = new Map();
   let lowRun = 0;
   let maxLowRun = 0;
   let simulatedTurns = 0;
-  let humanRandomState = 0x12345678;
-  let npcRandomState = 0x9abcdef0;
+  const humanRng = { value: 0x12345678 };
+  const npcRng = { value: 0x9abcdef0 };
 
-  const nextInt = state => (state * 1664525 + 1013904223) >>> 0;
-  const nextDie = (holder) => {
-    holder.value = nextInt(holder.value);
-    return 1 + (holder.value % 6);
+  const nextInt = holder => {
+    holder.value = (Math.imul(holder.value, 1664525) + 1013904223) >>> 0;
+    return holder.value;
   };
-  const humanRng = { value: humanRandomState };
-  const npcRng = { value: npcRandomState };
-  humanContext.randomManager.rollDice = () => nextDie(humanRng);
-  npcContext.randomManager.rollDice = () => nextDie(npcRng);
+  const nextDie = holder => 1 + (nextInt(holder) % 6);
+
+  const configureBattle = () => {
+    game.eventManager.checkEvent = () => false;
+    const human = game.battleMode.player1;
+    const npc = game.battleMode.player2;
+    human.setAction({ action: "continue", source: "human" });
+    npc.setAction({ action: "continue", source: "npc" });
+    game.battleMode.getPlayerContext(human).randomManager.rollDice = () => nextDie(humanRng);
+    game.battleMode.getPlayerContext(npc).randomManager.rollDice = () => nextDie(npcRng);
+  };
+
+  configureBattle();
 
   while (simulatedTurns < 1000) {
     if (game.battleMode.finished) {
       game.startBattleMode({ difficulty: "easy" });
-      game.eventManager.checkEvent = () => false;
-      human.setAction = () => ({ action: "continue", source: "human" });
-      npc.setAction = () => ({ action: "continue", source: "npc" });
-      const newHumanContext = game.battleMode.getPlayerContext(game.battleMode.player1);
-      const newNpcContext = game.battleMode.getPlayerContext(game.battleMode.player2);
-      newHumanContext.randomManager.rollDice = () => nextDie(humanRng);
-      newNpcContext.randomManager.rollDice = () => nextDie(npcRng);
+      configureBattle();
       lowRun = 0;
-      humanContext.state = newHumanContext.state;
-      npcContext.state = newNpcContext.state;
       continue;
     }
 
     const activePlayer = game.battleMode.getActivePlayer();
+    assert.ok(activePlayer, "Battle must have an active player during simulation");
     const diceCount = activePlayer.currentState.getCurrentDiceCount();
     frequencies.set(diceCount, (frequencies.get(diceCount) ?? 0) + 1);
 
