@@ -189,18 +189,16 @@ function renderBattleBoard(ui, game, state, outcome = null) {
   const documentRef = ui?.document;
   if (!documentRef?.querySelector || state?.getGameMode?.() !== "BATTLE") return;
 
-  const host = documentRef.querySelector("#battleStatusPanel");
-  const originalBoard = documentRef.querySelector("#battleBoard");
-  if (!host || !originalBoard) return;
+  const board = documentRef.querySelector("#battleBoard");
+  const players = documentRef.querySelector("#battlePlayerStatus");
+  if (!board || !players) return;
 
-  let board = documentRef.querySelector("#battlePlayerBoardV2");
-  if (!board) {
-    board = documentRef.createElement("div");
-    board.id = "battlePlayerBoardV2";
-    board.className = "battle-player-board-v2";
-    board.style.marginTop = "12px";
-    originalBoard.before(board);
-  }
+  board.style.display = "grid";
+  board.style.gridTemplateColumns = "minmax(0, 1fr) minmax(0, 1fr)";
+  board.style.gridTemplateAreas = '"players players" "action field"';
+  board.style.gap = "14px";
+  board.style.alignItems = "stretch";
+  board.classList.add("battle-player-board-v2");
 
   const battle = game?.battleMode;
   const activePlayer = battle?.getActivePlayer?.() ?? outcome?.mode?.player ?? null;
@@ -215,18 +213,27 @@ function renderBattleBoard(ui, game, state, outcome = null) {
     appendBattleLog(ui, actor, detail, state, outcome);
   }
 
-  board.replaceChildren();
-  board.style.display = "grid";
-  board.style.gridTemplateColumns = "minmax(0, 1fr) minmax(0, 1fr)";
-  board.style.gap = "14px";
-  board.style.alignItems = "start";
+  players.style.gridArea = "players";
+  players.style.display = "grid";
+  players.style.gridTemplateColumns = "repeat(2, minmax(0, 1fr))";
+  players.style.gap = "12px";
+  players.replaceChildren();
 
   const player1 = renderPlayerCard(ui, battle?.player1, activePlayer, state);
   const player2 = renderPlayerCard(ui, battle?.player2, activePlayer, state);
-  if (player1) board.appendChild(player1);
-  if (player2) board.appendChild(player2);
+  if (player1) players.appendChild(player1);
+  if (player2) players.appendChild(player2);
 
-  originalBoard.hidden = true;
+  const actionCard = documentRef.querySelector("#battleActionCard");
+  const fieldCard = documentRef.querySelector("#battleFieldCard");
+  if (actionCard) {
+    actionCard.style.gridArea = "action";
+    actionCard.style.display = "block";
+  }
+  if (fieldCard) {
+    fieldCard.style.gridArea = "field";
+    fieldCard.style.display = "block";
+  }
 }
 
 export function installBattlePlayerBoard(ui) {
