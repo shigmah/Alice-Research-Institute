@@ -1,23 +1,19 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import Game from "../src/core/Game.js";
-import Cat from "../src/model/Cat.js";
+import { Game } from "../src/core/Game.js";
 
 function prepareGame() {
   const game = new Game();
   game.startBattleMode({ difficulty: "easy" });
 
-  // Keep the long-run experiment alive independently of the normal game-over
-  // condition so that we can observe the dice-count Markov process itself.
-  game.state.cats = Array.from({ length: 100 }, (_, index) => new Cat(index + 1));
+  // This experiment measures the dice-count transition process itself.
+  // Disable the normal no-cats termination guard so the experiment can run
+  // without having to construct real Cat instances.
+  game.ensureGameOverIfNoCats = () => false;
   game.state.isGameOver = false;
   game.state.gameEndReason = null;
 
   return game;
-}
-
-function forceContinue(player) {
-  player.setAction?.({ action: "continue", source: "human" });
 }
 
 function runExperiment(turns = 10_000) {
@@ -28,8 +24,6 @@ function runExperiment(turns = 10_000) {
   let longestLowRun = 0;
   let maxDice = 0;
 
-  // Remove randomness from the *action* decision while preserving the real
-  // dice rolls and ClassicRule transition logic.
   game.battleMode.player1.getAction = () => ({ action: "continue", source: "human" });
   game.battleMode.player2.getAction = () => ({ action: "continue", source: "npc" });
 
@@ -46,8 +40,10 @@ function runExperiment(turns = 10_000) {
       lowRun = 0;
     }
 
-    const activePlayer = game.battleMode.getActivePlayer();
-    forceContinue(activePlayer);
+    game.battleMode.getActivePlayer().setAction?.({
+      action: "continue",
+      source: game.battleMode.getActivePlayer().constructor?.name === "NpcPlayer" ? "npc" : "human"
+    });
     game.roll();
 
     if (game.state.isGameOver) {
