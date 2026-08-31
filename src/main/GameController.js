@@ -6,6 +6,7 @@ export class GameController {
     this.game = game;
     this.ui = ui;
     this.busy = false;
+    this.npcTimer = null;
 
     this.ui.onBattleContinue = () => this.battleContinue();
     this.ui.onBattleDropout = () => this.battleDropout();
@@ -39,19 +40,25 @@ export class GameController {
     activePlayer.pendingAction = null;
     const action = activePlayer.getAction?.();
     activePlayer.setAction?.(action ?? { action: "continue", source: "npc" });
-    const result = this.game.roll();
-
-    if (result && !this.game.state.isGameOver && !this.game.hasActiveEvent?.()) {
-      const next = this.game.battleMode?.getActivePlayer?.();
-      if (next?.constructor?.name === "NpcPlayer") {
-        return this.runNpcTurnIfNeeded();
-      }
-    }
-
-    return result;
+    return this.roll({ assignHumanAction: false, advanceNpc: false });
   }
 
-  async roll({ assignHumanAction = true, advanceNpc = true } = {}) {
+  scheduleNpcTurnIfNeeded(delay = 250) {
+    if (this.npcTimer !== null) return;
+    if (this.game.state.isGameOver || this.game.hasActiveEvent?.()) return;
+    if (this.game.state.getGameMode?.() !== "BATTLE") return;
+
+    const activePlayer = this.game.battleMode?.getActivePlayer?.();
+    if (!activePlayer || activePlayer.constructor?.name !== "NpcPlayer") return;
+
+    this.npcTimer = setTimeout(async () => {
+      this.npcTimer = null;
+      if (this.game.state.isGameOver || this.game.hasActiveEvent?.()) return;
+      await this.runNpcTurnIfNeeded();
+    }, delay);
+  }
+
+  async roll({ assignHumanAction = true, advanceNpc = false } = {}) {
     if (this.busy || this.game.state.isGameOver || this.game.hasActiveEvent?.()) return null;
     this.busy = true;
     this.ui.setBusy(true);
@@ -64,11 +71,8 @@ export class GameController {
         }
       }
       const result = this.game.roll();
-      if (advanceNpc && result && !this.game.state.isGameOver && !this.game.hasActiveEvent?.()) {
-        const next = this.game.battleMode?.getActivePlayer?.();
-        if (next?.constructor?.name === "NpcPlayer") {
-          return this.runNpcTurnIfNeeded();
-        }
+      if (advanceNpc && result) {
+        this.scheduleNpcTurnIfNeeded();
       }
       return result;
     } finally {
@@ -84,7 +88,9 @@ export class GameController {
     if (!activePlayer || activePlayer.constructor?.name === "NpcPlayer") return null;
 
     activePlayer.setAction?.({ action: "continue", source: "human" });
-    return this.roll({ assignHumanAction: false, advanceNpc: true });
+    const result = await this.roll({ assignHumanAction: false, advanceNpc: false });
+    if (result) this.scheduleNpcTurnIfNeeded();
+    return result;
   }
 
   async battleDropout() {
@@ -96,7 +102,8 @@ export class GameController {
     activePlayer.setAction?.({ action: "dropout", source: "human" });
     const humanResult = await this.roll({ assignHumanAction: false, advanceNpc: false });
     if (!humanResult || this.game.state.isGameOver || this.game.hasActiveEvent?.()) return humanResult;
-    return this.runNpcTurnIfNeeded();
+    this.scheduleNpcTurnIfNeeded();
+    return humanResult;
   }
 
   mogumogu() {
@@ -149,6 +156,10 @@ export class GameController {
   }
 
   reset() {
+    if (this.npcTimer !== null) {
+      clearTimeout(this.npcTimer);
+      this.npcTimer = null;
+    }
     this.game.reset();
     this.ui.setBusy(false);
     this.ui.hideEventModal?.();
@@ -156,5 +167,11 @@ export class GameController {
     this.game.start();
   }
 
-  destroy() { this.unsubscribe?.(); }
+  destroy() {
+    if (this.npcTimer !== null) {
+      clearTimeout(this.npcTimer);
+      this.npcTimer = null;
+    }
+    this.unsubscribe?.();
+  }
 }
