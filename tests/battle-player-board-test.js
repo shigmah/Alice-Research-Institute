@@ -18,7 +18,7 @@ test("Battle player board keeps Human and NPC status side by side", () => {
 
 test("Each Battle player panel exposes turn, cats, next dice, and log", () => {
   assert.match(source, /getPlayerState\(player, state\)/);
-  assert.ok(source.includes('["ターン", String(playerState?.getTurn?.() ?? playerState?.turn)')); 
+  assert.ok(source.includes('["ターン", String(playerState?.getTurn?.() ?? playerState?.turn)'));
   assert.match(source, /\["招き猫", String\(getPlayerMetricCats/);
   assert.match(source, /\["次のサイコロ数", String\(getPlayerNextDiceCount/);
   assert.match(source, /battle-player-log/);
