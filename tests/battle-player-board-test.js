@@ -4,9 +4,11 @@ import { readFile } from "node:fs/promises";
 
 const source = await readFile(new URL("../src/ui/BattleBoard.js", import.meta.url), "utf8");
 const mainSource = await readFile(new URL("../src/main/Main.js", import.meta.url), "utf8");
+const setupSource = await readFile(new URL("../src/ui/BattleSetup.js", import.meta.url), "utf8");
 
 test("Battle player board keeps Human and NPC status side by side", () => {
   assert.match(source, /battle-player-board-v2/);
+  assert.match(source, /querySelector\("#battleBoard"\)/);
   assert.match(source, /gridTemplateColumns\s*=\s*["']minmax\(0, 1fr\) minmax\(0, 1fr\)["']/);
   assert.match(source, /data-player-type|dataset\.playerType/);
   assert.match(source, /あなた/);
@@ -27,6 +29,14 @@ test("Battle board renders from live battle outcomes", () => {
   assert.match(source, /modeResult\?\.action/);
   assert.match(source, /appendBattleLog/);
   assert.match(source, /renderBattleBoard\(ui, game, state, outcome\)/);
+});
+
+test("Battle board retains the action and field cards", () => {
+  assert.match(setupSource, /id = "battleActionCard"/);
+  assert.match(setupSource, /id = "battleFieldCard"/);
+  assert.match(source, /querySelector\("#battleActionCard"\)/);
+  assert.match(source, /querySelector\("#battleFieldCard"\)/);
+  assert.doesNotMatch(source, /originalBoard\.hidden\s*=\s*true/);
 });
 
 test("Main installs the Battle player board after Battle mode support", () => {
