@@ -5,11 +5,13 @@ import { readFile } from "node:fs/promises";
 const battleSetupSource = await readFile(new URL("../src/ui/BattleSetup.js", import.meta.url), "utf8");
 const controllerSource = await readFile(new URL("../src/main/GameController.js", import.meta.url), "utf8");
 const playerSource = await readFile(new URL("../src/player/Player.js", import.meta.url), "utf8");
+const mainSource = await readFile(new URL("../src/main/Main.js", import.meta.url), "utf8");
 
-test("Battle UI exposes continue and dropout action controls", () => {
+test("Battle UI exposes dice-roll and dropout action controls", () => {
   assert.match(battleSetupSource, /battleContinue/);
   assert.match(battleSetupSource, /battleDropout/);
-  assert.match(battleSetupSource, /継続|続ける/);
+  assert.match(mainSource, /battleRollButton/);
+  assert.match(mainSource, /サイコロを振る/);
   assert.match(battleSetupSource, /脱落する/);
 });
 
