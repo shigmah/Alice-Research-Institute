@@ -54,6 +54,32 @@ test("Battle ends after both players drop out and judges the larger fixed cat co
   assert.equal(battle.battleResult?.winner, p1);
 });
 
+test("Battle judges a naturally finished player using that player's final cat count", () => {
+  const game = prepareBattle();
+  const battle = game.battleMode;
+  const p1 = battle.player1;
+  const p2 = battle.player2;
+  const p1Context = battle.getPlayerContext(p1);
+  const p2Context = battle.getPlayerContext(p2);
+
+  p1.setDroppedOut(2);
+  p2.setAction({ type: "DROP_OUT" });
+  p2Context.catManager.createCat();
+  p2Context.catManager.createCat();
+  p2Context.catManager.createCat();
+  p2Context.catManager.createCat();
+
+  p1Context.state.isGameOver = true;
+  p1Context.state.cats.length = 0;
+
+  const result = game.roll();
+
+  assert.equal(result?.mode?.action?.type, "DROP_OUT");
+  assert.equal(p2.getFixedCatCount(), 4);
+  assert.equal(battle.battleResult?.winner, p2);
+  assert.equal(result?.battleResult?.winner, p2);
+});
+
 test("A completed battle does not execute another player turn", () => {
   const game = prepareBattle();
   const p1 = game.battleMode.player1;
