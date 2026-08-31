@@ -13,9 +13,9 @@ import { Game } from "../src/core/Game.js";
 // 目標1ターンなら、1ターン目の猫生成後に勝利する。
 {
   const game = new Game();
+  game.startAliceMode(1);
   game.randomManager.rollDice = () => 3;
   game.eventManager.checkEvent = () => false;
-  game.startAliceMode(1);
   const outcome = game.roll();
 
   console.assert(outcome !== null, "Alice mode roll returns outcome");
@@ -39,15 +39,14 @@ console.log("Alice mode tests: PASS");
 // Game統合時もAliceModifierのターン前後処理が実行され、寿命が表示可能な状態になる。
 {
   const game = new Game();
+  game.startAliceMode(20);
   game.randomManager.rollDice = () => 3;
   game.randomManager.checkProbability = () => false;
   game.eventManager.checkEvent = () => false;
-  game.startAliceMode(20);
   game.roll();
   console.assert(game.state.getCats().length > 0, "Alice mode creates cats");
   console.assert(game.state.getCats().every(cat => cat.lifetime === 6), "Alice mode cats have visible lifetime after creation turn");
 
-  const previous = game.state.getCats().map(cat => cat.lifetime);
   game.roll();
   const current = game.state.getCats();
   console.assert(
