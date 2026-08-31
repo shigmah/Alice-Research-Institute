@@ -9,17 +9,19 @@ function prepareBattle() {
   return game;
 }
 
-test("Battle shares one currentDiceCount across Human and NPC turns", () => {
+test("Battle keeps currentDiceCount independent between Human and NPC turns", () => {
   const game = prepareBattle();
   const human = game.battleMode.player1;
   const npc = game.battleMode.player2;
+  const humanState = human.currentState;
+  const npcState = npc.currentState;
 
-  assert.strictEqual(human.currentState, game.state);
-  assert.strictEqual(npc.currentState, game.state);
+  assert.notStrictEqual(humanState, game.state);
+  assert.notStrictEqual(npcState, game.state);
+  assert.notStrictEqual(humanState, npcState);
 
-  assert.equal(game.state.getCurrentDiceCount(), 1);
-  assert.equal(human.currentState.getCurrentDiceCount(), 1);
-  assert.equal(npc.currentState.getCurrentDiceCount(), 1);
+  assert.equal(humanState.getCurrentDiceCount(), 1);
+  assert.equal(npcState.getCurrentDiceCount(), 1);
 
   human.getAction = () => ({
     action: "continue",
@@ -29,7 +31,7 @@ test("Battle shares one currentDiceCount across Human and NPC turns", () => {
   const result = game.roll();
 
   assert.ok(result?.mode);
-  assert.equal(game.state.getCurrentDiceCount(), 2);
-  assert.equal(human.currentState.getCurrentDiceCount(), 2);
-  assert.equal(npc.currentState.getCurrentDiceCount(), 2);
+  assert.equal(result.mode.player, human);
+  assert.equal(humanState.getCurrentDiceCount(), 2);
+  assert.equal(npcState.getCurrentDiceCount(), 1);
 });
