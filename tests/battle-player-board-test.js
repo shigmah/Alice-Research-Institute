@@ -26,8 +26,8 @@ test("Each Battle player panel exposes turn, cats, next dice, and log", () => {
 
 test("Battle player logs use stable player identities instead of shared undefined ids", () => {
   assert.match(source, /function getPlayerId\(player\)/);
-  assert.match(source, /player\?\.playerId\s*\?\?\s*player\?\.id/);
-  assert.match(source, /player\?\.playerName\s*\?\?\s*player\?\.name/);
+  assert.ok(source.includes("player?.playerId ?? player?.id"));
+  assert.ok(source.includes("player.playerName ?? player.name"));
   assert.match(source, /String\(getPlayerId\(player\) \?\? getPlayerLabel\(player\)\)/);
 });
 
