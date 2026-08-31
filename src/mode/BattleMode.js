@@ -79,8 +79,6 @@ export class BattleMode {
     };
 
     if (this.hasIndependentPlayerStates()) {
-      // Battle is complete only when both individual games have finished.
-      // A player may finish by dropout or by their own GameState reaching game-over.
       return isPlayerFinished(this.player1) && isPlayerFinished(this.player2);
     }
 
@@ -91,9 +89,25 @@ export class BattleMode {
     return this.playRule?.isFinished?.() === true;
   }
 
+  getFinalCatCount(player) {
+    if (!player) return null;
+
+    const fixed = player.getFixedCatCount?.();
+    if (Number.isFinite(fixed)) return fixed;
+
+    const context = this.getPlayerContext(player);
+    const state = context?.state ?? player.currentState ?? null;
+    if (state?.isGameOver) {
+      const cats = state.getCats?.();
+      if (Array.isArray(cats)) return cats.length;
+    }
+
+    return null;
+  }
+
   judgeWinner() {
-    const count1 = this.player1?.getFixedCatCount?.();
-    const count2 = this.player2?.getFixedCatCount?.();
+    const count1 = this.getFinalCatCount(this.player1);
+    const count2 = this.getFinalCatCount(this.player2);
 
     if (!Number.isFinite(count1) || !Number.isFinite(count2)) {
       return null;
