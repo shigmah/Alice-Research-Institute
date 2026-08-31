@@ -14,6 +14,14 @@ export function createMain(documentRef = document) {
   installCollectorModeSupport(ui);
   installBattleModeSupport(ui);
   installBattlePlayerBoard(ui);
+
+  const battleRollButton = documentRef.querySelector?.("#battleContinue");
+  if (battleRollButton) {
+    battleRollButton.textContent = "🎲 サイコロを振る";
+    battleRollButton.setAttribute("aria-label", "サイコロを振る");
+    battleRollButton.title = "サイコロを振る";
+  }
+
   const controller = new GameController({ game, ui });
 
   return { game, ui, controller };
