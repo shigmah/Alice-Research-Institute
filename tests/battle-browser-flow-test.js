@@ -72,7 +72,11 @@ function createControllerHarness() {
     render() {}, renderBattleStatus() {}, renderBattleActions() {},
     bindActions(actions) { this.actions = actions; }, setBusy() {}, playDiceAnimation: async () => {}
   };
-  return { game, ui, calls, getRollCount: () => rollCount };
+  return { game, ui, calls, getRollCount: () => rollCount, getActive: () => active };
+}
+
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 test("browser entry page boots the shared Main factory", async () => {
@@ -100,12 +104,20 @@ test("Battle setup makes the existing mode selector battle-ready", () => {
   assert.equal(ui.getModeStartOptions().difficulty, "hard");
 });
 
-test("human Battle action automatically advances through the NPC turn", async () => {
-  const { game, ui, calls, getRollCount } = createControllerHarness();
+test("human Battle action resolves one turn before the NPC turn is scheduled", async () => {
+  const { game, ui, calls, getRollCount, getActive } = createControllerHarness();
   const controller = new GameController({ game, ui });
+
   await controller.battleContinue();
+
   assert.deepEqual(calls, [["humanAction", { action: "continue", source: "human" }]]);
+  assert.equal(getRollCount(), 1);
+  assert.equal(getActive().constructor.name, "NpcPlayer");
+
+  await wait(300);
   assert.equal(getRollCount(), 2);
+  assert.equal(getActive().constructor.name, "Player");
+
   controller.destroy();
 });
 
