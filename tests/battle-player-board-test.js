@@ -6,6 +6,7 @@ const source = await readFile(new URL("../src/ui/BattleBoard.js", import.meta.ur
 const mainSource = await readFile(new URL("../src/main/Main.js", import.meta.url), "utf8");
 const setupSource = await readFile(new URL("../src/ui/BattleSetup.js", import.meta.url), "utf8");
 
+
 test("Battle player board keeps Human and NPC status side by side", () => {
   assert.match(source, /battle-player-board-v2/);
   assert.match(source, /querySelector\("#battleBoard"\)/);
@@ -21,6 +22,13 @@ test("Each Battle player panel exposes turn, cats, next dice, and log", () => {
   assert.match(source, /\["次のサイコロ数", String\((?:state\?\.getCurrentDiceCount|getPlayerNextDiceCount)/);
   assert.match(source, /battle-player-log/);
   assert.match(source, /のログ/);
+});
+
+test("Battle player logs use stable player identities instead of shared undefined ids", () => {
+  assert.match(source, /function getPlayerId\(player\)/);
+  assert.match(source, /player\?\.playerId \?\? player\?\.id/);
+  assert.match(source, /player\?\.playerName \?\? player\?\.name/);
+  assert.match(source, /String\(getPlayerId\(player\) \?\? getPlayerLabel\(player\)\)/);
 });
 
 test("Battle board renders from live battle outcomes", () => {
