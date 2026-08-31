@@ -22,14 +22,14 @@ function getPlayerState(player, state) {
 function getActiveLabel(player, activePlayer) {
   if (!player) return "---";
   if (player === activePlayer) return isNpcPlayer(player) ? "NPCのターン" : "あなたのターン";
-  if (player.isDroppedOut?.()) return "脱落";
+  if (player.isDroppedOut?.()) return "降りた";
   if (player.currentState?.isGameOver) return "プレイ終了";
   return "待機中";
 }
 
 function getActionText(action) {
   if (!action) return "";
-  if (action.action === "dropout" || action.type === "DROP_OUT") return "脱落する";
+  if (action.action === "dropout" || action.type === "DROP_OUT") return "降りる";
   if (action.action === "continue" || action.type === "CONTINUE") return "続ける";
   return action.action ?? action.type ?? "行動";
 }
@@ -43,7 +43,7 @@ function getResultText(outcome) {
       : `出目：${values.join("、")}`;
   }
   const mode = outcome?.mode;
-  if (mode?.type === "DROP_OUT") return `脱落・確定${mode.fixedCatCount ?? "?"}匹`;
+  if (mode?.type === "DROP_OUT") return `降りる・確定${mode.fixedCatCount ?? "?"}匹`;
   return "";
 }
 
