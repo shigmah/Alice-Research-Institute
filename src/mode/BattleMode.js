@@ -5,6 +5,7 @@ export class BattleMode {
     this.playRule = null;
     this.player1 = null;
     this.player2 = null;
+    this.playerContexts = new Map();
     this.battleResult = null;
     this.finished = false;
     this.lastAction = null;
@@ -35,13 +36,37 @@ export class BattleMode {
     this.player2 = player;
   }
 
+  setPlayerContext(player, context) {
+    if (!player || !context?.state || !context?.playRule) {
+      throw new Error("Battle player context requires state and playRule");
+    }
+    this.playerContexts.set(player, context);
+    player.currentState = context.state;
+    player.playRule = context.playRule;
+  }
+
+  getPlayerContext(player) {
+    return this.playerContexts.get(player) ?? null;
+  }
+
+  hasIndependentPlayerStates() {
+    return this.playerContexts.has(this.player1) && this.playerContexts.has(this.player2);
+  }
+
   getActivePlayer() {
     const turn = Number.isInteger(this.gameState?.turn) ? this.gameState.turn : 1;
     const preferredPlayer = turn % 2 === 1 ? this.player1 : this.player2;
     const alternatePlayer = preferredPlayer === this.player1 ? this.player2 : this.player1;
 
-    if (preferredPlayer && !preferredPlayer.isDroppedOut?.()) return preferredPlayer;
-    if (alternatePlayer && !alternatePlayer.isDroppedOut?.()) return alternatePlayer;
+    const canAct = player => {
+      if (!player || player.isDroppedOut?.()) return false;
+      const context = this.getPlayerContext(player);
+      if (context?.state?.isGameOver) return false;
+      return true;
+    };
+
+    if (canAct(preferredPlayer)) return preferredPlayer;
+    if (canAct(alternatePlayer)) return alternatePlayer;
     return null;
   }
 
@@ -49,13 +74,15 @@ export class BattleMode {
     const player1Dropped = this.player1?.isDroppedOut?.() === true;
     const player2Dropped = this.player2?.isDroppedOut?.() === true;
 
-    // Both players dropping out always ends the battle, even if the shared
-    // PlayRule has not reached its own terminal condition.
     if (player1Dropped && player2Dropped) return true;
 
-    // The battle starts with an empty field. Allow the opening turn to use
-    // the shared PlayRule so it can generate the initial cats.
-    if (this.gameState.turn === 1 && this.gameState.getCats().length === 0) {
+    if (this.hasIndependentPlayerStates()) {
+      const player1Finished = this.getPlayerContext(this.player1)?.state?.isGameOver === true;
+      const player2Finished = this.getPlayerContext(this.player2)?.state?.isGameOver === true;
+      return player1Finished && player2Finished;
+    }
+
+    if (this.gameState.turn === 1 && this.gameState.getCats?.().length === 0) {
       return false;
     }
 
@@ -93,7 +120,9 @@ export class BattleMode {
 
   terminate() {
     this.finished = true;
-    this.playRule?.terminate?.();
+    if (!this.hasIndependentPlayerStates()) {
+      this.playRule?.terminate?.();
+    }
   }
 
   isDropoutAction(action) {
@@ -102,7 +131,7 @@ export class BattleMode {
 
   executeTurn() {
     if (this.isFinished()) return this.battleResult;
-    if (!this.playRule) return null;
+    if (!this.playRule && !this.hasIndependentPlayerStates()) return null;
 
     const activePlayer = this.getActivePlayer();
     if (!activePlayer) {
@@ -110,19 +139,31 @@ export class BattleMode {
       return this.battleResult;
     }
 
+    const context = this.getPlayerContext(activePlayer);
+    const state = context?.state ?? this.gameState;
+    const rule = context?.playRule ?? this.playRule;
     const action = activePlayer.getAction?.() ?? null;
+    const playerTurn = Number.isInteger(state?.turn) ? state.turn : 1;
     this.lastAction = action;
 
     let modeResult = null;
     if (this.isDropoutAction(action)) {
-      const fixedCatCount = this.gameState.getCats().length;
+      const fixedCatCount = state?.getCats?.()?.length ?? 0;
       activePlayer.setDroppedOut(fixedCatCount);
       modeResult = { type: "DROP_OUT", fixedCatCount };
     } else {
-      modeResult = this.playRule.executeTurn?.(action) ?? null;
+      modeResult = rule?.executeTurn?.(action) ?? null;
     }
 
     this.lastTurnResult = modeResult;
+
+    if (context) {
+      context.catManager?.updateCats?.();
+      if (!state.isGameOver) state.nextTurn();
+      context.lastTurn = playerTurn;
+      context.lastAction = action;
+      context.lastModeResult = modeResult;
+    }
 
     if (this.checkBattleEnd()) {
       this.finishBattle();
@@ -132,6 +173,8 @@ export class BattleMode {
       player: activePlayer,
       action,
       mode: modeResult,
+      playerTurn,
+      playerState: state,
       battleResult: this.battleResult
     };
   }
@@ -140,6 +183,14 @@ export class BattleMode {
     if (this.finished) return this.battleResult;
 
     this.initialize();
+
+    if (this.hasIndependentPlayerStates()) {
+      for (const context of this.playerContexts.values()) {
+        context.playRule.initialize?.();
+        context.state.isGameOver = false;
+      }
+      return this.battleResult;
+    }
 
     if (!this.playRule) return null;
 

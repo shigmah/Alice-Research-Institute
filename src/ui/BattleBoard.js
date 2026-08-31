@@ -15,10 +15,15 @@ function getPlayerRole(player) {
   return isNpcPlayer(player) ? "🤖 NPC" : "🧑 あなた";
 }
 
+function getPlayerState(player, state) {
+  return player?.currentState ?? state ?? null;
+}
+
 function getActiveLabel(player, activePlayer) {
   if (!player) return "---";
   if (player === activePlayer) return isNpcPlayer(player) ? "NPCのターン" : "あなたのターン";
   if (player.isDroppedOut?.()) return "脱落";
+  if (player.currentState?.isGameOver) return "プレイ終了";
   return "待機中";
 }
 
@@ -42,20 +47,16 @@ function getResultText(outcome) {
   return "";
 }
 
-function getPlayerMetricCats(player, battle, state) {
-  if (!player) return 0;
-  const isHuman = !isNpcPlayer(player);
-  if (isHuman) return state?.getCats?.()?.length ?? 0;
-  const fixed = player.getFixedCatCount?.();
-  if (Number.isFinite(fixed)) return fixed;
-  return battle?.player2 === player ? state?.getCats?.()?.length ?? 0 : 0;
+function getPlayerMetricCats(player, _battle, state) {
+  const playerState = getPlayerState(player, state);
+  return playerState?.getCats?.()?.length ?? 0;
 }
 
-function getPlayerNextDiceCount(_player, _battle, state) {
-  if (!state?.getCurrentDiceCount) return "-";
-  const current = state.getCurrentDiceCount();
-  if (!Number.isFinite(current)) return "-";
-  return current;
+function getPlayerNextDiceCount(player, _battle, state) {
+  const playerState = getPlayerState(player, state);
+  if (!playerState?.getCurrentDiceCount) return "-";
+  const current = playerState.getCurrentDiceCount();
+  return Number.isFinite(current) ? current : "-";
 }
 
 function appendBattleLog(ui, player, text, state, outcome) {
@@ -65,6 +66,7 @@ function appendBattleLog(ui, player, text, state, outcome) {
   const list = logs.get(key) ?? [];
   const signature = [
     state?.turn,
+    outcome?.mode?.playerTurn,
     getPlayerId(player),
     outcome?.mode?.action?.action ?? outcome?.mode?.action?.type ?? "",
     outcome?.result?.values?.join(",") ?? "",
@@ -76,7 +78,7 @@ function appendBattleLog(ui, player, text, state, outcome) {
   const lastSignatureByPlayer = ui.__battleLastLogSignatures ??= new Map();
   if (lastSignatureByPlayer.get(key) === signature) return;
   lastSignatureByPlayer.set(key, signature);
-  const turn = state?.turn ?? "?";
+  const turn = outcome?.mode?.playerTurn ?? state?.turn ?? "?";
   list.push(`T${turn}: ${text}`);
   if (list.length > 80) list.shift();
   logs.set(key, list);
@@ -115,6 +117,7 @@ function renderPlayerCard(ui, player, activePlayer, state, battle) {
   if (!player) return null;
   const documentRef = ui.document;
   const isNpc = isNpcPlayer(player);
+  const playerState = getPlayerState(player, state);
   const card = documentRef.createElement("section");
   card.className = "battle-player-card battle-player-panel";
   card.setAttribute("data-player-type", isNpc ? "npc" : "human");
@@ -127,9 +130,7 @@ function renderPlayerCard(ui, player, activePlayer, state, battle) {
   card.style.borderRadius = "14px";
   card.style.background = isNpc ? "#f4f7fb" : "#fbfaf6";
 
-  if (player === activePlayer) {
-    card.style.boxShadow = "0 0 0 2px #e6a23c66";
-  }
+  if (player === activePlayer) card.style.boxShadow = "0 0 0 2px #e6a23c66";
 
   const header = documentRef.createElement("div");
   header.style.display = "flex";
@@ -163,7 +164,7 @@ function renderPlayerCard(ui, player, activePlayer, state, battle) {
   metrics.style.marginTop = "12px";
 
   const metricValues = [
-    ["ターン", String(state?.turn ?? "-")],
+    ["ターン", String(playerState?.getTurn?.() ?? playerState?.turn ?? "-")],
     ["招き猫", String(getPlayerMetricCats(player, battle, state))],
     ["次のサイコロ数", String(getPlayerNextDiceCount(player, battle, state))]
   ];

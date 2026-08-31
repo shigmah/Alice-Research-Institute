@@ -166,7 +166,7 @@ export class Game {
     }
 
     const strategies = {
-      easy: () => new EasyStrategy(() => this.randomManager.nextDouble()),
+      easy: random => new EasyStrategy(() => random.nextDouble()),
       normal: () => new NormalStrategy(),
       hard: () => new HardStrategy()
     };
@@ -177,18 +177,28 @@ export class Game {
       throw new Error(`Unsupported battle difficulty: ${difficulty}`);
     }
 
+    const createPlayerContext = () => {
+      const state = new GameState();
+      const catManager = new CatManager(state);
+      const randomManager = new RandomManager();
+      const playRule = new ClassicRule(state, catManager, randomManager, []);
+      playRule.initialize();
+      state.setGameMode("CLASSIC");
+      return { state, catManager, randomManager, playRule, lastTurn: 1, lastAction: null, lastModeResult: null };
+    };
+
     const player = new Player(playerId, playerName);
-    const npcAI = new NpcAI(this.state, createStrategy());
+    const npcContext = createPlayerContext();
+    const humanContext = createPlayerContext();
+    const npcAI = new NpcAI(npcContext.state, createStrategy(npcContext.randomManager));
     const npcPlayer = new NpcPlayer(npcId, npcName, normalizedDifficulty, npcAI);
 
-    for (const participant of [player, npcPlayer]) {
-      participant.currentState = this.state;
-      participant.playRule = this.currentRule;
-      participant.initialize();
-    }
-    npcAI.update(this.state);
-
+    player.initialize();
+    npcPlayer.initialize();
     this.battleMode.setPlayers(player, npcPlayer);
+    this.battleMode.setPlayerContext(player, humanContext);
+    this.battleMode.setPlayerContext(npcPlayer, npcContext);
+    npcAI.update(npcContext.state);
 
     return {
       player,
@@ -212,6 +222,38 @@ export class Game {
   }
 
   roll() {
+    if (this.modeType === "battle" && this.battleMode?.hasIndependentPlayerStates?.()) {
+      if (this.state.isGameOver) return null;
+
+      const turnResult = this.battleMode.executeTurn();
+      const playerState = turnResult?.playerState ?? this.battleMode.getPlayerContext(turnResult?.player)?.state ?? null;
+      const resultState = playerState ?? this.state;
+      const values = resultState.getDiceResults?.() ?? [];
+      const diceCount = resultState.getDiceCount?.() ?? 0;
+      const total = resultState.getDiceTotal?.() ?? 0;
+
+      this.state.nextTurn();
+
+      const battleResult = turnResult?.battleResult ?? this.battleMode.battleResult;
+      const outcome = {
+        result: {
+          values,
+          total,
+          phase: diceCount === 1 ? 1 : 2,
+          totalIsPrime: diceCount >= 2 ? this.classicRule.isPrime(total) : null
+        },
+        event: null,
+        mode: turnResult,
+        alice: null,
+        gameEnd: battleResult ? { reason: "battle-end" } : null,
+        state: this.state,
+        playerState,
+        battleResult
+      };
+      this.emit(this.state, outcome);
+      return outcome;
+    }
+
     if (this.state.isGameOver || this.ensureGameOverIfNoCats()) {
       const outcome = { result: null, event: null, gameEnd: { reason: this.state.gameEndReason ?? "no-cats" }, state: this.state };
       this.emit(this.state, outcome);

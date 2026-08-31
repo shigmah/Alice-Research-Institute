@@ -68,11 +68,15 @@ export class GameController {
     this.busy = true;
     this.ui.setBusy(true);
     try {
-      await this.ui.playDiceAnimation(this.game.state.getCurrentDiceCount());
+      const activePlayer = this.game.state.getGameMode?.() === "BATTLE"
+        ? this.game.battleMode?.getActivePlayer?.()
+        : null;
+      const diceState = activePlayer?.currentState ?? this.game.state;
+      await this.ui.playDiceAnimation(diceState?.getCurrentDiceCount?.() ?? 1);
       if (assignHumanAction && this.game.state.getGameMode?.() === "BATTLE") {
-        const activePlayer = this.game.battleMode?.getActivePlayer?.();
-        if (activePlayer?.setAction && activePlayer.constructor?.name !== "NpcPlayer") {
-          activePlayer.setAction({ action: "continue", source: "human" });
+        const currentPlayer = this.game.battleMode?.getActivePlayer?.();
+        if (currentPlayer?.setAction && currentPlayer.constructor?.name !== "NpcPlayer") {
+          currentPlayer.setAction({ action: "continue", source: "human" });
         }
       }
       const result = this.game.roll();
