@@ -118,6 +118,12 @@ function updateBattlePresentation(ui, game, outcome = null) {
       : "NPCの場に招き猫はいません";
   }
 
+  const player1Cats = documentRef.querySelector("#cats");
+  const player1Field = player1Cats?.parentNode;
+  const player1Title = Array.from(player1Field?.children ?? [])
+    .find(child => child?.tagName === "H2");
+  if (player1Title) player1Title.textContent = "🐱 Player 1 の招き猫フィールド";
+
   const dropoutButton = documentRef.querySelector("#battleDropout");
   if (dropoutButton) {
     dropoutButton.textContent = "↪ 降りる";

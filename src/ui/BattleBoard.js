@@ -225,7 +225,9 @@ function renderBattleBoard(ui, game, state, outcome = null) {
   board.classList.add("battle-player-board-v2");
 
   const battle = game?.battleMode;
-  const activePlayer = battle?.getActivePlayer?.() ?? outcome?.mode?.player ?? null;
+  const activePlayer = battle?.isFinished?.()
+    ? null
+    : battle?.getActivePlayer?.() ?? outcome?.mode?.player ?? null;
 
   const modeResult = outcome?.mode;
   const action = modeResult?.action;
