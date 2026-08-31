@@ -47,6 +47,7 @@ export function createMain(documentRef = document) {
   const ui = new MainScreen(documentRef);
   installCollectorModeSupport(ui);
   installBattleModeSupport(ui);
+  installBattlePlayerBoard(ui);
 
   const originalBattleStatus = ui.renderBattleStatus?.bind(ui);
   if (originalBattleStatus) {
@@ -61,8 +62,6 @@ export function createMain(documentRef = document) {
       originalBattleActions(battleGame, createBattleRenderState(state, outcome), outcome);
     };
   }
-
-  installBattlePlayerBoard(ui);
 
   const originalRender = ui.render.bind(ui);
   ui.render = (state, outcome = null) => {
