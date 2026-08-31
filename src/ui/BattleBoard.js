@@ -38,6 +38,22 @@ function getResultText(outcome) {
   return "";
 }
 
+function getPlayerMetricCats(player, battle, state) {
+  if (!player) return 0;
+  const isHuman = !isNpcPlayer(player);
+  if (isHuman) return state?.getCats?.()?.length ?? 0;
+  const fixed = player.getFixedCatCount?.();
+  if (Number.isFinite(fixed)) return fixed;
+  return battle?.player2 === player ? state?.getCats?.()?.length ?? 0 : 0;
+}
+
+function getPlayerNextDiceCount(player, battle, state) {
+  if (!state?.getCurrentDiceCount) return "-";
+  const current = state.getCurrentDiceCount();
+  if (!Number.isFinite(current)) return "-";
+  return current;
+}
+
 function appendBattleLog(ui, player, text, state, outcome) {
   if (!player || !text) return;
   const logs = ui.__battleLogs ??= new Map();
@@ -53,8 +69,9 @@ function appendBattleLog(ui, player, text, state, outcome) {
     outcome?.mode?.mode?.fixedCatCount ?? "",
     outcome?.gameEnd?.reason ?? ""
   ].join("|");
-  if (ui.__battleLastLogSignature === signature) return;
-  ui.__battleLastLogSignature = signature;
+  const lastSignatureByPlayer = ui.__battleLastLogSignatures ??= new Map();
+  if (lastSignatureByPlayer.get(key) === signature) return;
+  lastSignatureByPlayer.set(key, signature);
   const turn = state?.turn ?? "?";
   list.push(`T${turn}: ${text}`);
   if (list.length > 80) list.shift();
@@ -90,19 +107,21 @@ function renderPlayerLog(documentRef, player) {
   return log;
 }
 
-function renderPlayerCard(ui, player, activePlayer, state) {
+function renderPlayerCard(ui, player, activePlayer, state, battle) {
   if (!player) return null;
   const documentRef = ui.document;
+  const isNpc = isNpcPlayer(player);
   const card = documentRef.createElement("section");
   card.className = "battle-player-card battle-player-panel";
+  card.setAttribute("data-player-type", isNpc ? "npc" : "human");
   card.dataset.playerId = String(player.id ?? "");
-  card.dataset.playerType = isNpcPlayer(player) ? "npc" : "human";
+  card.dataset.playerType = isNpc ? "npc" : "human";
   card.style.boxSizing = "border-box";
   card.style.minWidth = "0";
   card.style.padding = "14px";
   card.style.border = "2px solid #e5dfd2";
   card.style.borderRadius = "14px";
-  card.style.background = "#fbfaf6";
+  card.style.background = isNpc ? "#f4f7fb" : "#fbfaf6";
 
   if (player === activePlayer) {
     card.style.boxShadow = "0 0 0 2px #e6a23c66";
@@ -141,8 +160,8 @@ function renderPlayerCard(ui, player, activePlayer, state) {
 
   const metricValues = [
     ["ターン", String(state?.turn ?? "-")],
-    ["招き猫", String(state?.getCats?.()?.length ?? 0)],
-    ["次のサイコロ数", String(state?.getCurrentDiceCount?.() ?? "-")]
+    ["招き猫", String(getPlayerMetricCats(player, battle, state))],
+    ["次のサイコロ数", String(getPlayerNextDiceCount(player, battle, state))]
   ];
   for (const [label, value] of metricValues) {
     const metric = documentRef.createElement("div");
@@ -219,8 +238,8 @@ function renderBattleBoard(ui, game, state, outcome = null) {
   players.style.gap = "12px";
   players.replaceChildren();
 
-  const player1 = renderPlayerCard(ui, battle?.player1, activePlayer, state);
-  const player2 = renderPlayerCard(ui, battle?.player2, activePlayer, state);
+  const player1 = renderPlayerCard(ui, battle?.player1, activePlayer, state, battle);
+  const player2 = renderPlayerCard(ui, battle?.player2, activePlayer, state, battle);
   if (player1) players.appendChild(player1);
   if (player2) players.appendChild(player2);
 
@@ -240,10 +259,14 @@ export function installBattlePlayerBoard(ui) {
   if (!ui || ui.__battlePlayerBoardInstalled) return;
   ui.__battlePlayerBoardInstalled = true;
   const originalRenderBattleStatus = ui.renderBattleStatus?.bind(ui);
+  const originalRenderBattleActions = ui.renderBattleActions?.bind(ui);
   const render = (game, state, outcome = null) => {
     originalRenderBattleStatus?.(game, state, outcome);
     renderBattleBoard(ui, game, state, outcome);
   };
   ui.renderBattleStatus = render;
-  ui.renderBattleActions = render;
+  ui.renderBattleActions = (game, state, outcome = null) => {
+    originalRenderBattleActions?.(game, state, outcome);
+    renderBattleBoard(ui, game, state, outcome);
+  };
 }
