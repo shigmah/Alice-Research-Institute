@@ -2,9 +2,13 @@ function isNpcPlayer(player) {
   return player?.constructor?.name === "NpcPlayer";
 }
 
+function getPlayerId(player) {
+  return player?.playerId ?? player?.id ?? null;
+}
+
 function getPlayerLabel(player) {
   if (!player) return "---";
-  return player.name ?? `Player ${player.id ?? ""}`;
+  return player.playerName ?? player.name ?? `Player ${getPlayerId(player) ?? ""}`;
 }
 
 function getPlayerRole(player) {
@@ -47,7 +51,7 @@ function getPlayerMetricCats(player, battle, state) {
   return battle?.player2 === player ? state?.getCats?.()?.length ?? 0 : 0;
 }
 
-function getPlayerNextDiceCount(player, battle, state) {
+function getPlayerNextDiceCount(_player, _battle, state) {
   if (!state?.getCurrentDiceCount) return "-";
   const current = state.getCurrentDiceCount();
   if (!Number.isFinite(current)) return "-";
@@ -57,11 +61,11 @@ function getPlayerNextDiceCount(player, battle, state) {
 function appendBattleLog(ui, player, text, state, outcome) {
   if (!player || !text) return;
   const logs = ui.__battleLogs ??= new Map();
-  const key = String(player.id ?? getPlayerLabel(player));
+  const key = String(getPlayerId(player) ?? getPlayerLabel(player));
   const list = logs.get(key) ?? [];
   const signature = [
     state?.turn,
-    player.id,
+    getPlayerId(player),
     outcome?.mode?.action?.action ?? outcome?.mode?.action?.type ?? "",
     outcome?.result?.values?.join(",") ?? "",
     outcome?.result?.total ?? "",
@@ -114,7 +118,7 @@ function renderPlayerCard(ui, player, activePlayer, state, battle) {
   const card = documentRef.createElement("section");
   card.className = "battle-player-card battle-player-panel";
   card.setAttribute("data-player-type", isNpc ? "npc" : "human");
-  card.dataset.playerId = String(player.id ?? "");
+  card.dataset.playerId = String(getPlayerId(player) ?? "");
   card.dataset.playerType = isNpc ? "npc" : "human";
   card.style.boxSizing = "border-box";
   card.style.minWidth = "0";
@@ -197,7 +201,7 @@ function renderPlayerCard(ui, player, activePlayer, state, battle) {
   card.appendChild(logTitle);
 
   const logs = ui.__battleLogs ?? new Map();
-  const entries = logs.get(String(player.id ?? getPlayerLabel(player))) ?? [];
+  const entries = logs.get(String(getPlayerId(player) ?? getPlayerLabel(player))) ?? [];
   player.__battleLogEntries = entries;
   card.appendChild(renderPlayerLog(documentRef, player));
 
