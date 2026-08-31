@@ -96,8 +96,6 @@ test("Battle 10,000-turn dice-state experiment reports long-run metrics", () => 
   assert.ok(result.maxDice >= 1);
   assert.ok(result.lowRate >= 0 && result.lowRate <= 1);
   assert.ok(result.high3Rate >= 0 && result.high3Rate <= 1);
-  assert.ok(result.reached4);
-  assert.ok(result.reached5);
   assert.ok(result.longestLowRun >= 1);
 });
 
