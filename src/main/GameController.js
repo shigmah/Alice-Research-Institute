@@ -51,10 +51,15 @@ export class GameController {
     const activePlayer = this.game.battleMode?.getActivePlayer?.();
     if (!activePlayer || activePlayer.constructor?.name !== "NpcPlayer") return;
 
+    this.ui.setBusy(true);
     this.npcTimer = setTimeout(async () => {
       this.npcTimer = null;
-      if (this.game.state.isGameOver || this.game.hasActiveEvent?.()) return;
-      await this.runNpcTurnIfNeeded();
+      try {
+        if (this.game.state.isGameOver || this.game.hasActiveEvent?.()) return;
+        await this.runNpcTurnIfNeeded();
+      } finally {
+        this.ui.setBusy(false);
+      }
     }, delay);
   }
 
