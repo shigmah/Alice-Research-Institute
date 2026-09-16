@@ -16,16 +16,17 @@ function sequenceLabel(values) {
 test("Battle dice progression exposes a deterministic 1→2 transition on the opening phase-1 turn", () => {
   const game = prepareBattle();
   const human = game.battleMode.player1;
+  const humanContext = game.battleMode.getPlayerContext(human);
 
-  human.getAction = () => ({ action: "continue", source: "human" });
-  game.randomManager.rollDice = count => Array.from({ length: count }, () => 1);
+  human.setAction({ action: "continue", source: "human" });
+  humanContext.randomManager.rollDice = () => 1;
 
-  const before = game.state.getCurrentDiceCount();
-  const result = game.roll();
-  const after = game.state.getCurrentDiceCount();
+  const before = humanContext.state.getCurrentDiceCount();
+  const outcome = game.roll();
+  const after = humanContext.state.getCurrentDiceCount();
 
   assert.equal(before, 1);
-  assert.equal(result?.mode?.phase, 1);
+  assert.equal(outcome?.result?.phase, 1);
   assert.equal(after, 2);
 });
 
@@ -33,20 +34,26 @@ test("Battle dice progression can enter the 1→2→1 loop when a two-dice non-p
   const game = prepareBattle();
   const human = game.battleMode.player1;
   const npc = game.battleMode.player2;
+  const humanContext = game.battleMode.getPlayerContext(human);
+  const npcContext = game.battleMode.getPlayerContext(npc);
   const counts = [];
 
-  human.getAction = () => ({ action: "continue", source: "human" });
-  npc.getAction = () => ({ action: "continue", source: "npc" });
-
-  game.randomManager.rollDice = () => [1];
-  counts.push(game.state.getCurrentDiceCount());
+  human.setAction({ action: "continue", source: "human" });
+  humanContext.randomManager.rollDice = () => 6;
+  counts.push(humanContext.state.getCurrentDiceCount());
   game.roll();
 
-  game.randomManager.rollDice = () => [1, 1];
-  counts.push(game.state.getCurrentDiceCount());
+  npc.setAction({ action: "continue", source: "npc" });
+  npcContext.randomManager.rollDice = () => 6;
   game.roll();
 
-  counts.push(game.state.getCurrentDiceCount());
+  human.setAction({ action: "continue", source: "human" });
+  const values = [1, 3];
+  humanContext.randomManager.rollDice = () => values.shift() ?? 1;
+  counts.push(humanContext.state.getCurrentDiceCount());
+  game.roll();
+
+  counts.push(humanContext.state.getCurrentDiceCount());
 
   assert.deepEqual(counts, [1, 2, 1], sequenceLabel(counts));
 });
@@ -55,33 +62,63 @@ test("Battle dice progression can recover above two when prime outcomes occur", 
   const game = prepareBattle();
   const human = game.battleMode.player1;
   const npc = game.battleMode.player2;
+  const humanContext = game.battleMode.getPlayerContext(human);
+  const npcContext = game.battleMode.getPlayerContext(npc);
 
-  human.getAction = () => ({ action: "continue", source: "human" });
-  npc.getAction = () => ({ action: "continue", source: "npc" });
-
-  game.randomManager.rollDice = () => [1];
+  human.setAction({ action: "continue", source: "human" });
+  humanContext.randomManager.rollDice = () => 6;
   game.roll();
-  assert.equal(game.state.getCurrentDiceCount(), 2);
+  assert.equal(humanContext.state.getCurrentDiceCount(), 2);
 
-  game.randomManager.rollDice = () => [1, 2];
+  npc.setAction({ action: "continue", source: "npc" });
+  npcContext.randomManager.rollDice = () => 6;
   game.roll();
-  assert.equal(game.state.getCurrentDiceCount(), 3);
+
+  human.setAction({ action: "continue", source: "human" });
+  let values = [1, 2];
+  humanContext.randomManager.rollDice = () => values.shift() ?? 1;
+  game.roll();
+  assert.equal(humanContext.state.getCurrentDiceCount(), 3);
 });
 
 test("Battle dice progression measures the distribution and records the longest low-count run", () => {
   const game = prepareBattle();
-  const human = game.battleMode.player1;
-  const npc = game.battleMode.player2;
-
-  human.getAction = () => ({ action: "continue", source: "human" });
-  npc.getAction = () => ({ action: "continue", source: "npc" });
-
   const frequencies = new Map();
   let lowRun = 0;
   let maxLowRun = 0;
+  let simulatedTurns = 0;
+  const humanRng = { value: 0x12345678 };
+  const npcRng = { value: 0x9abcdef0 };
 
-  for (let turn = 0; turn < 1000; turn += 1) {
-    const diceCount = game.state.getCurrentDiceCount();
+  const nextInt = holder => {
+    holder.value = (Math.imul(holder.value, 1664525) + 1013904223) >>> 0;
+    return holder.value;
+  };
+  const nextDie = holder => 1 + (nextInt(holder) % 6);
+
+  const configureBattle = () => {
+    game.eventManager.checkEvent = () => false;
+    const human = game.battleMode.player1;
+    const npc = game.battleMode.player2;
+    human.setAction({ action: "continue", source: "human" });
+    npc.setAction({ action: "continue", source: "npc" });
+    game.battleMode.getPlayerContext(human).randomManager.rollDice = () => nextDie(humanRng);
+    game.battleMode.getPlayerContext(npc).randomManager.rollDice = () => nextDie(npcRng);
+  };
+
+  configureBattle();
+
+  while (simulatedTurns < 1000) {
+    if (game.battleMode.finished) {
+      game.startBattleMode({ difficulty: "easy" });
+      configureBattle();
+      lowRun = 0;
+      continue;
+    }
+
+    const activePlayer = game.battleMode.getActivePlayer();
+    assert.ok(activePlayer, "Battle must have an active player during simulation");
+    const diceCount = activePlayer.currentState.getCurrentDiceCount();
     frequencies.set(diceCount, (frequencies.get(diceCount) ?? 0) + 1);
 
     if (diceCount <= 2) {
@@ -91,18 +128,8 @@ test("Battle dice progression measures the distribution and records the longest 
       lowRun = 0;
     }
 
-    game.randomManager.rollDice = count => Array.from(
-      { length: count },
-      () => 1 + Math.floor(Math.random() * 6)
-    );
-
     game.roll();
-
-    if (game.state.isGameOver) break;
-
-    if (game.state.getCats().length === 0) {
-      game.catManager.createCat();
-    }
+    simulatedTurns += 1;
   }
 
   assert.ok(frequencies.get(1) >= 1);
