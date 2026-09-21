@@ -2,6 +2,9 @@ import { Game } from "../src/core/Game.js";
 
 const game = new Game();
 
+game.randomManager.rollDice = () => 1;
+game.eventManager.checkEvent = () => false;
+
 const first = game.roll();
 console.assert(first !== null, "initial phase roll works");
 console.assert(game.state.turn === 2, "initial turn advances");
