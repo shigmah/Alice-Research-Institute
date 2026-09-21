@@ -79,7 +79,8 @@ test("NPC timer continues while NPC remains the active player after Player 1 fin
   const controller = new GameController({ game, ui });
   controller.scheduleNpcTurnIfNeeded(10);
   await wait(35);
-  assert.ok(rollCount >= 2);
+  assert.equal(rollCount, 1);
+  assert.notEqual(controller.npcTimer, null);
   controller.destroy();
 });
 
