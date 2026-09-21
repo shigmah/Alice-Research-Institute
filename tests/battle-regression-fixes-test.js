@@ -55,6 +55,34 @@ test("Battle continues when Player 1 is finished but NPC is still active", () =>
   assert.equal(battle.getActivePlayer(), npc);
 });
 
+test("NPC timer continues while NPC remains the active player after Player 1 finishes", async () => {
+  const calls = [];
+  const npc = { constructor: { name: "NpcPlayer" } };
+  let rollCount = 0;
+  const game = {
+    state: { isGameOver: false, getGameMode: () => "BATTLE" },
+    battleMode: {
+      finished: false,
+      isFinished: () => false,
+      getActivePlayer: () => npc
+    },
+    hasActiveEvent: () => false,
+    onChange() { return () => {}; },
+    roll() { rollCount += 1; return {}; }
+  };
+  const ui = {
+    render() {}, renderBattleStatus() {}, renderBattleActions() {},
+    bindActions(actions) { this.actions = actions; },
+    setBusy(value) { calls.push(value); },
+    playDiceAnimation: async () => {}
+  };
+  const controller = new GameController({ game, ui });
+  controller.scheduleNpcTurnIfNeeded(10);
+  await wait(35);
+  assert.ok(rollCount >= 2);
+  controller.destroy();
+});
+
 test("NPC timer does not run after Battle has finished", async () => {
   const calls = [];
   const npc = { constructor: { name: "NpcPlayer" } };
