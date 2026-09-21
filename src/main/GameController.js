@@ -53,7 +53,9 @@ export class GameController {
     activePlayer.pendingAction = null;
     const action = activePlayer.getAction?.();
     activePlayer.setAction?.(action ?? { action: "continue", source: "npc" });
-    return this.roll({ assignHumanAction: false, advanceNpc: false });
+    const result = await this.roll({ assignHumanAction: false, advanceNpc: false });
+    if (result) this.scheduleNpcTurnIfNeeded();
+    return result;
   }
 
   scheduleNpcTurnIfNeeded(delay = 250) {
