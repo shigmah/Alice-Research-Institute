@@ -37,6 +37,24 @@ test("finished Battle preserves a deterministic winner from final cat counts", (
   assert.equal(battle.getActivePlayer(), null);
 });
 
+test("Battle continues when Player 1 is finished but NPC is still active", () => {
+  const game = new Game();
+  game.startBattleMode({ difficulty: "easy" });
+
+  const battle = game.battleMode;
+  const human = battle.player1;
+  const npc = battle.player2;
+  const humanContext = battle.getPlayerContext(human);
+  const npcContext = battle.getPlayerContext(npc);
+
+  humanContext.state.isGameOver = true;
+  npcContext.state.isGameOver = false;
+
+  assert.equal(battle.checkBattleEnd(), false);
+  assert.equal(battle.isFinished(), false);
+  assert.equal(battle.getActivePlayer(), npc);
+});
+
 test("NPC timer does not run after Battle has finished", async () => {
   const calls = [];
   const npc = { constructor: { name: "NpcPlayer" } };
