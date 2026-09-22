@@ -81,29 +81,47 @@ test("Battle dice progression can recover above two when prime outcomes occur", 
   assert.equal(humanContext.state.getCurrentDiceCount(), 3);
 });
 
-test("Battle dice progression measures the distribution and records the longest low-count run", () => {
+test("Battle dice progression measures the distribution with fully deterministic dice and NPC AI randomness", () => {
   const game = prepareBattle();
   const frequencies = new Map();
+  const transitions = new Map();
+  const npcActions = new Map();
   let lowRun = 0;
   let maxLowRun = 0;
   let simulatedTurns = 0;
+  let previousDiceCount = null;
   const humanRng = { value: 0x12345678 };
   const npcRng = { value: 0x9abcdef0 };
+  const npcAiRng = { value: 0x13579bdf };
 
   const nextInt = holder => {
     holder.value = (Math.imul(holder.value, 1664525) + 1013904223) >>> 0;
     return holder.value;
   };
   const nextDie = holder => 1 + (nextInt(holder) % 6);
+  const nextDouble = holder => nextInt(holder) / 4294967296;
 
   const configureBattle = () => {
     game.eventManager.checkEvent = () => false;
     const human = game.battleMode.player1;
     const npc = game.battleMode.player2;
+    const humanContext = game.battleMode.getPlayerContext(human);
+    const npcContext = game.battleMode.getPlayerContext(npc);
+
     human.setAction({ action: "continue", source: "human" });
     npc.setAction({ action: "continue", source: "npc" });
-    game.battleMode.getPlayerContext(human).randomManager.rollDice = () => nextDie(humanRng);
-    game.battleMode.getPlayerContext(npc).randomManager.rollDice = () => nextDie(npcRng);
+
+    humanContext.randomManager.rollDice = () => nextDie(humanRng);
+    npcContext.randomManager.rollDice = () => nextDie(npcRng);
+    npcContext.randomManager.nextDouble = () => nextDouble(npcAiRng);
+
+    const originalGetAction = npc.getAction.bind(npc);
+    npc.getAction = () => {
+      const action = originalGetAction();
+      const label = action?.action ?? "unknown";
+      npcActions.set(label, (npcActions.get(label) ?? 0) + 1);
+      return action;
+    };
   };
 
   configureBattle();
@@ -113,6 +131,7 @@ test("Battle dice progression measures the distribution and records the longest 
       game.startBattleMode({ difficulty: "easy" });
       configureBattle();
       lowRun = 0;
+      previousDiceCount = null;
       continue;
     }
 
@@ -120,6 +139,11 @@ test("Battle dice progression measures the distribution and records the longest 
     assert.ok(activePlayer, "Battle must have an active player during simulation");
     const diceCount = activePlayer.currentState.getCurrentDiceCount();
     frequencies.set(diceCount, (frequencies.get(diceCount) ?? 0) + 1);
+
+    if (previousDiceCount !== null) {
+      const key = `${previousDiceCount}→${diceCount}`;
+      transitions.set(key, (transitions.get(key) ?? 0) + 1);
+    }
 
     if (diceCount <= 2) {
       lowRun += 1;
@@ -129,6 +153,7 @@ test("Battle dice progression measures the distribution and records the longest 
     }
 
     game.roll();
+    previousDiceCount = diceCount;
     simulatedTurns += 1;
   }
 
@@ -139,6 +164,14 @@ test("Battle dice progression measures the distribution and records the longest 
   console.log(
     "Battle dice distribution:",
     Object.fromEntries([...frequencies.entries()].sort((a, b) => a[0] - b[0]))
+  );
+  console.log(
+    "Battle dice transitions:",
+    Object.fromEntries([...transitions.entries()].sort())
+  );
+  console.log(
+    "NPC action distribution:",
+    Object.fromEntries([...npcActions.entries()].sort())
   );
   console.log("Longest dice-count ≤ 2 run:", maxLowRun);
 });
