@@ -22,7 +22,7 @@ test("Battle result display is installed in the real game page", () => {
 const mainScreenSource = await readFile(new URL("../src/ui/MainScreen.js", import.meta.url), "utf8");
 
 test("Battle end banner is distinct from normal game-over text", () => {
-  assert.match(mainScreenSource, /state\.getGameMode\(\?\.\) === "BATTLE"/);
+  assert.match(mainScreenSource, /state\.getGameMode\?\.\(\) === "BATTLE"/);
   assert.match(mainScreenSource, /⚔️ バトル終了：結果を確認してください。/);
   assert.match(mainScreenSource, /ゲームオーバー：招き猫が0匹になりました。/);
 });

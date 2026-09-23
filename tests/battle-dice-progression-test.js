@@ -81,15 +81,29 @@ test("Battle dice progression can recover above two when prime outcomes occur", 
   assert.equal(humanContext.state.getCurrentDiceCount(), 3);
 });
 
-test("Battle dice progression measures the distribution with fully deterministic dice and NPC AI randomness", () => {
+test("Battle dice progression measures per-player distributions with fully deterministic dice and NPC AI randomness", () => {
   const game = prepareBattle();
-  const frequencies = new Map();
-  const transitions = new Map();
+  const stats = {
+    player1: {
+      frequencies: new Map(),
+      transitions: new Map(),
+      previousDiceCount: null,
+      lowRun: 0,
+      maxLowRun: 0,
+      observedTurns: 0,
+    },
+    npc: {
+      frequencies: new Map(),
+      transitions: new Map(),
+      previousDiceCount: null,
+      lowRun: 0,
+      maxLowRun: 0,
+      observedTurns: 0,
+    },
+  };
   const npcActions = new Map();
-  let lowRun = 0;
-  let maxLowRun = 0;
   let simulatedTurns = 0;
-  let previousDiceCount = null;
+
   const humanRng = { value: 0x12345678 };
   const npcRng = { value: 0x9abcdef0 };
   const npcAiRng = { value: 0x13579bdf };
@@ -103,6 +117,7 @@ test("Battle dice progression measures the distribution with fully deterministic
 
   const configureBattle = () => {
     game.eventManager.checkEvent = () => false;
+
     const human = game.battleMode.player1;
     const npc = game.battleMode.player2;
     const humanContext = game.battleMode.getPlayerContext(human);
@@ -124,54 +139,108 @@ test("Battle dice progression measures the distribution with fully deterministic
     };
   };
 
+  const resetBattleLocalState = () => {
+    for (const playerStats of Object.values(stats)) {
+      playerStats.previousDiceCount = null;
+      playerStats.lowRun = 0;
+    }
+  };
+
+  const getPlayerKey = activePlayer =>
+    activePlayer === game.battleMode.player1 ? "player1" : "npc";
+
   configureBattle();
 
   while (simulatedTurns < 1000) {
     if (game.battleMode.finished) {
       game.startBattleMode({ difficulty: "easy" });
       configureBattle();
-      lowRun = 0;
-      previousDiceCount = null;
+      resetBattleLocalState();
       continue;
     }
 
     const activePlayer = game.battleMode.getActivePlayer();
     assert.ok(activePlayer, "Battle must have an active player during simulation");
-    const diceCount = activePlayer.currentState.getCurrentDiceCount();
-    frequencies.set(diceCount, (frequencies.get(diceCount) ?? 0) + 1);
 
-    if (previousDiceCount !== null) {
-      const key = `${previousDiceCount}→${diceCount}`;
-      transitions.set(key, (transitions.get(key) ?? 0) + 1);
+    const playerKey = getPlayerKey(activePlayer);
+    const playerStats = stats[playerKey];
+    const diceCount = activePlayer.currentState.getCurrentDiceCount();
+
+    playerStats.frequencies.set(
+      diceCount,
+      (playerStats.frequencies.get(diceCount) ?? 0) + 1
+    );
+    playerStats.observedTurns += 1;
+
+    if (playerStats.previousDiceCount !== null) {
+      const key = `${playerStats.previousDiceCount}→${diceCount}`;
+      playerStats.transitions.set(
+        key,
+        (playerStats.transitions.get(key) ?? 0) + 1
+      );
     }
 
     if (diceCount <= 2) {
-      lowRun += 1;
-      maxLowRun = Math.max(maxLowRun, lowRun);
+      playerStats.lowRun += 1;
+      playerStats.maxLowRun = Math.max(
+        playerStats.maxLowRun,
+        playerStats.lowRun
+      );
     } else {
-      lowRun = 0;
+      playerStats.lowRun = 0;
     }
 
     game.roll();
-    previousDiceCount = diceCount;
+    playerStats.previousDiceCount = diceCount;
     simulatedTurns += 1;
   }
 
-  assert.ok(frequencies.get(1) >= 1);
-  assert.ok(frequencies.get(2) >= 1);
-  assert.ok(maxLowRun >= 2);
+  for (const playerStats of Object.values(stats)) {
+    assert.ok(playerStats.frequencies.get(1) >= 1);
+    assert.ok(playerStats.frequencies.get(2) >= 1);
+    assert.ok(playerStats.maxLowRun >= 2);
+  }
 
   console.log(
-    "Battle dice distribution:",
-    Object.fromEntries([...frequencies.entries()].sort((a, b) => a[0] - b[0]))
+    "Player 1 dice distribution:",
+    Object.fromEntries(
+      [...stats.player1.frequencies.entries()].sort((a, b) => a[0] - b[0])
+    )
   );
   console.log(
-    "Battle dice transitions:",
-    Object.fromEntries([...transitions.entries()].sort())
+    "Player 1 dice transitions:",
+    Object.fromEntries([...stats.player1.transitions.entries()].sort())
   );
+  console.log(
+    "Player 1 observed turns:",
+    stats.player1.observedTurns
+  );
+  console.log(
+    "Player 1 longest dice-count ≤ 2 run:",
+    stats.player1.maxLowRun
+  );
+
+  console.log(
+    "NPC dice distribution:",
+    Object.fromEntries(
+      [...stats.npc.frequencies.entries()].sort((a, b) => a[0] - b[0])
+    )
+  );
+  console.log(
+    "NPC dice transitions:",
+    Object.fromEntries([...stats.npc.transitions.entries()].sort())
+  );
+  console.log(
+    "NPC observed turns:",
+    stats.npc.observedTurns
+  );
+  console.log(
+    "NPC longest dice-count ≤ 2 run:",
+    stats.npc.maxLowRun
+  );
+
   console.log(
     "NPC action distribution:",
     Object.fromEntries([...npcActions.entries()].sort())
   );
-  console.log("Longest dice-count ≤ 2 run:", maxLowRun);
 });
