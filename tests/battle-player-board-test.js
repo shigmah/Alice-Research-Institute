@@ -49,7 +49,8 @@ test("Battle board retains the action and field cards", () => {
 });
 
 test("Battle board renders independent Player 1 and NPC field cards", () => {
-  assert.match(source, /id = "battlePlayer1FieldCard"/);
+  assert.match(source, /card\.id = id/);
+  assert.match(source, /id: "battlePlayer1FieldCard"/);
   assert.match(source, /battlePlayer1FieldCatCount/);
   assert.match(source, /battlePlayer1FieldStatus/);
   assert.match(source, /battlePlayer1FieldCats/);
