@@ -166,6 +166,12 @@ export function createMain(documentRef = document) {
   ui.render = (state, outcome = null) => {
     const renderState = createPlayer1RenderState(state, game);
     originalRender(renderState, outcome);
+
+    const normalCatField = documentRef.querySelector?.("#cats")?.closest?.("section.panel");
+    if (normalCatField) {
+      normalCatField.hidden = state?.getGameMode?.() === "BATTLE";
+    }
+
     if (outcome?.battleResult) {
       showBattleResultModal(ui, game, outcome);
     }

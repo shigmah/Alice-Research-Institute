@@ -1,3 +1,5 @@
+import { AssetResolver } from "./AssetResolver.js";
+
 function isNpcPlayer(player) {
   return player?.constructor?.name === "NpcPlayer";
 }
@@ -209,6 +211,128 @@ function renderPlayerCard(ui, player, activePlayer, state, battle) {
   return card;
 }
 
+
+function createBattleFieldCard(ui, {
+  id,
+  title,
+  countId,
+  statusId,
+  catsId,
+  gridArea
+}) {
+  const documentRef = ui.document;
+  const card = documentRef.createElement("section");
+  card.id = id;
+  card.style.gridArea = gridArea;
+  card.style.boxSizing = "border-box";
+  card.style.padding = "16px";
+  card.style.border = "1px solid #e5dfd2";
+  card.style.borderRadius = "12px";
+  card.style.background = "#fbfaf6";
+
+  const titleNode = documentRef.createElement("h4");
+  titleNode.textContent = title;
+  titleNode.style.margin = "0 0 10px";
+  card.appendChild(titleNode);
+
+  const countNode = documentRef.createElement("div");
+  countNode.id = countId;
+  countNode.style.fontWeight = "700";
+  countNode.style.marginBottom = "10px";
+  card.appendChild(countNode);
+
+  const statusNode = documentRef.createElement("div");
+  statusNode.id = statusId;
+  statusNode.style.marginBottom = "6px";
+  card.appendChild(statusNode);
+
+  const catsNode = documentRef.createElement("div");
+  catsNode.id = catsId;
+  catsNode.style.display = "flex";
+  catsNode.style.flexWrap = "wrap";
+  catsNode.style.gap = "8px";
+  card.appendChild(catsNode);
+
+  return card;
+}
+
+function renderBattleField(ui, card, playerState, labels) {
+  if (!card) return;
+
+  const documentRef = ui.document;
+  const cats = playerState?.getCats?.() ?? [];
+  const countNode = card.querySelector("#" + labels.countId);
+  const statusNode = card.querySelector("#" + labels.statusId);
+  const catsNode = card.querySelector("#" + labels.catsId);
+
+  if (countNode) countNode.textContent = labels.countPrefix + cats.length + "匹";
+  if (statusNode) {
+    statusNode.textContent = cats.length
+      ? labels.statusWithCats
+      : labels.statusWithoutCats;
+  }
+
+  if (!catsNode) return;
+  catsNode.replaceChildren();
+
+  for (const cat of cats) {
+    const wrapper = documentRef.createElement("div");
+    wrapper.className = "battle-field-cat";
+    wrapper.style.display = "flex";
+    wrapper.style.alignItems = "center";
+    wrapper.style.gap = "4px";
+
+    const image = documentRef.createElement("img");
+    image.className = "cat-image";
+    image.alt = cat.color + " 招き猫";
+    image.style.width = "44px";
+    image.style.height = "44px";
+
+    AssetResolver.setImageWithFallback(
+      image,
+      AssetResolver.imageCandidates(ui.getCatAsset?.(cat.color) ?? "white_cat.png"),
+      resolved => {
+        if (!resolved) image.replaceWith(documentRef.createTextNode(ui.getCatGlyph?.(cat.color) ?? "🐱"));
+      }
+    );
+
+    wrapper.appendChild(image);
+
+    if (Number.isFinite(cat.lifetime)) {
+      const life = documentRef.createElement("span");
+      life.textContent = String(cat.lifetime);
+      life.style.fontSize = "12px";
+      wrapper.appendChild(life);
+    }
+
+    catsNode.appendChild(wrapper);
+  }
+}
+
+function ensureBattlePlayer1FieldCard(ui, board) {
+  const documentRef = ui.document;
+  let card = documentRef.querySelector("#battlePlayer1FieldCard");
+  if (card) return card;
+
+  card = createBattleFieldCard(ui, {
+    id: "battlePlayer1FieldCard",
+    title: "🐱 Player 1 の招き猫フィールド",
+    countId: "battlePlayer1FieldCatCount",
+    statusId: "battlePlayer1FieldStatus",
+    catsId: "battlePlayer1FieldCats",
+    gridArea: "player1Field"
+  });
+
+  const npcCard = documentRef.querySelector("#battleFieldCard");
+  if (npcCard?.parentNode === board) {
+    board.insertBefore(card, npcCard);
+  } else {
+    board.appendChild(card);
+  }
+
+  return card;
+}
+
 function renderBattleBoard(ui, game, state, outcome = null) {
   const documentRef = ui?.document;
   if (!documentRef?.querySelector || state?.getGameMode?.() !== "BATTLE") return;
@@ -219,7 +343,7 @@ function renderBattleBoard(ui, game, state, outcome = null) {
 
   board.style.display = "grid";
   board.style.gridTemplateColumns = "minmax(0, 1fr) minmax(0, 1fr)";
-  board.style.gridTemplateAreas = '"players players" "action field"';
+  board.style.gridTemplateAreas = '"players players" "player1Field field" "action action"';
   board.style.gap = "14px";
   board.style.alignItems = "stretch";
   board.classList.add("battle-player-board-v2");
@@ -250,15 +374,49 @@ function renderBattleBoard(ui, game, state, outcome = null) {
   if (player1) players.appendChild(player1);
   if (player2) players.appendChild(player2);
 
-  const actionCard = documentRef.querySelector("#battleActionCard");
+  const player1FieldCard = ensureBattlePlayer1FieldCard(ui, board);
   const fieldCard = documentRef.querySelector("#battleFieldCard");
-  if (actionCard) {
-    actionCard.style.gridArea = "action";
-    actionCard.style.display = "block";
+  if (player1FieldCard) {
+    player1FieldCard.style.gridArea = "player1Field";
+    player1FieldCard.style.display = "block";
   }
   if (fieldCard) {
     fieldCard.style.gridArea = "field";
     fieldCard.style.display = "block";
+  }
+
+  renderBattleField(
+    ui,
+    player1FieldCard,
+    battle?.player1?.currentState,
+    {
+      countId: "battlePlayer1FieldCatCount",
+      statusId: "battlePlayer1FieldStatus",
+      catsId: "battlePlayer1FieldCats",
+      countPrefix: "現在のPlayer 1の猫：",
+      statusWithCats: "現在、Player 1の場に存在している招き猫",
+      statusWithoutCats: "Player 1の場に招き猫はいません"
+    }
+  );
+
+  renderBattleField(
+    ui,
+    fieldCard,
+    battle?.player2?.currentState,
+    {
+      countId: "battleFieldCatCount",
+      statusId: "battleFieldStatus",
+      catsId: "battleFieldCats",
+      countPrefix: "現在のNPCの猫：",
+      statusWithCats: "現在、NPCの場に存在している招き猫",
+      statusWithoutCats: "NPCの場に招き猫はいません"
+    }
+  );
+
+  const actionCard = documentRef.querySelector("#battleActionCard");
+  if (actionCard) {
+    actionCard.style.gridArea = "action";
+    actionCard.style.display = "block";
   }
 }
 

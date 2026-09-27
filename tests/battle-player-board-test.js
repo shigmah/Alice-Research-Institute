@@ -48,6 +48,21 @@ test("Battle board retains the action and field cards", () => {
   assert.doesNotMatch(source, /originalBoard\.hidden\s*=\s*true/);
 });
 
+test("Battle board renders independent Player 1 and NPC field cards", () => {
+  assert.match(source, /card\.id = id/);
+  assert.match(source, /id: "battlePlayer1FieldCard"/);
+  assert.match(source, /battlePlayer1FieldCatCount/);
+  assert.match(source, /battlePlayer1FieldStatus/);
+  assert.match(source, /battlePlayer1FieldCats/);
+  assert.match(source, /battle\?\.player1\?\.currentState/);
+  assert.match(source, /battle\?\.player2\?\.currentState/);
+  assert.match(source, /gridTemplateAreas\s*=\s*["']"players players" "player1Field field" "action action"["']/);
+});
+
+test("Normal Player 1 cat field is hidden only while Battle Mode is active", () => {
+  assert.match(mainSource, /normalCatField\.hidden\s*=\s*state\?\.getGameMode\?\.\(\) === "BATTLE"/);
+});
+
 test("Main installs the Battle player board after Battle mode support", () => {
   assert.match(mainSource, /installBattlePlayerBoard/);
   assert.match(mainSource, /installBattleModeSupport\(ui\);\s*installBattlePlayerBoard\(ui\);/);

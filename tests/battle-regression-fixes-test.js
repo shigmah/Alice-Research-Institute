@@ -37,6 +37,53 @@ test("finished Battle preserves a deterministic winner from final cat counts", (
   assert.equal(battle.getActivePlayer(), null);
 });
 
+test("Battle continues when Player 1 is finished but NPC is still active", () => {
+  const game = new Game();
+  game.startBattleMode({ difficulty: "easy" });
+
+  const battle = game.battleMode;
+  const human = battle.player1;
+  const npc = battle.player2;
+  const humanContext = battle.getPlayerContext(human);
+  const npcContext = battle.getPlayerContext(npc);
+
+  humanContext.state.isGameOver = true;
+  npcContext.state.isGameOver = false;
+
+  assert.equal(battle.checkBattleEnd(), false);
+  assert.equal(battle.isFinished(), false);
+  assert.equal(battle.getActivePlayer(), npc);
+});
+
+test("NPC timer continues while NPC remains the active player after Player 1 finishes", async () => {
+  const calls = [];
+  const npc = { constructor: { name: "NpcPlayer" } };
+  let rollCount = 0;
+  const game = {
+    state: { isGameOver: false, getGameMode: () => "BATTLE" },
+    battleMode: {
+      finished: false,
+      isFinished: () => false,
+      getActivePlayer: () => npc
+    },
+    hasActiveEvent: () => false,
+    onChange() { return () => {}; },
+    roll() { rollCount += 1; return {}; }
+  };
+  const ui = {
+    render() {}, renderBattleStatus() {}, renderBattleActions() {},
+    bindActions(actions) { this.actions = actions; },
+    setBusy(value) { calls.push(value); },
+    playDiceAnimation: async () => {}
+  };
+  const controller = new GameController({ game, ui });
+  controller.scheduleNpcTurnIfNeeded(10);
+  await wait(35);
+  assert.equal(rollCount, 1);
+  assert.notEqual(controller.npcTimer, null);
+  controller.destroy();
+});
+
 test("NPC timer does not run after Battle has finished", async () => {
   const calls = [];
   const npc = { constructor: { name: "NpcPlayer" } };
