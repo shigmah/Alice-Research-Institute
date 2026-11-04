@@ -1,12 +1,14 @@
 import { FacilityCatalog } from "./FacilityCatalog.js";
 import { InstituteNavigationController } from "./InstituteNavigationController.js";
 import { createResearchInstituteData } from "./ResearchInstituteData.js";
+import { MemoryManager } from "./MemoryManager.js";
 
 export class ResearchInstituteController {
-  constructor({ gameState, facilityCatalog = new FacilityCatalog(), saveManager = null, onChange = null } = {}) {
+  constructor({ gameState, facilityCatalog = new FacilityCatalog(), memoryManager = null, saveManager = null, onChange = null } = {}) {
     if (!gameState) throw new Error("gameState is required");
     this.gameState = gameState;
     this.facilityCatalog = facilityCatalog;
+    this.memoryManager = memoryManager ?? new MemoryManager(gameState);
     this.saveManager = saveManager;
     this.onChange = typeof onChange === "function" ? onChange : null;
 
@@ -62,8 +64,20 @@ export class ResearchInstituteController {
   }
 
   selectFacility(facilityId) {
+    const previousState = this.getFacilityState(facilityId);
+    const wasVisited = previousState?.isVisited === true;
     const moved = this.navigation.moveTo(facilityId);
-    if (moved) this.notifyChanged();
+    if (moved) {
+      if (!wasVisited) {
+        const facility = this.facilityCatalog.getFacility(facilityId);
+        this.memoryManager.recordAutomaticMemory({
+          eventCategory: "daily",
+          title: `${facility.name}を訪れた`,
+          description: `${facility.name}を初めて訪れた。`
+        });
+      }
+      this.notifyChanged();
+    }
     return moved;
   }
 
