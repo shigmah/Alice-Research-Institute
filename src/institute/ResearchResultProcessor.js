@@ -61,7 +61,8 @@ export class ResearchResultProcessor {
     };
     results.push(storedResult);
 
-    this.entryManager.registerAttempt(storedResult.themeId, storedResult);
+    const entryUpdate = this.entryManager.registerAttempt(storedResult.themeId, storedResult);
+    const entry = entryUpdate.entry;
 
     let archiveRecord = null;
     if (this.shouldRegisterArchive(storedResult) === true) {
@@ -78,6 +79,9 @@ export class ResearchResultProcessor {
         relatedResultId: storedResult.resultId,
         occurredAt: storedResult.completedAt
       });
+      if (memoryRecord && !entry.memoryIds.includes(memoryRecord.memoryId)) {
+        entry.memoryIds.push(memoryRecord.memoryId);
+      }
     }
 
     const researchData = {
