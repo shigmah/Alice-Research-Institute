@@ -4,11 +4,23 @@ import { createResearchInstituteData } from "./ResearchInstituteData.js";
 import { MemoryManager } from "./MemoryManager.js";
 
 export class ResearchInstituteController {
-  constructor({ gameState, facilityCatalog = new FacilityCatalog(), memoryManager = null, saveManager = null, onChange = null } = {}) {
+  constructor({
+    gameState,
+    facilityCatalog = new FacilityCatalog(),
+    memoryManager = null,
+    themeManager = null,
+    discoveryEvaluator = null,
+    challengeCoordinator = null,
+    saveManager = null,
+    onChange = null
+  } = {}) {
     if (!gameState) throw new Error("gameState is required");
     this.gameState = gameState;
     this.facilityCatalog = facilityCatalog;
     this.memoryManager = memoryManager ?? new MemoryManager(gameState);
+    this.themeManager = themeManager;
+    this.discoveryEvaluator = discoveryEvaluator;
+    this.challengeCoordinator = challengeCoordinator;
     this.saveManager = saveManager;
     this.onChange = typeof onChange === "function" ? onChange : null;
 
@@ -21,6 +33,38 @@ export class ResearchInstituteController {
       facilityCatalog: this.facilityCatalog,
       getFacilityStates: () => this.gameState.researchInstituteData.facilityStates
     });
+  }
+
+  initialize() {
+    this.ensureFacilityStates();
+    return this.gameState.researchInstituteData;
+  }
+
+  handleInstituteEvent(event, stateSnapshot = this.gameState) {
+    if (!this.discoveryEvaluator || !this.themeManager) return [];
+    const candidates = this.discoveryEvaluator.evaluate(event, stateSnapshot);
+    const discovered = [];
+
+    for (const theme of candidates) {
+      const source = event?.source ?? null;
+      const sourceId = event?.sourceId ?? event?.eventId ?? null;
+      if (this.themeManager.discoverTheme(theme.themeId, source, sourceId)) {
+        discovered.push(theme.themeId);
+      }
+    }
+
+    if (discovered.length > 0) this.notifyChanged();
+    return discovered;
+  }
+
+  startResearch(themeId) {
+    const started = this.themeManager?.startResearch?.(themeId) === true;
+    if (started) this.notifyChanged();
+    return started;
+  }
+
+  startChallenge(themeId, challengeId) {
+    return this.challengeCoordinator?.startChallenge?.(themeId, challengeId) === true;
   }
 
   ensureFacilityStates() {
