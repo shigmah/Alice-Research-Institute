@@ -40,6 +40,11 @@ export class ResearchResultProcessor {
       return { accepted: false, reason: "invalid-result" };
     }
 
+    const progress = this.themeManager.getThemeProgress(result.themeId);
+    if (!progress || progress.status !== "researching") {
+      return { accepted: false, reason: "theme-not-researching" };
+    }
+
     const results = this.gameState.researchInstituteData.challengeResults;
     if (results.some(item => item.resultId === result.resultId)) {
       return { accepted: false, duplicate: true, reason: "duplicate-result" };
