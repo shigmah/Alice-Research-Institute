@@ -19,15 +19,14 @@ export function createResearchInstituteServices({
   shouldRegisterMemory = () => false,
   challengeStarter = null,
   saveManager = null,
-  now = () => new Date().toISOString(),
-  idFactory
+  now = () => new Date().toISOString()
 } = {}) {
   if (!gameState) throw new Error("gameState is required");
 
   const facilityCatalog = new FacilityCatalog();
-  const entryManager = new ResearchEntryManager(gameState, { now, ...(idFactory ? { idFactory } : {}) });
-  const archiveManager = new ArchiveManager(gameState, { now, ...(idFactory ? { idFactory } : {}) });
-  const memoryManager = new MemoryManager(gameState, { now, ...(idFactory ? { idFactory } : {}) });
+  const entryManager = new ResearchEntryManager(gameState, { now });
+  const archiveManager = new ArchiveManager(gameState, { now });
+  const memoryManager = new MemoryManager(gameState, { now });
   const themeManager = new ResearchThemeManager(gameState, {
     themeDefinitions,
     entryManager,
