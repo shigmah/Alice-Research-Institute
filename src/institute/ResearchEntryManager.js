@@ -79,4 +79,28 @@ export class ResearchEntryManager {
     entry.completedAt = completedAt;
     return true;
   }
+
+  updateResearchStatus(themeId, status) {
+    if (status === "researching") return this.markStarted(themeId);
+    if (status === "completed") return this.markCompleted(themeId);
+    if (status === "discovered") return this.getEntry(themeId);
+    return false;
+  }
+
+  addRelatedRecord(themeId, recordId, relationType = "memory") {
+    if (typeof recordId !== "string" || !recordId.trim()) return false;
+    const entry = this.getEntry(themeId);
+    if (!entry) return false;
+
+    const fields = {
+      challengeResult: "challengeResultIds",
+      memory: "memoryIds",
+      areAnalysis: "areAnalysisIds",
+      paper: "paperIds"
+    };
+    const field = fields[relationType];
+    if (!field) return false;
+    if (!entry[field].includes(recordId)) entry[field].push(recordId);
+    return true;
+  }
 }
