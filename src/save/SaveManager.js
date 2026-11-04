@@ -64,15 +64,25 @@ export class SaveManager {
         currentDiceCount: this.gameState.currentDiceCount,
         isGameOver: this.gameState.isGameOver,
         hasDroppedOut: this.gameState.hasDroppedOut,
-        fixedCatCount: this.gameState.fixedCatCount
+        fixedCatCount: this.gameState.fixedCatCount,
+        researchInstituteData: this.gameState.researchInstituteData
       }
     });
   }
 
   deserialize(data) {
+    const savedState = data.gameState ?? {};
     return {
-      ...data.gameState,
-      playerData: data.playerData
+      ...savedState,
+      researchInstituteData: savedState.researchInstituteData ?? {
+        facilityStates: [],
+        themeProgress: [],
+        researchEntries: [],
+        challengeResults: [],
+        archiveRecords: [],
+        memories: []
+      },
+      playerData: data.playerData ?? {}
     };
   }
 
