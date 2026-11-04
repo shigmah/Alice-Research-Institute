@@ -169,8 +169,7 @@ export class ResearchInstituteScreen {
         if (theme.description) item.appendChild(this.element("p", "muted", theme.description));
         if (theme.progress?.status === "discovered") {
           item.appendChild(this.button("研究を開始", () => {
-            this.services.themeManager.startResearch(theme.themeId);
-            this.controller.notifyChanged();
+            this.controller.startResearch(theme.themeId);
           }));
         }
         themePanel.appendChild(item);
@@ -223,7 +222,7 @@ export class ResearchInstituteScreen {
         } else {
           for (const challengeId of challengeIds) {
             item.appendChild(this.button(`実験を開始：${challengeId}`, () => {
-              const started = this.services.challengeCoordinator.startChallenge(theme.themeId, challengeId);
+              const started = this.controller.startChallenge(theme.themeId, challengeId);
               this.notice = started
                 ? "チャレンジを開始しました。実行側との接続処理を待っています。"
                 : "チャレンジ実行アダプターが未接続です。チャレンジ側の実装後に開始できます。";
@@ -282,8 +281,7 @@ export class ResearchInstituteScreen {
   }
 
   recordMemory({ eventCategory, title, description }) {
-    this.services.memoryManager.recordAutomaticMemory({ eventCategory, title, description });
-    this.controller.notifyChanged();
+    this.controller.recordAutomaticMemory({ eventCategory, title, description });
   }
 
   renderDiningRoom() {
