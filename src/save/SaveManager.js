@@ -201,8 +201,19 @@ export class SaveManager {
   }
 
   backup() {
-    if (this.exists()) {
-      localStorage.setItem(`${this.savePath}.backup`, localStorage.getItem(this.savePath));
+    const previousRaw = localStorage.getItem(this.savePath);
+    if (previousRaw === null) return;
+
+    try {
+      const previous = JSON.parse(previousRaw);
+      if (!this.validateVersion(previous?.saveVersion)) return;
+      if (!new SaveData(previous).validate()) return;
+      const restored = this.deserialize(previous);
+      if (!this.validateResearchInstituteData(restored.researchInstituteData)) return;
+
+      localStorage.setItem(`${this.savePath}.backup`, previousRaw);
+    } catch (_error) {
+      // 破損した現行データで、正常なバックアップを上書きしない。
     }
   }
 }
