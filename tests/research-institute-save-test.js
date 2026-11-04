@@ -34,6 +34,32 @@ console.assert(
   "institute memory is restored"
 );
 
+// 2回目の保存では、直前の正常データがバックアップへ退避される。
+state.researchInstituteData.memories.push({
+  memoryId: "MEMORY_SAVE_TEST_2",
+  memoryLayer: "automatic",
+  eventCategory: "daily",
+  title: "中庭を訪れた",
+  description: "バックアップテスト",
+  occurredAt: "2026-11-05T00:01:00.000Z",
+  relatedThemeId: null,
+  relatedResultId: null,
+  relatedConversationId: null
+});
+console.assert(manager.save() === true, "second save succeeds");
+const backup = JSON.parse(storage.get("manekineko-save.backup"));
+console.assert(backup.gameState.researchInstituteData.memories.length === 1, "previous save is backed up");
+
+// 現行データが破損している場合、正常なバックアップから復元できる。
+storage.set("manekineko-save", "{broken-json");
+const recoveredState = new GameState();
+const recoveredManager = new SaveManager(recoveredState);
+console.assert(recoveredManager.load() === true, "backup recovery succeeds");
+console.assert(
+  recoveredState.researchInstituteData.memories.length === 1,
+  "backup recovery restores the prior consistent state"
+);
+
 // Version 1.0.0の既存セーブ（researchInstituteDataなし）も読み込めることを確認する。
 storage.set("legacy-save", JSON.stringify({
   saveVersion: "1.0.0",
