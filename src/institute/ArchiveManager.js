@@ -36,6 +36,24 @@ export class ArchiveManager {
     return record;
   }
 
+  registerPaper(paper) {
+    const targetId = paper?.paperId ?? paper?.id;
+    return this.registerRecord({
+      recordType: "paper",
+      targetId,
+      themeId: paper?.themeId ?? null
+    });
+  }
+
+  registerAchievement(achievement) {
+    const targetId = achievement?.achievementId ?? achievement?.id;
+    return this.registerRecord({
+      recordType: "achievement",
+      targetId,
+      themeId: achievement?.themeId ?? null
+    });
+  }
+
   registerRecord({ recordType, targetId, themeId = null }) {
     if (typeof recordType !== "string" || !recordType.trim()) {
       throw new TypeError("recordType is required");
