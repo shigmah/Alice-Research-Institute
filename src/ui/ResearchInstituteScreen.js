@@ -313,7 +313,16 @@ export class ResearchInstituteScreen {
       const item = this.element("article", "institute-character-card");
       item.appendChild(this.element("div", "character-mark", "👧"));
       item.appendChild(this.element("strong", "", name));
-      item.appendChild(this.element("p", "muted", "会話イベントの定義待ちです。"));
+      item.appendChild(this.element("p", "muted", "会話内容は後続の会話イベント定義で接続します。"));
+      item.appendChild(this.button("話しかける", () => {
+        this.recordMemory({
+          eventCategory: "conversation",
+          title: `${name}に話しかけた`,
+          description: `プレイヤーが${name}に話しかけた。`
+        });
+        this.notice = `${name}との会話開始をMemoryに記録しました。`;
+        this.render();
+      }));
       people.appendChild(item);
     }
     panel.appendChild(people);
