@@ -1,9 +1,12 @@
+import { createResearchInstituteData } from "../institute/ResearchInstituteData.js";
+
 export class GameState {
   constructor() {
     this.initialize();
   }
 
   initialize() {
+    const researchInstituteData = this.researchInstituteData;
     this.turn = 1;
     this.gameMode = null;
     this.cats = [];
@@ -20,6 +23,7 @@ export class GameState {
     this.fixedCatCount = null;
     this.gameEndReason = null;
     this.targetTurns = 20;
+    this.researchInstituteData = createResearchInstituteData(researchInstituteData);
   }
 
   reset() {
