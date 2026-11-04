@@ -60,6 +60,9 @@ export function createResearchInstituteServices({
     gameState,
     facilityCatalog,
     memoryManager,
+    themeManager,
+    discoveryEvaluator,
+    challengeCoordinator,
     saveManager
   });
 
