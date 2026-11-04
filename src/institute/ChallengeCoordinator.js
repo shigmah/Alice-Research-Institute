@@ -23,9 +23,9 @@ export class ChallengeCoordinator {
     }
     if (this.activeChallenge) return false;
 
-    const started = this.challengeStarter
-      ? this.challengeStarter({ themeId, challengeId })
-      : { started: true, themeId, challengeId };
+    if (!this.challengeStarter) return false;
+
+    const started = this.challengeStarter({ themeId, challengeId });
     if (started === false || started?.started === false) return false;
 
     this.activeChallenge = { themeId, challengeId };
