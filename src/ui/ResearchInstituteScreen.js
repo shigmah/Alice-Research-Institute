@@ -281,15 +281,28 @@ export class ResearchInstituteScreen {
     return wrapper;
   }
 
+  recordMemory({ eventCategory, title, description }) {
+    this.services.memoryManager.recordAutomaticMemory({ eventCategory, title, description });
+    this.controller.notifyChanged();
+  }
+
   renderDiningRoom() {
     const panel = this.panel("食堂", "アリスたちが食事をする生活施設です。");
+    panel.appendChild(this.element("p", "muted", "メニュー例。選択すると日常Memoryに記録します。"));
     const menus = this.element("div", "institute-chip-list");
     for (const item of ["ドーナツ", "ケーキ", "紅茶", "コラーチェ"]) {
-      menus.appendChild(this.element("span", "institute-chip", item));
+      menus.appendChild(this.button(`${item}を選ぶ`, () => {
+        this.recordMemory({
+          eventCategory: "daily",
+          title: `食堂で${item}を選んだ`,
+          description: `食堂で${item}を選択した。`
+        });
+        this.notice = `${item}を選択した記録をMemoryに保存しました。`;
+        this.render();
+      }));
     }
-    panel.appendChild(this.element("p", "muted", "メニュー例"));
     panel.appendChild(menus);
-    panel.appendChild(this.element("div", "institute-placeholder", "食事による空腹度・機嫌の変化や専用会話は、アリスステータス仕様の整合後に接続します。"));
+    panel.appendChild(this.element("div", "institute-placeholder", "空腹度・機嫌の数値変化や好物専用会話は、アリスステータス仕様の整合後に接続します。"));
     return panel;
   }
 
@@ -311,20 +324,29 @@ export class ResearchInstituteScreen {
   renderCourtyard() {
     const panel = this.panel("中庭", "研究所内の憩い・観察の場所です。");
     const items = this.element("div", "institute-feature-grid");
-    for (const [name, description, icon] of [
-      ["花壇", "花の開花を観察します。", "🌷"],
-      ["池", "金魚が最大3匹生息します。", "🐟"],
-      ["芝生", "ゆっくり過ごせる場所です。", "🌱"],
-      ["猫", "猫を発見するイベントにつながります。", "🐈"]
+    for (const [name, description, icon, memoryTitle, memoryDescription] of [
+      ["花壇", "花の開花を観察します。", "🌷", "花を見つけた", "中庭で花を観察した。"],
+      ["池", "金魚が最大3匹生息します。", "🐟", "金魚を観察した", "中庭の池で金魚を観察した。"],
+      ["芝生", "ゆっくり過ごせる場所です。", "🌱", "中庭の芝生で過ごした", "中庭の芝生で過ごした。"],
+      ["猫", "猫を発見するイベントにつながります。", "🐈", "猫を発見した", "中庭で猫を発見した。"]
     ]) {
       const item = this.element("article", "institute-character-card");
       item.appendChild(this.element("div", "character-mark", icon));
       item.appendChild(this.element("strong", "", name));
       item.appendChild(this.element("p", "muted", description));
+      item.appendChild(this.button("観察を記録", () => {
+        this.recordMemory({
+          eventCategory: "observation",
+          title: memoryTitle,
+          description: memoryDescription
+        });
+        this.notice = `「${memoryTitle}」をMemoryに記録しました。`;
+        this.render();
+      }));
       items.appendChild(item);
     }
     panel.appendChild(items);
-    panel.appendChild(this.element("div", "institute-placeholder", "猫・花・金魚などの観察イベントとMemory登録は、個別イベント定義の接続後に有効になります。"));
+    panel.appendChild(this.element("div", "institute-placeholder", "観察による好奇心・機嫌・研究意欲の数値変化や、ランダム発生条件は仕様確定後に接続します。"));
     return panel;
   }
 
