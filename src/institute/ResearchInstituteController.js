@@ -67,6 +67,24 @@ export class ResearchInstituteController {
     return this.challengeCoordinator?.startChallenge?.(themeId, challengeId) === true;
   }
 
+  recordAutomaticMemory(event) {
+    const memory = this.memoryManager.recordAutomaticMemory(event);
+    this.notifyChanged();
+    return memory;
+  }
+
+  createManualMemory(content) {
+    const memory = this.memoryManager.createManualMemory(content);
+    this.notifyChanged();
+    return memory;
+  }
+
+  updateManualMemory(memoryId, content) {
+    const updated = this.memoryManager.updateManualMemory(memoryId, content);
+    if (updated) this.notifyChanged();
+    return updated;
+  }
+
   ensureFacilityStates() {
     const states = this.gameState.researchInstituteData.facilityStates;
     for (const facility of this.facilityCatalog.getAllFacilities()) {
