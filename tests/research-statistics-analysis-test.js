@@ -122,11 +122,11 @@ console.assert(analysis.faceDistribution[0].wilson95.lower < 1 / 3 &&
 console.assert(analysis.notes.some(note => note.includes("標本数が30未満")),
   "small samples are explicitly cautioned");
 console.assert(analysis.dataConsistency === true, "matching trial and face counts are recognized");
-console.assert(Math.abs(analysis.chiSquareGoodnessOfFit.statistic - 4) < 1e-12,
+console.assert(Math.abs(analysis.chiSquareGoodnessOfFit.statistic - 3) < 1e-12,
   "Pearson chi-square statistic is calculated from six observed categories");
 console.assert(analysis.chiSquareGoodnessOfFit.degreesOfFreedom === 5,
   "six fixed categories produce five degrees of freedom");
-console.assert(Math.abs(analysis.chiSquareGoodnessOfFit.pValue - 0.54941595135278) < 1e-10,
+console.assert(Math.abs(analysis.chiSquareGoodnessOfFit.pValue - 0.6999858358786276) < 1e-10,
   "chi-square p-value is calculated from the upper-tail distribution");
 console.assert(analysis.chiSquareGoodnessOfFit.expectedCountPerFace === 0.5,
   "expected frequency per face is reported");
