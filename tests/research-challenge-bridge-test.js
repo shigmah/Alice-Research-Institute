@@ -82,7 +82,12 @@ console.assert(result?.metrics?.phase2TrialCount === 1, "phase 2 rolls are count
 console.assert(result?.metrics?.removedCatCount === 1, "removed cats are measured");
 console.assert(result?.metrics?.endReason === "no-cats", "game end reason is retained");
 console.assert(run.completed === true, "run closes after its first terminal event");
-console.assert(listeners.length === 0, "run unsubscribes after completion");
+console.assert(listeners.length === 1, "run keeps event dispatch stable until page cleanup");
+const completedRollCount = run.metrics.rollCount;
+emit({ mode: { phase: 1, generatedCats: 6 }, result: { values: [6] } });
+console.assert(run.metrics.rollCount === completedRollCount, "completed run ignores later game events");
+run.destroy();
+console.assert(listeners.length === 0, "run can be explicitly cleaned up");
 console.assert(bridge.readSession(session.sessionId)?.status === "completed",
   "completed session status is persisted");
 
