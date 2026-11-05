@@ -121,6 +121,38 @@ console.assert(analysis.dataConsistency === true, "matching trial and face count
 
 console.assert(wilsonInterval(0, 0) === null, "Wilson interval rejects an empty sample");
 console.assert(wilsonInterval(2, 1) === null, "Wilson interval rejects invalid counts");
+const knownWilson = wilsonInterval(1, 3);
+console.assert(Math.abs(knownWilson.lower - 0.0615) < 0.001 &&
+  Math.abs(knownWilson.upper - 0.7923) < 0.001,
+  "Wilson interval matches the expected 95% interval for one success in three trials");
+
+const emptyAnalysis = analyzer.analyze("theme-with-no-results");
+console.assert(emptyAnalysis.faceObservationCount === 0 && emptyAnalysis.sampleMean === null,
+  "empty themes produce a safe analysis without undefined averages");
+console.assert(emptyAnalysis.faceDistribution.every(face => face.wilson95 === null),
+  "empty samples do not produce misleading confidence intervals");
+
+const inconsistentState = new GameState();
+inconsistentState.researchInstituteData.challengeResults.push({
+  resultId: "RESULT_INCONSISTENT",
+  themeId,
+  challengeId,
+  completedAt: "2026-11-05T15:00:00.000Z",
+  outcome: "success",
+  summary: "不整合テスト",
+  metrics: {
+    phase1TrialCount: 2,
+    phase1FaceCounts: { 1: 1, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }
+  }
+});
+const inconsistentAnalysis = new ResearchStatisticsAnalyzer({
+  gameState: inconsistentState,
+  now: () => "2026-11-05T15:00:00.000Z"
+}).analyze(themeId, { challengeId });
+console.assert(inconsistentAnalysis.dataConsistency === false,
+  "mismatched trial and face counts are detected");
+console.assert(inconsistentAnalysis.notes.some(note => note.includes("一致しません")),
+  "data inconsistency is disclosed to the researcher");
 
 // ARE exposes the analyzer through its existing analysis entry point.
 const areState = new GameState();
