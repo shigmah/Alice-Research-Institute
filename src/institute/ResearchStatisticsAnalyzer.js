@@ -145,7 +145,9 @@ export class ResearchStatisticsAnalyzer {
     challengeId = null,
     simulationCount = 2000,
     seed = Date.now(),
-    yieldEvery = 25
+    yieldEvery = 25,
+    progressEvery = null,
+    onProgress = null
   } = {}) {
     if (typeof themeId !== "string" || !themeId.trim()) {
       throw new TypeError("themeId must be a non-empty string");
@@ -236,7 +238,9 @@ export class ResearchStatisticsAnalyzer {
       experimentPolicies: eligibleRuns,
       simulationCount,
       seed,
-      yieldEvery
+      yieldEvery,
+      progressEvery,
+      onProgress
     });
 
     const totalObservedSampleCount = FACE_VALUES.reduce(
