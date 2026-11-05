@@ -11,8 +11,8 @@ export const RESEARCH_THEME_DEFINITIONS = Object.freeze([
 ]);
 
 export class ResearchInstituteAchievementBridge {
-  constructor({ storage = globalThis.localStorage, now = () => new Date().toISOString() } = {}) {
-    this.storage = storage ?? null;
+  constructor({ storage, now = () => new Date().toISOString() } = {}) {
+    this.storage = storage ?? (typeof localStorage !== "undefined" ? localStorage : null);
     this.now = now;
   }
 
