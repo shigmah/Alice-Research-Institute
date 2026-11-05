@@ -24,6 +24,10 @@ export class ResearchChallengeRun {
       cheshireRemovedCatCount: 0,
       mogumoguEventCount: 0,
       mogumoguDiceRollCount: 0,
+      mogumoguAcceptedCount: 0,
+      mogumoguDeclinedCount: 0,
+      mogumoguDecisionHistory: [],
+      pendingMogumoguDecisionIndex: null,
       mogumoguRewardCatCount: 0
     };
 
@@ -92,14 +96,34 @@ export class ResearchChallengeRun {
     if (eventResult?.eventId === "mogumogu") {
       if (payload.phase === "offer") {
         this.metrics.mogumoguEventCount += 1;
+        this.metrics.mogumoguDecisionHistory.push("pending");
+        this.metrics.pendingMogumoguDecisionIndex =
+          this.metrics.mogumoguDecisionHistory.length - 1;
       }
-      if (Number.isInteger(payload.dice)) {
+
+      if (payload.declined === true) {
+        this.metrics.mogumoguDeclinedCount += 1;
+        this.resolveMogumoguDecision("decline");
+      } else if (Number.isInteger(payload.dice)) {
         this.metrics.mogumoguDiceRollCount += 1;
+        if (this.metrics.pendingMogumoguDecisionIndex !== null) {
+          this.metrics.mogumoguAcceptedCount += 1;
+          this.resolveMogumoguDecision("accept");
+        }
       }
+
       if (payload.reward?.type === "cat-plus-10" && Number.isFinite(payload.reward.amount)) {
         this.metrics.mogumoguRewardCatCount += payload.reward.amount;
       }
     }
+  }
+
+  resolveMogumoguDecision(decision) {
+    const index = this.metrics.pendingMogumoguDecisionIndex;
+    if (index === null || !["accept", "decline"].includes(decision)) return false;
+    this.metrics.mogumoguDecisionHistory[index] = decision;
+    this.metrics.pendingMogumoguDecisionIndex = null;
+    return true;
   }
 
   finish(state, outcome = null) {
