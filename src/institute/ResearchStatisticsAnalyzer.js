@@ -174,12 +174,18 @@ export class ResearchStatisticsAnalyzer {
 
       const counts = metrics.phase1FaceCounts;
       const reportedTrials = metrics.phase1TrialCount;
-      const countTotal = FACE_VALUES.reduce((sum, face) => {
-        const value = counts?.[face] ?? counts?.[String(face)] ?? 0;
-        return sum + (Number.isSafeInteger(value) && value >= 0 ? value : 0);
-      }, 0);
+      const validFaceCounts = counts !== null &&
+        typeof counts === "object" &&
+        !Array.isArray(counts) &&
+        FACE_VALUES.every(face => {
+          const value = counts[face] ?? counts[String(face)];
+          return Number.isSafeInteger(value) && value >= 0;
+        });
+      const countTotal = validFaceCounts
+        ? FACE_VALUES.reduce((sum, face) => sum + (counts[face] ?? counts[String(face)]), 0)
+        : null;
 
-      if (!counts || !Number.isSafeInteger(reportedTrials) ||
+      if (!validFaceCounts || !Number.isSafeInteger(reportedTrials) ||
           reportedTrials <= 0 || countTotal !== reportedTrials) {
         exclusionReasons["invalid-or-inconsistent-observation-data"] =
           (exclusionReasons["invalid-or-inconsistent-observation-data"] ?? 0) + 1;
