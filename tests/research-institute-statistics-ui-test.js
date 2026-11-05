@@ -133,6 +133,8 @@ function createScreen({
     observedStatistic: 2.5,
     pValue: 0.0505,
     monteCarloStandardError: 0.0049,
+    monteCarloLower95: 0.0409,
+    monteCarloUpper95: 0.0601,
     averageSimulatedSampleCount: 13.8,
     minimumSimulatedSampleCount: 8,
     maximumSimulatedSampleCount: 20,
