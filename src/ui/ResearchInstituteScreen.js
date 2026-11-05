@@ -8,6 +8,7 @@ export class ResearchInstituteScreen {
     this.controller = controller;
     this.services = services;
     this.notice = "";
+    this.analysis = null;
 
     this.controller.onChange = () => this.render();
     this.render();
@@ -215,18 +216,91 @@ export class ResearchInstituteScreen {
     }
     wrapper.appendChild(entryPanel);
 
-    const arePanel = this.panel("研究者モード / ARE", "研究記録やArchiveを参照する簡易表示です。解析処理は将来の接続対象です。");
-    const areButton = this.button("研究記録の概要を見る", () => {
-      const selected = entries[0];
-      const overview = selected ? this.services.areInterface.getOverview(selected.themeId) : null;
-      this.notice = overview
-        ? `「${selected.themeName || selected.themeId}」の研究記録を表示しています。`
-        : "参照できる研究記録はまだありません。";
-      this.render();
-    });
-    arePanel.appendChild(areButton);
+    const arePanel = this.panel(
+      "研究者モード / ARE",
+      "Alice Research Engine：蓄積された実験データを統計的に集計し、理論値と比較します。"
+    );
+    const selected = entries[0] ?? null;
+    if (!selected) {
+      arePanel.appendChild(this.element("div", "institute-placeholder", "研究記録が登録されると、ここで統計分析を実行できます。"));
+    } else {
+      const overview = this.services.areInterface.getOverview(selected.themeId);
+      arePanel.appendChild(this.element("p", "muted",
+        `対象：${selected.themeName || selected.themeId} / 登録済み実験 ${overview.entry?.attemptCount ?? 0}回`));
+      arePanel.appendChild(this.button("蓄積データの統計分析を実行", () => {
+        this.analysis = this.services.areInterface.openAnalysis(selected.themeId);
+        this.notice = "Research Entryに登録された実験結果を集計しました。";
+        this.render();
+      }));
+      if (this.analysis?.themeId === selected.themeId) {
+        arePanel.appendChild(this.renderStatisticsAnalysis(this.analysis));
+      }
+    }
     wrapper.appendChild(arePanel);
     return wrapper;
+  }
+
+  renderStatisticsAnalysis(analysis) {
+    const panel = this.element("section", "institute-content-stack");
+    panel.appendChild(this.element("h4", "", "出目分布の統計分析"));
+    panel.appendChild(this.element("p", "muted",
+      "対象は第1フェーズのサイコロです。理論モデルでは1～6の各目がそれぞれ1/6で出現すると仮定します。イベントによる招き猫の増減は、サイコロの出目分布とは分けて集計しています。"));
+
+    const summary = this.element("div", "institute-summary");
+    summary.append(
+      this.summaryItem("実験回数", analysis.experimentCount),
+      this.summaryItem("有効な観測実験", analysis.observationExperimentCount),
+      this.summaryItem("出目標本数", analysis.faceObservationCount),
+      this.summaryItem("実測平均", analysis.sampleMean === null ? "—" : analysis.sampleMean.toFixed(3)),
+      this.summaryItem("理論平均", analysis.theoreticalMean.toFixed(3)),
+      this.summaryItem("実測分散", analysis.sampleVariance === null ? "—" : analysis.sampleVariance.toFixed(3)),
+      this.summaryItem("理論分散", analysis.theoreticalVariance.toFixed(3))
+    );
+    panel.appendChild(summary);
+
+    if (analysis.sampleMean !== null) {
+      const difference = analysis.meanDifference;
+      const sign = difference > 0 ? "+" : "";
+      panel.appendChild(this.element("p", "muted",
+        `平均値の差（実測 − 理論）：${sign}${difference.toFixed(3)} / 標準誤差：${analysis.standardError === null ? "—" : analysis.standardError.toFixed(3)} / 第1フェーズの平均生成数：${analysis.averageGeneratedCatsPerPhase1Trial.toFixed(3)}匹`));
+    }
+
+    const table = this.element("table", "ari-statistics-table");
+    const thead = this.element("thead");
+    const headerRow = this.element("tr");
+    for (const label of ["出目", "観測回数", "相対度数", "理論期待度数", "95% Wilson区間"]) {
+      headerRow.appendChild(this.element("th", "", label));
+    }
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    const tbody = this.element("tbody");
+    for (const face of analysis.faceDistribution) {
+      const row = this.element("tr");
+      const interval = face.wilson95
+        ? `${(face.wilson95.lower * 100).toFixed(1)}% ～ ${(face.wilson95.upper * 100).toFixed(1)}%`
+        : "—";
+      const cells = [
+        String(face.face),
+        String(face.count),
+        face.relativeFrequency === null ? "—" : `${(face.relativeFrequency * 100).toFixed(1)}%`,
+        face.theoreticalExpectedCount.toFixed(2),
+        interval
+      ];
+      for (const value of cells) row.appendChild(this.element("td", "", value));
+      tbody.appendChild(row);
+    }
+    table.appendChild(tbody);
+    panel.appendChild(table);
+
+    const eventEffects = analysis.eventEffects;
+    panel.appendChild(this.element("p", "muted",
+      `イベント別集計（出目分布には含めない）：チェシャ猫 ${eventEffects.cheshireEventCount}回（+${eventEffects.cheshireGeneratedCatCount}/−${eventEffects.cheshireRemovedCatCount}匹）、もぐもぐ ${eventEffects.mogumoguEventCount}回（サイコロ${eventEffects.mogumoguDiceRollCount}回、報酬+${eventEffects.mogumoguRewardCatCount}匹）`));
+
+    for (const note of analysis.notes) {
+      panel.appendChild(this.element("div", "institute-placeholder", note));
+    }
+    return panel;
   }
 
   renderExperimentRoom() {
