@@ -79,6 +79,15 @@
     .institute-list-item p { margin: 0; }
     .institute-chip-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
     .institute-chip { padding: 5px 12px; border: 1px solid var(--line); border-radius: 999px; background: #fff; }
+    .ari-statistics-table { width: 100%; border-collapse: collapse; background: #fff; font-size: .9rem; }
+    .ari-statistics-table th, .ari-statistics-table td { padding: 9px 10px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+    .ari-statistics-table th:first-child, .ari-statistics-table td:first-child { text-align: center; }
+    .ari-statistics-table thead { background: #f7f5ef; }
+    .ari-statistics-table th { color: var(--blue-dark); font-weight: 800; }
+    @media (max-width: 700px) {
+      .ari-statistics-table { font-size: .78rem; }
+      .ari-statistics-table th, .ari-statistics-table td { padding: 7px 5px; }
+    }
     .institute-character-grid, .institute-feature-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 12px 0; }
     .institute-feature-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     .institute-character-card { padding: 15px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
