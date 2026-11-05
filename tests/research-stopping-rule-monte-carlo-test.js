@@ -124,6 +124,15 @@ test("ClassicModeMonteCarloSimulator runs the real classic game with determinist
     one.phase1TrialCount
   );
 
+  const diceLimited = simulateOneClassicGame({
+    seed: 20261106,
+    policy: { decisions: [], defaultDecision: "accept" },
+    maxDiceCount: 1
+  });
+  assert.equal(diceLimited.completed, false);
+  assert.equal(diceLimited.reason, "dice-count-limit",
+    "simulations stop safely if Cheshire effects lead to an excessive dice count");
+
   let yieldCount = 0;
   const simulator = new ClassicModeMonteCarloSimulator({
     yieldControl: async () => { yieldCount += 1; }
@@ -171,6 +180,27 @@ test("ClassicModeMonteCarloSimulator rejects invalid simulation settings", async
   assert.equal(notCompleted.validSimulationCount, 0);
   assert.equal(notCompleted.failedSimulationCount, 1);
   assert.equal(notCompleted.failureReasons["main-turn-limit"], 1);
+
+  assert.throws(
+    () => new ClassicModeMonteCarloSimulator({ maxDiceCount: 0 }),
+    /maxDiceCount/
+  );
+  await assert.rejects(
+    () => simulator.run({
+      observedFaceCounts: { 1: -1, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 },
+      experimentPolicies: [{ decisions: [], defaultDecision: "accept" }],
+      simulationCount: 1
+    }),
+    /valid observed face counts/
+  );
+  await assert.rejects(
+    () => simulator.run({
+      observedFaceCounts: { 1: 1, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 },
+      experimentPolicies: [{ decisions: ["sometimes"], defaultDecision: "accept" }],
+      simulationCount: 1
+    }),
+    /valid observed face counts/
+  );
 });
 
 console.log("Research stopping-rule Monte Carlo tests: PASS");
