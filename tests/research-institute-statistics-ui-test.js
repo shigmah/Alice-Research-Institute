@@ -72,6 +72,7 @@ const researchResults = [{
 
 const analysis = {
   themeId,
+  challengeId,
   experimentCount: 7,
   successfulExperimentCount: 7,
   successRate: 1,
@@ -132,6 +133,8 @@ function createScreen({
       monteCarloLower95: 0.025,
       monteCarloUpper95: 0.075
     });
+    const validSimulationCount = options.simulationCount;
+    const extremeCount = Math.round(validSimulationCount * 0.05);
     return {
     themeId,
     method: "stopping-rule-monte-carlo",
@@ -140,14 +143,14 @@ function createScreen({
     completedSimulationCount: options.simulationCount,
     maxMainTurns: 10000,
     maxDicePerTurn: 512,
-    validSimulationCount: 2000,
+    validSimulationCount,
     failedSimulationCount: 0,
-    extremeCount: 100,
+    extremeCount,
     eligibleExperimentCount: 7,
     excludedExperimentCount: 0,
     observedSampleCount: 14,
     observedStatistic: 2.5,
-    pValue: 0.0505,
+    pValue: (extremeCount + 1) / (validSimulationCount + 1),
     monteCarloStandardError: 0.0049,
     monteCarloLower95: 0.0409,
     monteCarloUpper95: 0.0601,
@@ -177,8 +180,8 @@ function createScreen({
         requestedSimulationCount: options.simulationCount,
         validSimulationCount: options.simulationCount,
         failedSimulationCount: 0,
-        extremeCount: 100,
-        pValue: 101 / (options.simulationCount + 1),
+        extremeCount,
+        pValue: (extremeCount + 1) / (options.simulationCount + 1),
         monteCarloLower95: 0.0409,
         monteCarloUpper95: 0.0601
       }
