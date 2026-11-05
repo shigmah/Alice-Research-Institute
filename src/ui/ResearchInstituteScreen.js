@@ -401,15 +401,22 @@ export class ResearchInstituteScreen {
     );
     section.appendChild(summary);
 
-    const decisionLabel = result.pValue === null
-      ? "検定結果を算出できませんでした"
-      : result.pValue < 0.05
-        ? "シミュレーション検定では5%水準で帰無仮説を棄却"
-        : "シミュレーション検定では5%水準で帰無仮説を棄却できない";
+    const enoughSimulations = result.validSimulationCount >=
+      Math.ceil(result.requestedSimulationCount * 0.95);
+    const monteCarloIntervalAvailable =
+      Number.isFinite(result.monteCarloLower95) &&
+      Number.isFinite(result.monteCarloUpper95);
+    const decisionLabel = result.pValue === null || !enoughSimulations
+      ? "有効な反復数が不足しているため、判定を保留"
+      : monteCarloIntervalAvailable && result.monteCarloUpper95 < 0.05
+        ? "モンテカルロ推定誤差を考慮しても、5%水準で帰無仮説を棄却"
+        : monteCarloIntervalAvailable && result.monteCarloLower95 > 0.05
+          ? "モンテカルロ推定誤差を考慮しても、5%水準で帰無仮説を棄却できない"
+          : "モンテカルロ推定誤差が5%境界に重なるため、判定を保留";
     section.appendChild(this.element("div", "ari-chi-square-decision", decisionLabel));
 
     section.appendChild(this.element("p", "muted",
-      `観測χ²以上となった反復：${result.extremeCount.toLocaleString()} / ${result.validSimulationCount.toLocaleString()}回。各反復では対象実験と同数のゲームを実行しています。シミュレーション標本数の範囲：${result.minimumSimulatedSampleCount} ～ ${result.maximumSimulatedSampleCount}回。`));
+      `観測χ²以上となった反復：${result.extremeCount.toLocaleString()} / ${result.validSimulationCount.toLocaleString()}回。p値のモンテカルロ95%近似区間：${result.monteCarloLower95 === null ? "—" : result.monteCarloLower95.toFixed(4)} ～ ${result.monteCarloUpper95 === null ? "—" : result.monteCarloUpper95.toFixed(4)}。各反復では対象実験と同数のゲームを実行しています。シミュレーション標本数の範囲：${result.minimumSimulatedSampleCount} ～ ${result.maximumSimulatedSampleCount}回。`));
     section.appendChild(this.element("p", "muted",
       `乱数シード：${result.seed} / 失敗反復：${result.failedSimulationCount}`));
     section.appendChild(this.element("p", "muted", result.stoppingRule));
