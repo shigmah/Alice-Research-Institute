@@ -691,24 +691,26 @@ export class ResearchInstituteScreen {
       countSelect.appendChild(option);
     }
     countSelect.value = String(selectedSimulationCount);
-    countSelect.addEventListener("change", event => {
-      const nextCount = Number(event?.target?.value ?? countSelect.value);
-      if (simulationCounts.includes(nextCount) && !this.monteCarloRunning) {
-        this.monteCarloSimulationCount = nextCount;
-      }
-    });
-    countControl.append(countLabel, countSelect);
-    panel.appendChild(countControl);
-    panel.appendChild(this.button(
+    const monteCarloButton = this.button(
       this.monteCarloRunning
         ? "モンテカルロ検定を実行中…"
         : `停止条件を再現したモンテカルロ検定を実行（${selectedSimulationCount.toLocaleString()}反復）`,
       () => this.runMonteCarloAnalysis(analysis.themeId, {
         challengeId: analysis.challengeId,
-        simulationCount: selectedSimulationCount
+        simulationCount: this.monteCarloSimulationCount
       }),
       { disabled: this.monteCarloRunning }
-    ));
+    );
+    countSelect.addEventListener("change", event => {
+      const nextCount = Number(event?.target?.value ?? countSelect.value);
+      if (simulationCounts.includes(nextCount) && !this.monteCarloRunning) {
+        this.monteCarloSimulationCount = nextCount;
+        monteCarloButton.textContent =
+          `停止条件を再現したモンテカルロ検定を実行（${nextCount.toLocaleString()}反復）`;
+      }
+    });
+    countControl.append(countLabel, countSelect);
+    panel.append(countControl, monteCarloButton);
     if (this.monteCarloRunning) {
       panel.appendChild(this.renderMonteCarloProgress());
     }
