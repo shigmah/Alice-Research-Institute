@@ -37,7 +37,7 @@ class StubElement {
   }
 
   click() {
-    this.listeners.click?.({ target: this, currentTarget: this });
+    return this.listeners.click?.({ target: this, currentTarget: this });
   }
 }
 
@@ -117,8 +117,36 @@ const analysis = {
   notes: ["画面テスト用の標本です。"]
 };
 
-function createScreen({ openAnalysis = () => analysis } = {}) {
+function createScreen({
+  openAnalysis = () => analysis,
+  runMonteCarlo = async () => ({
+    themeId,
+    method: "stopping-rule-monte-carlo",
+    seed: 1234,
+    requestedSimulationCount: 2000,
+    validSimulationCount: 2000,
+    failedSimulationCount: 0,
+    extremeCount: 100,
+    eligibleExperimentCount: 7,
+    excludedExperimentCount: 0,
+    observedSampleCount: 14,
+    observedStatistic: 2.5,
+    pValue: 0.0505,
+    monteCarloStandardError: 0.0049,
+    averageSimulatedSampleCount: 13.8,
+    minimumSimulatedSampleCount: 8,
+    maximumSimulatedSampleCount: 20,
+    experimentCountPerReplicate: 7,
+    failureReasons: {},
+    legacyDecisionAssumptionCount: 1,
+    recordedDecisionHistoryCount: 6,
+    mogumoguPolicy: "過去の記録はもぐもぐイベントをすべて受諾する仮定で再現しました。",
+    stoppingRule: "招き猫が0匹になった時点で終了します。",
+    modelNotes: ["既存のGame実装を使用します。"]
+  })
+} = {}) {
   let receivedOptions = null;
+  let receivedMonteCarloOptions = null;
   const screen = Object.create(ResearchInstituteScreen.prototype);
   screen.document = { createElement: tag => new StubElement(tag) };
   screen.notice = "";
@@ -147,6 +175,10 @@ function createScreen({ openAnalysis = () => analysis } = {}) {
       openAnalysis: (id, options) => {
         receivedOptions = { id, ...options };
         return openAnalysis(id, options);
+      },
+      runMonteCarlo: async (id, options) => {
+        receivedMonteCarloOptions = { id, ...options };
+        return runMonteCarlo(id, options);
       }
     }
   };
@@ -160,7 +192,8 @@ function createScreen({ openAnalysis = () => analysis } = {}) {
   screen.latestTree = screen.renderResearchLab();
   return {
     screen,
-    getReceivedOptions: () => receivedOptions
+    getReceivedOptions: () => receivedOptions,
+    getReceivedMonteCarloOptions: () => receivedMonteCarloOptions
   };
 }
 
@@ -211,6 +244,26 @@ console.assert(allBars[0].style.height === "0%",
   "zero observed frequency renders as a zero-height bar");
 console.assert(allBars[1].style.height !== "0%",
   "theoretical expected frequency is shown even when observed count is zero");
+
+const monteCarloButton = findElement(happy.screen.latestTree, node =>
+  node.tagName === "BUTTON" && node.textContent.includes("停止条件を再現したモンテカルロ検定")
+);
+console.assert(monteCarloButton !== null, "stopping-rule Monte Carlo action is rendered");
+await monteCarloButton.click();
+console.assert(happy.getReceivedMonteCarloOptions()?.id === themeId,
+  "Monte Carlo action calls ARE for the selected theme");
+console.assert(happy.getReceivedMonteCarloOptions()?.challengeId === challengeId,
+  "Monte Carlo action uses the selected challenge");
+console.assert(happy.getReceivedMonteCarloOptions()?.simulationCount === 2000,
+  "Monte Carlo action requests 2,000 replicates");
+console.assert(happy.screen.monteCarlo?.validSimulationCount === 2000,
+  "Monte Carlo result is retained in screen state");
+console.assert(happy.screen.latestTree.textContent.includes("停止条件を再現したモンテカルロ検定"),
+  "Monte Carlo result panel is rendered");
+console.assert(happy.screen.latestTree.textContent.includes("モンテカルロp値"),
+  "Monte Carlo p-value is displayed");
+console.assert(happy.screen.latestTree.textContent.includes("すべて受諾する仮定"),
+  "legacy Mogumogu decision assumption is disclosed");
 
 // Errors must not disappear silently. The user receives a visible message.
 const broken = createScreen({
