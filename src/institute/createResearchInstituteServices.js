@@ -9,6 +9,7 @@ import { ResearchCompletionEvaluator } from "./ResearchCompletionEvaluator.js";
 import { ArchiveManager } from "./ArchiveManager.js";
 import { MemoryManager } from "./MemoryManager.js";
 import { AREInterface } from "./AREInterface.js";
+import { ResearchStatisticsAnalyzer } from "./ResearchStatisticsAnalyzer.js";
 
 export function createResearchInstituteServices({
   gameState,
@@ -54,7 +55,12 @@ export function createResearchInstituteServices({
     resultProcessor,
     challengeStarter
   });
-  const areInterface = new AREInterface({ entryManager, archiveManager });
+  const statisticsAnalyzer = new ResearchStatisticsAnalyzer({ gameState, now });
+  const areInterface = new AREInterface({
+    entryManager,
+    archiveManager,
+    analysisProvider: themeId => statisticsAnalyzer.analyze(themeId)
+  });
   const instituteController = new ResearchInstituteController({
     gameState,
     facilityCatalog,
@@ -76,6 +82,7 @@ export function createResearchInstituteServices({
     completionEvaluator,
     archiveManager,
     memoryManager,
-    areInterface
+    areInterface,
+    statisticsAnalyzer
   };
 }
