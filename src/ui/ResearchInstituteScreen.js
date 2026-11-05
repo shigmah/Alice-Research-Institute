@@ -9,6 +9,8 @@ export class ResearchInstituteScreen {
     this.services = services;
     this.notice = "";
     this.analysis = null;
+    this.monteCarlo = null;
+    this.monteCarloRunning = false;
 
     this.controller.onChange = () => this.render();
     this.render();
@@ -250,6 +252,7 @@ export class ResearchInstituteScreen {
       }
 
       this.analysis = analysis;
+      this.monteCarlo = null;
       this.notice = `統計分析が完了しました。出目標本数：${analysis.faceObservationCount}回。`;
     } catch (error) {
       this.analysis = null;
@@ -343,6 +346,96 @@ export class ResearchInstituteScreen {
     return figure;
   }
 
+  async runMonteCarloAnalysis(themeId, options = {}) {
+    if (this.monteCarloRunning) return null;
+
+    this.monteCarloRunning = true;
+    this.monteCarlo = null;
+    this.notice = "停止条件を再現したモンテカルロ検定を実行しています（2,000反復）。";
+    this.render();
+
+    try {
+      this.monteCarlo = await this.services.areInterface.runMonteCarlo(themeId, {
+        ...options,
+        simulationCount: 2000,
+        yieldEvery: 25
+      });
+      this.notice = this.monteCarlo?.validSimulationCount > 0
+        ? `モンテカルロ検定が完了しました。有効反復数：${this.monteCarlo.validSimulationCount.toLocaleString()}回。`
+        : "モンテカルロ検定を完了できませんでした。有効なシミュレーションがありません。";
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      this.notice = `モンテカルロ検定を実行できませんでした：${detail}`;
+      this.monteCarlo = null;
+      console.error("[ARE] Monte Carlo analysis failed:", error);
+    } finally {
+      this.monteCarloRunning = false;
+      this.render();
+      this.root?.querySelector?.("#areMonteCarloResult")?.scrollIntoView?.({
+        behavior: "smooth",
+        block: "start"
+      });
+    }
+
+    return this.monteCarlo;
+  }
+
+  renderMonteCarloResult(result) {
+    const section = this.element("section", "ari-monte-carlo-panel");
+    section.id = "areMonteCarloResult";
+    section.setAttribute?.("aria-live", "polite");
+    section.appendChild(this.element("h4", "", "停止条件を再現したモンテカルロ検定"));
+
+    const summary = this.element("div", "institute-summary");
+    summary.append(
+      this.summaryItem("有効なシミュレーション", result.validSimulationCount.toLocaleString()),
+      this.summaryItem("対象実験数", result.eligibleExperimentCount),
+      this.summaryItem("除外実験数", result.excludedExperimentCount),
+      this.summaryItem("観測標本数", result.observedSampleCount),
+      this.summaryItem("観測χ²", result.observedStatistic.toFixed(4)),
+      this.summaryItem("モンテカルロp値", result.pValue === null ? "—" : result.pValue.toFixed(4)),
+      this.summaryItem("Monte Carlo標準誤差",
+        result.monteCarloStandardError === null ? "—" : result.monteCarloStandardError.toFixed(4)),
+      this.summaryItem("シミュレーション標本数（平均）",
+        result.averageSimulatedSampleCount === null ? "—" : result.averageSimulatedSampleCount.toFixed(2))
+    );
+    section.appendChild(summary);
+
+    const decisionLabel = result.pValue === null
+      ? "検定結果を算出できませんでした"
+      : result.pValue < 0.05
+        ? "シミュレーション検定では5%水準で帰無仮説を棄却"
+        : "シミュレーション検定では5%水準で帰無仮説を棄却できない";
+    section.appendChild(this.element("div", "ari-chi-square-decision", decisionLabel));
+
+    section.appendChild(this.element("p", "muted",
+      `観測χ²以上となった反復：${result.extremeCount.toLocaleString()} / ${result.validSimulationCount.toLocaleString()}回。各反復では対象実験と同数のゲームを実行しています。シミュレーション標本数の範囲：${result.minimumSimulatedSampleCount} ～ ${result.maximumSimulatedSampleCount}回。`));
+    section.appendChild(this.element("p", "muted",
+      `乱数シード：${result.seed} / 失敗反復：${result.failedSimulationCount}`));
+    section.appendChild(this.element("p", "muted", result.stoppingRule));
+    section.appendChild(this.element("p", "muted", result.mogumoguPolicy));
+
+    if (result.legacyDecisionAssumptionCount > 0) {
+      section.appendChild(this.element("div", "institute-placeholder",
+        `過去の実験記録 ${result.legacyDecisionAssumptionCount}件には、もぐもぐイベントの受諾・辞退履歴がありません。これらはすべて受諾したものとしてシミュレーションしています。`));
+    }
+
+    if (result.excludedExperimentCount > 0) {
+      section.appendChild(this.element("div", "institute-placeholder",
+        `自然終了条件を満たさない、または記録に不整合がある実験を ${result.excludedExperimentCount}件除外しました。`));
+    }
+
+    for (const note of result.modelNotes) {
+      section.appendChild(this.element("p", "muted", note));
+    }
+
+    if (result.failedSimulationCount > 0) {
+      section.appendChild(this.element("p", "muted",
+        "一部のシミュレーション反復が安全上限またはイベント処理上限に達したため除外されています。"));
+    }
+    return section;
+  }
+
   renderChiSquareGoodnessOfFit(test) {
     const section = this.element("section", "ari-chi-square-panel");
     section.appendChild(this.element("h4", "", "カイ二乗適合度検定"));
@@ -407,6 +500,18 @@ export class ResearchInstituteScreen {
 
     panel.appendChild(this.renderFaceDistributionChart(analysis));
     panel.appendChild(this.renderChiSquareGoodnessOfFit(analysis.chiSquareGoodnessOfFit));
+    panel.appendChild(this.button(
+      this.monteCarloRunning
+        ? "モンテカルロ検定を実行中…"
+        : "停止条件を再現したモンテカルロ検定を実行（2,000反復）",
+      () => this.runMonteCarloAnalysis(analysis.themeId, {
+        challengeId: analysis.challengeId
+      }),
+      { disabled: this.monteCarloRunning }
+    ));
+    if (this.monteCarlo?.themeId === analysis.themeId) {
+      panel.appendChild(this.renderMonteCarloResult(this.monteCarlo));
+    }
 
     const table = this.element("table", "ari-statistics-table");
     const thead = this.element("thead");
