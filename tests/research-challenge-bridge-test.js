@@ -105,13 +105,14 @@ console.assert(services.challengeCoordinator.restoreActiveChallenge({
 console.assert(services.challengeCoordinator.activeChallenge?.challengeId === session.challengeId,
   "restored challenge metadata is retained");
 
+const savesBeforeResult = saveCount;
 const receipt = services.instituteController.receiveChallengeResult(result);
 console.assert(receipt.accepted === true, "institute controller accepts the experiment result");
 console.assert(instituteState.researchInstituteData.challengeResults.length === 1,
   "experiment result is persisted in institute data");
 console.assert(services.entryManager.getEntry(session.themeId).attemptCount === 1,
   "result updates Research Entry attempt count");
-console.assert(saveCount === 1, "accepted result triggers institute save");
+console.assert(saveCount === savesBeforeResult + 1, "accepted result triggers institute save");
 
 // Consuming a result clears its temporary cross-tab transport records.
 console.assert(bridge.consumeResult(session.sessionId) === true, "result can be consumed");
