@@ -32,6 +32,19 @@ export class ChallengeCoordinator {
     return true;
   }
 
+  restoreActiveChallenge({ themeId, challengeId } = {}) {
+    if (this.activeChallenge) return false;
+    const progress = this.themeManager.getThemeProgress(themeId);
+    const definition = this.themeManager.getThemeDefinition(themeId);
+    if (!progress || progress.status !== "researching" || !definition) return false;
+    if (typeof challengeId !== "string" || !challengeId.trim()) return false;
+    if (Array.isArray(definition.challengeIds) && !definition.challengeIds.includes(challengeId)) {
+      return false;
+    }
+    this.activeChallenge = { themeId, challengeId };
+    return true;
+  }
+
   receiveChallengeResult(result) {
     if (!result || !this.activeChallenge) {
       return { accepted: false, reason: "no-active-challenge" };
