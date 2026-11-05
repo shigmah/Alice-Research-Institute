@@ -339,7 +339,7 @@ export class ResearchInstituteScreen {
 
     figure.appendChild(plot);
     figure.appendChild(this.element("p", "ari-chart-axis-caption",
-      "縦軸：回数（棒の上の数値は「実測 / 理論期待度数」）"));
+      "縦軸：回数（各出目の下の数値は「実測 / 理論期待度数」）"));
     return figure;
   }
 
