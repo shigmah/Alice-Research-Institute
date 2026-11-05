@@ -78,6 +78,13 @@ export class ResearchInstituteController {
     return this.challengeCoordinator?.startChallenge?.(themeId, challengeId) === true;
   }
 
+  receiveChallengeResult(result) {
+    const processed = this.challengeCoordinator?.receiveChallengeResult?.(result)
+      ?? { accepted: false, reason: "challenge-coordinator-unavailable" };
+    if (processed.accepted) this.notifyChanged();
+    return processed;
+  }
+
   recordAutomaticMemory(event) {
     const memory = this.memoryManager.recordAutomaticMemory(event);
     this.notifyChanged();
