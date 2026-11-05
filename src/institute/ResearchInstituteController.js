@@ -49,6 +49,17 @@ export class ResearchInstituteController {
       const source = event?.source ?? null;
       const sourceId = event?.sourceId ?? event?.eventId ?? null;
       if (this.themeManager.discoverTheme(theme.themeId, source, sourceId)) {
+        const memory = this.memoryManager.recordAutomaticMemory({
+          eventCategory: "discovery",
+          title: `研究テーマ「${theme.name ?? theme.themeId}」を発見した`,
+          description: theme.description ?? "新しい研究テーマを発見した。",
+          relatedThemeId: theme.themeId
+        });
+        const entry = this.gameState.researchInstituteData.researchEntries
+          .find(item => item.themeId === theme.themeId);
+        if (entry && memory && !entry.memoryIds.includes(memory.memoryId)) {
+          entry.memoryIds.push(memory.memoryId);
+        }
         discovered.push(theme.themeId);
       }
     }
