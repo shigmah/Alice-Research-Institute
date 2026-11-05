@@ -201,6 +201,12 @@ export class ClassicModeMonteCarloSimulator {
     const monteCarloStandardError = pValue === null
       ? null
       : Math.sqrt((pValue * (1 - pValue)) / (validSimulationCount + 1));
+    const monteCarloLower95 = pValue === null
+      ? null
+      : Math.max(0, pValue - (1.96 * monteCarloStandardError));
+    const monteCarloUpper95 = pValue === null
+      ? null
+      : Math.min(1, pValue + (1.96 * monteCarloStandardError));
 
     return {
       method: "stopping-rule-monte-carlo",
@@ -213,6 +219,8 @@ export class ClassicModeMonteCarloSimulator {
       observedSampleCount,
       pValue,
       monteCarloStandardError,
+      monteCarloLower95,
+      monteCarloUpper95,
       averageSimulatedSampleCount: validSimulationCount > 0
         ? totalSimulatedSampleCount / validSimulationCount
         : null,
