@@ -57,6 +57,16 @@ test("ResearchStatisticsAnalyzer selects natural game-over experiments and recor
   const fakeSimulator = {
     async run(options) {
       captured = options;
+      options.onProgress?.({
+        completedSimulationCount: 10,
+        requestedSimulationCount: options.simulationCount,
+        validSimulationCount: 10,
+        failedSimulationCount: 0,
+        extremeCount: 2,
+        pValue: 3 / 11,
+        monteCarloLower95: 0.05,
+        monteCarloUpper95: 0.45
+      });
       return {
         method: "stopping-rule-monte-carlo",
         seed: 321,
@@ -83,10 +93,13 @@ test("ResearchStatisticsAnalyzer selects natural game-over experiments and recor
     monteCarloSimulator: fakeSimulator
   });
 
+  let forwardedProgress = null;
   const result = await analyzer.runMonteCarlo(themeId, {
     challengeId,
     simulationCount: 100,
-    seed: 321
+    seed: 321,
+    progressEvery: 10,
+    onProgress: checkpoint => { forwardedProgress = checkpoint; }
   });
 
   assert.equal(result.eligibleExperimentCount, 2);
@@ -98,6 +111,14 @@ test("ResearchStatisticsAnalyzer selects natural game-over experiments and recor
     1: 4, 2: 2, 3: 2, 4: 4, 5: 2, 6: 2
   });
   assert.equal(captured.experimentPolicies.length, 2);
+  assert.equal(captured.progressEvery, 10,
+    "a requested progress interval is forwarded to the simulator");
+  assert.equal(typeof captured.onProgress, "function",
+    "the progress callback is forwarded to the simulator");
+  assert.equal(forwardedProgress.completedSimulationCount, 10,
+    "simulator checkpoints are delivered to the analyzer caller");
+  assert.equal(forwardedProgress.requestedSimulationCount, 100,
+    "the forwarded checkpoint retains the requested iteration count");
   assert.equal(captured.experimentPolicies[0].defaultDecision, "accept");
   assert.deepEqual(captured.experimentPolicies[1].decisions, ["accept", "decline"]);
   assert.equal(result.legacyDecisionAssumptionCount, 1);
