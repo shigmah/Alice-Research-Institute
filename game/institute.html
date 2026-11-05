@@ -133,7 +133,7 @@
     const achievementBridge = new ResearchInstituteAchievementBridge();
     const achievements = achievementBridge.readAll();
     if (achievements["cat-count-20"]) {
-      const discovered = services.instituteController.handleInstituteEvent({
+      services.instituteController.handleInstituteEvent({
         eventId: "classic-cat-count-20",
         source: "game_achievement",
         sourceId: "cat-count-20",
