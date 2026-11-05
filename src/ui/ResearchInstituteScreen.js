@@ -437,9 +437,15 @@ export class ResearchInstituteScreen {
       section.appendChild(this.element("p", "muted", note));
     }
 
+    section.appendChild(this.element("p", "muted",
+      `シミュレーション安全上限：1ゲーム最大 ${result.maxMainTurns.toLocaleString()}ターン / 1ターン最大 ${result.maxDicePerTurn.toLocaleString()}個のサイコロ。`));
+
     if (result.failedSimulationCount > 0) {
-      section.appendChild(this.element("p", "muted",
-        "一部のシミュレーション反復が安全上限またはイベント処理上限に達したため除外されています。"));
+      const failureSummary = Object.entries(result.failureReasons ?? {})
+        .map(([reason, count]) => `${reason}：${count.toLocaleString()}回`)
+        .join(" / ");
+      section.appendChild(this.element("div", "institute-placeholder",
+        `一部のシミュレーション反復が失敗しました（${result.failedSimulationCount.toLocaleString()}回）。失敗理由：${failureSummary || "詳細不明"}。失敗反復があるため、有意差の判定は保留です。`));
     }
     return section;
   }
