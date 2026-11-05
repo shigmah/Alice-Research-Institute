@@ -6,7 +6,7 @@ export const RESEARCH_THEME_DEFINITIONS = Object.freeze([
     name: "招き猫の出現確率に関する研究",
     description: "招き猫ゲームのプレイ結果を記録し、招き猫の出現頻度や確率的な傾向を調べる。",
     overview: "招き猫ゲームで観測される招き猫の出現数を集計し、理論上の確率と実測値を比較するための研究テーマ。",
-    challengeIds: []
+    challengeIds: ["maneki-neko-classic"]
   })
 ]);
 
