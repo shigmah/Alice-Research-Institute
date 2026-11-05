@@ -89,9 +89,10 @@ export class ResearchChallengeRun {
     });
 
     if (result) {
+      // Keep the listener in place until pagehide/destroy. Game.emit iterates its
+      // live listener array, so removing this listener during dispatch could skip
+      // the next listener in the same emission.
       this.completed = true;
-      this.unsubscribe?.();
-      this.unsubscribe = null;
     }
     return result;
   }
