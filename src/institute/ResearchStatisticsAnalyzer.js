@@ -1,3 +1,5 @@
+import { ClassicModeMonteCarloSimulator } from "./ClassicModeMonteCarloSimulator.js";
+
 const FACE_VALUES = Object.freeze([1, 2, 3, 4, 5, 6]);
 const THEORETICAL_MEAN = 3.5;
 const THEORETICAL_VARIANCE = 35 / 12;
@@ -126,12 +128,132 @@ function wilsonInterval(successes, trials) {
 }
 
 export class ResearchStatisticsAnalyzer {
-  constructor({ gameState, now = () => new Date().toISOString() } = {}) {
+  constructor({
+    gameState,
+    now = () => new Date().toISOString(),
+    monteCarloSimulator = new ClassicModeMonteCarloSimulator()
+  } = {}) {
     if (!gameState?.researchInstituteData) {
       throw new Error("gameState with researchInstituteData is required");
     }
     this.gameState = gameState;
     this.now = now;
+    this.monteCarloSimulator = monteCarloSimulator;
+  }
+
+  async runMonteCarlo(themeId, {
+    challengeId = null,
+    simulationCount = 2000,
+    seed = Date.now(),
+    yieldEvery = 25
+  } = {}) {
+    if (typeof themeId !== "string" || !themeId.trim()) {
+      throw new TypeError("themeId must be a non-empty string");
+    }
+
+    const results = this.gameState.researchInstituteData.challengeResults
+      .filter(result => result?.themeId === themeId)
+      .filter(result => challengeId === null || result?.challengeId === challengeId);
+
+    const eligibleRuns = [];
+    const exclusionReasons = {};
+    let legacyDecisionAssumptionCount = 0;
+    let recordedDecisionHistoryCount = 0;
+    const observedFaceCounts = createEmptyFaceCounts();
+
+    for (const result of results) {
+      const metrics = result?.metrics ?? {};
+      const endReason = metrics.endReason ?? "unknown";
+      if (endReason !== "no-cats") {
+        const reason = endReason === "player-dropout"
+          ? "player-dropout"
+          : `not-natural-game-over:${endReason}`;
+        exclusionReasons[reason] = (exclusionReasons[reason] ?? 0) + 1;
+        continue;
+      }
+
+      const counts = metrics.phase1FaceCounts;
+      const reportedTrials = metrics.phase1TrialCount;
+      const countTotal = FACE_VALUES.reduce((sum, face) => {
+        const value = counts?.[face] ?? counts?.[String(face)] ?? 0;
+        return sum + (Number.isSafeInteger(value) && value >= 0 ? value : 0);
+      }, 0);
+
+      if (!counts || !Number.isSafeInteger(reportedTrials) ||
+          reportedTrials <= 0 || countTotal !== reportedTrials) {
+        exclusionReasons["invalid-or-inconsistent-observation-data"] =
+          (exclusionReasons["invalid-or-inconsistent-observation-data"] ?? 0) + 1;
+        continue;
+      }
+
+      for (const face of FACE_VALUES) {
+        observedFaceCounts[face] += counts[face] ?? counts[String(face)] ?? 0;
+      }
+
+      let decisions = [];
+      let defaultDecision = "accept";
+      if (Array.isArray(metrics.mogumoguDecisionHistory)) {
+        decisions = metrics.mogumoguDecisionHistory
+          .filter(decision => decision === "accept" || decision === "decline");
+        if (decisions.length > 0) recordedDecisionHistoryCount += 1;
+        const accepted = decisions.filter(decision => decision === "accept").length;
+        const declined = decisions.length - accepted;
+        defaultDecision = declined > accepted ? "decline" : "accept";
+      } else if ((metrics.mogumoguEventCount ?? 0) > 0) {
+        // Historical result records predate explicit offer-decision tracking.
+        // Auto-accept is a transparent fallback assumption for those records.
+        legacyDecisionAssumptionCount += 1;
+      }
+
+      eligibleRuns.push({
+        decisions,
+        defaultDecision
+      });
+    }
+
+    if (eligibleRuns.length === 0) {
+      throw new Error(
+        "停止条件を再現できる自然終了（招き猫0匹）の実験記録がありません。ドロップアウト記録やデータ不整合の記録は対象外です。"
+      );
+    }
+
+    const simulation = await this.monteCarloSimulator.run({
+      observedFaceCounts,
+      experimentPolicies: eligibleRuns,
+      simulationCount,
+      seed,
+      yieldEvery
+    });
+
+    const totalObservedSampleCount = FACE_VALUES.reduce(
+      (sum, face) => sum + observedFaceCounts[face],
+      0
+    );
+
+    return {
+      themeId,
+      challengeId,
+      generatedAt: this.now(),
+      eligibleExperimentCount: eligibleRuns.length,
+      excludedExperimentCount: results.length - eligibleRuns.length,
+      exclusionReasons,
+      observedFaceCounts,
+      observedSampleCount: totalObservedSampleCount,
+      legacyDecisionAssumptionCount,
+      recordedDecisionHistoryCount,
+      mogumoguPolicy: legacyDecisionAssumptionCount > 0
+        ? "過去の記録は受諾・辞退の履歴がないため、もぐもぐイベントをすべて受諾する仮定で再現しました。"
+        : "保存されているもぐもぐイベントの受諾・辞退履歴を実験ごとに再現しました。",
+      stoppingRule: "各シミュレーション実験は、通常クラシックモードのゲーム本体を使用し、招き猫が0匹になった時点で終了します。",
+      modelNotes: [
+        "サイコロ、フェーズ遷移、素数判定、招き猫の増減、チェシャ猫イベント、もぐもぐチャレンジには既存のGame実装を使用します。",
+        "各反復では、観測データと同じ件数の独立した自然終了ゲームを実行し、実験間の第1フェーズ出目を合算します。",
+        "手動ドロップアウトはプレイヤーの判断に依存するため、停止ルールを再現できず検定対象から除外します。",
+        "過去の実験に受諾・辞退履歴がない場合、もぐもぐイベントをすべて受諾すると仮定します。以後の実験では記録した選択履歴を再現します。",
+        "モンテカルロp値は、シミュレーションの有限回数に対して (極端な統計量の回数 + 1) / (有効反復数 + 1) で推定します。"
+      ],
+      ...simulation
+    };
   }
 
   analyze(themeId, { challengeId = null } = {}) {
