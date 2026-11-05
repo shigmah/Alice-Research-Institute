@@ -53,6 +53,8 @@ state.researchInstituteData.challengeResults.push(
       cheshireRemovedCatCount: 0,
       mogumoguEventCount: 1,
       mogumoguDiceRollCount: 2,
+      mogumoguAcceptedCount: 1,
+      mogumoguDeclinedCount: 0,
       mogumoguRewardCatCount: 10
     }
   },
@@ -112,6 +114,9 @@ console.assert(analysis.eventEffects.cheshireGeneratedCatCount === 5,
   "Cheshire effects remain a separate category");
 console.assert(analysis.eventEffects.mogumoguRewardCatCount === 10,
   "Mogumogu rewards remain a separate category");
+console.assert(analysis.eventEffects.mogumoguAcceptedCount === 1 &&
+  analysis.eventEffects.mogumoguDeclinedCount === 0,
+  "Mogumogu accept and decline decisions are aggregated");
 console.assert(analysis.faceDistribution[0].relativeFrequency === 1 / 3,
   "relative frequency is calculated");
 console.assert(analysis.faceDistribution[0].theoreticalExpectedCount === 0.5,
