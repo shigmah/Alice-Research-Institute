@@ -401,8 +401,9 @@ export class ResearchInstituteScreen {
     );
     section.appendChild(summary);
 
-    const enoughSimulations = result.validSimulationCount >=
-      Math.ceil(result.requestedSimulationCount * 0.95);
+    const enoughSimulations =
+      result.failedSimulationCount === 0 &&
+      result.validSimulationCount === result.requestedSimulationCount;
     const monteCarloIntervalAvailable =
       Number.isFinite(result.monteCarloLower95) &&
       Number.isFinite(result.monteCarloUpper95);
