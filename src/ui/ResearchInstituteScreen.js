@@ -359,10 +359,10 @@ export class ResearchInstituteScreen {
     this.monteCarloRunning = true;
     this.monteCarlo = null;
     this.monteCarloProgress = {
-      completed: 0,
-      requested: simulationCount,
-      valid: 0,
-      failed: 0,
+      completedSimulationCount: 0,
+      requestedSimulationCount: simulationCount,
+      validSimulationCount: 0,
+      failedSimulationCount: 0,
       extremeCount: 0,
       pValue: null,
       monteCarloLower95: null,
