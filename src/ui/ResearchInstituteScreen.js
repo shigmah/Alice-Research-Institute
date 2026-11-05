@@ -258,7 +258,9 @@ export class ResearchInstituteScreen {
       this.summaryItem("実測平均", analysis.sampleMean === null ? "—" : analysis.sampleMean.toFixed(3)),
       this.summaryItem("理論平均", analysis.theoreticalMean.toFixed(3)),
       this.summaryItem("実測分散", analysis.sampleVariance === null ? "—" : analysis.sampleVariance.toFixed(3)),
-      this.summaryItem("理論分散", analysis.theoreticalVariance.toFixed(3))
+      this.summaryItem("理論分散", analysis.theoreticalVariance.toFixed(3)),
+      this.summaryItem("実測標準偏差", analysis.sampleStandardDeviation === null ? "—" : analysis.sampleStandardDeviation.toFixed(3)),
+      this.summaryItem("平均の標準誤差", analysis.standardError === null ? "—" : analysis.standardError.toFixed(3))
     );
     panel.appendChild(summary);
 
