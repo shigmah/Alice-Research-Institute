@@ -286,6 +286,8 @@ export class ResearchStatisticsAnalyzer {
       cheshireRemovedCatCount: 0,
       mogumoguEventCount: 0,
       mogumoguDiceRollCount: 0,
+      mogumoguAcceptedCount: 0,
+      mogumoguDeclinedCount: 0,
       mogumoguRewardCatCount: 0
     };
 
@@ -312,6 +314,8 @@ export class ResearchStatisticsAnalyzer {
         "cheshireRemovedCatCount",
         "mogumoguEventCount",
         "mogumoguDiceRollCount",
+        "mogumoguAcceptedCount",
+        "mogumoguDeclinedCount",
         "mogumoguRewardCatCount"
       ]) {
         addNonNegativeInteger(totals, field, metrics[field]);
@@ -444,6 +448,8 @@ export class ResearchStatisticsAnalyzer {
         cheshireRemovedCatCount: totals.cheshireRemovedCatCount,
         mogumoguEventCount: totals.mogumoguEventCount,
         mogumoguDiceRollCount: totals.mogumoguDiceRollCount,
+        mogumoguAcceptedCount: totals.mogumoguAcceptedCount,
+        mogumoguDeclinedCount: totals.mogumoguDeclinedCount,
         mogumoguRewardCatCount: totals.mogumoguRewardCatCount
       },
       dataConsistency,
