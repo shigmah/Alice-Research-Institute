@@ -247,7 +247,10 @@ export class ResearchInstituteScreen {
           item.appendChild(this.element("p", "muted", "対応するチャレンジ定義がありません。"));
         } else {
           for (const challengeId of challengeIds) {
-            item.appendChild(this.button(`実験を開始：${challengeId}`, () => {
+            const challengeLabel = challengeId === "maneki-neko-classic"
+              ? "通常クラシックモード"
+              : challengeId;
+            item.appendChild(this.button(`実験を開始：${challengeLabel}`, () => {
               const started = this.controller.startChallenge(theme.themeId, challengeId);
               this.notice = started
                 ? "実験を別タブで開始しました。ゲームオーバーまたはドロップアウトで終了すると、結果が研究所へ登録されます。"
