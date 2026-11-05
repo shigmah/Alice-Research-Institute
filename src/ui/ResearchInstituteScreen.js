@@ -258,7 +258,17 @@ export class ResearchInstituteScreen {
       console.error("[ARE] Statistical analysis failed:", error);
     }
 
-    this.render();
+    try {
+      this.render();
+    } catch (error) {
+      // Keep the research lab usable even if a malformed legacy record causes
+      // the statistics panel renderer to fail.
+      this.analysis = null;
+      const detail = error instanceof Error ? error.message : String(error);
+      this.notice = `分析結果の画面表示に失敗しました：${detail}`;
+      console.error("[ARE] Statistical analysis rendering failed:", error);
+      this.render();
+    }
     return this.analysis;
   }
 
