@@ -38,6 +38,8 @@
     .e2e-status { background: var(--blue-soft); border-color: #d9e0ee; }
     .e2e-warning { color: #745c2f; font-weight: 700; }
     .e2e-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: 16px 0; }
+    .e2e-actions label { font-weight: 700; }
+    .e2e-actions select { padding: 9px 12px; border: 1px solid #cbd4e4; border-radius: 10px; background: white; color: var(--ink); font: inherit; }
     button {
       padding: 10px 16px; border: 1px solid #cbd4e4; border-radius: 999px;
       background: white; color: var(--blue-dark); font: inherit; font-weight: 700; cursor: pointer;
@@ -122,11 +124,16 @@
     <h1>ARE ブラウザ実動作検証</h1>
     <div class="e2e-intro">
       <p><strong>このページは検証専用です。</strong> 本物の <code>Game</code>、<code>ResearchStatisticsAnalyzer</code>、<code>ClassicModeMonteCarloSimulator</code>、<code>ResearchInstituteScreen</code> を使用します。</p>
-      <p class="e2e-warning">テスト用の実験データはメモリ上だけに作成し、SaveManager・localStorageには保存しません。通常の研究所データには影響しません。</p>
-      <p class="muted">最初は2,000回で動作確認し、その後必要に応じて画面内の選択欄から50,000回まで試してください。</p>
+      <p class="e2e-warning">実際のGameで自然終了した5ゲームを基に検証用観測データを作成します。出目の再配分は検証のための人工的な操作で、メモリ内だけに保持します。SaveManager・localStorageには保存しません。</p>
+      <p class="muted">均等データと偏りデータを切り替えて比較できます。各データは同じ5ゲーム分の試行数を維持します。2,000回から開始し、最大50,000回まで試せます。</p>
     </div>
     <div id="e2eStatus" class="e2e-status" role="status">検証用データを準備しています…</div>
     <div class="e2e-actions">
+      <label for="e2eScenario">観測データ</label>
+      <select id="e2eScenario">
+        <option value="balanced">均等データ</option>
+        <option value="biased">偏りデータ（全観測を出目1に再配分）</option>
+      </select>
       <button id="startBrowserCheck" type="button">選択した反復数でブラウザ検証を開始</button>
     </div>
     <section id="e2eReport" class="e2e-report" aria-live="polite">
@@ -137,6 +144,7 @@
   </main>
   <script type="module">
     import { GameState } from "../src/core/GameState.js";
+    import { simulateOneClassicGame } from "../src/institute/ClassicModeMonteCarloSimulator.js";
     import { createResearchInstituteServices } from "../src/institute/createResearchInstituteServices.js";
     import { RESEARCH_THEME_DEFINITIONS } from "../src/institute/ResearchThemeDefinitions.js";
     import { ResearchInstituteScreen } from "../src/ui/ResearchInstituteScreen.js";
@@ -162,29 +170,58 @@
       throw new Error("Could not prepare the in-memory research theme fixture.");
     }
 
-    const fixtureResult = {
-      resultId: "BROWSER_E2E_FIXTURE",
-      themeId,
-      challengeId,
-      outcome: "success",
-      completedAt: new Date().toISOString(),
-      summary: "ブラウザ検証専用の均等出目サンプル（メモリ上のみ）",
-      metrics: {
-        endReason: "no-cats",
-        phase1TrialCount: 60,
-        phase1FaceCounts: { 1: 10, 2: 10, 3: 10, 4: 10, 5: 10, 6: 10 },
-        mogumoguEventCount: 0,
-        mogumoguDecisionHistory: [],
-        generatedCatCount: 210,
-        rollCount: 60,
-        phase2TrialCount: 0,
-        cheshireEventCount: 0,
-        cheshireGeneratedCatCount: 0,
-        cheshireRemovedCatCount: 0
+    // Collect five genuine natural-stop games. Both test datasets retain each
+    // game's actual number of first-phase trials and the same five-game count.
+    const naturalGames = [];
+    for (let attempt = 0; attempt < 100 && naturalGames.length < 5; attempt += 1) {
+      const gameResult = simulateOneClassicGame({
+        seed: 2026110601 + attempt,
+        policy: { decisions: [], defaultDecision: "accept" }
+      });
+      if (gameResult?.completed &&
+          gameResult.endReason === "no-cats" &&
+          Number.isSafeInteger(gameResult.phase1TrialCount) &&
+          gameResult.phase1TrialCount > 0) {
+        naturalGames.push(gameResult);
       }
+    }
+    if (naturalGames.length !== 5) {
+      throw new Error("Could not generate five natural-stop game fixtures.");
+    }
+
+    const totalObservedTrials = naturalGames.reduce(
+      (sum, game) => sum + game.phase1TrialCount, 0
+    );
+    const balancedTarget = Object.fromEntries([1, 2, 3, 4, 5, 6].map(face => [
+      face,
+      Math.floor(totalObservedTrials / 6) +
+        (face <= totalObservedTrials % 6 ? 1 : 0)
+    ]));
+    const biasedTarget = {
+      1: totalObservedTrials,
+      2: 0, 3: 0, 4: 0, 5: 0, 6: 0
     };
-    gameState.researchInstituteData.challengeResults.push(fixtureResult);
-    services.entryManager.registerAttempt(themeId, fixtureResult);
+
+    function allocateFaceCounts(targetCounts) {
+      const remaining = { ...targetCounts };
+      return naturalGames.map(game => {
+        let slots = game.phase1TrialCount;
+        const counts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+        for (const face of [1, 2, 3, 4, 5, 6]) {
+          const assigned = Math.min(slots, remaining[face]);
+          counts[face] = assigned;
+          remaining[face] -= assigned;
+          slots -= assigned;
+        }
+        if (slots !== 0) throw new Error("Could not allocate the synthetic face distribution.");
+        return counts;
+      });
+    }
+
+    const scenarioData = {
+      balanced: allocateFaceCounts(balancedTarget),
+      biased: allocateFaceCounts(biasedTarget)
+    };
 
     const screen = new ResearchInstituteScreen({
       documentRef: document,
@@ -195,21 +232,76 @@
     screen.controller.selectFacility("research_lab");
     screen.render();
 
-    const analysisButton = [...root.querySelectorAll("button")]
-      .find(button => button.textContent.includes("蓄積データの統計分析を実行"));
-    if (!analysisButton) {
-      throw new Error("Could not find the ARE statistics analysis button.");
-    }
-    analysisButton.click();
-
     const countSelect = root.querySelector("#areMonteCarloSimulationCount");
-    const runButton = [...root.querySelectorAll("button")]
-      .find(button => button.textContent.includes("停止条件を再現したモンテカルロ検定を実行"));
-    if (!countSelect || !runButton) {
-      throw new Error("Monte Carlo controls did not render in the research institute screen.");
+    if (!countSelect) throw new Error("Monte Carlo controls did not render in the research institute screen.");
+
+    const scenarioSelect = document.querySelector("#e2eScenario");
+    function installScenario(scenario) {
+      const distributions = scenarioData[scenario];
+      if (!distributions) throw new Error("Unknown browser fixture scenario: " + scenario);
+
+      const records = naturalGames.map((game, index) => {
+        const offerCount = game.mogumoguOfferCount ?? 0;
+        return {
+          resultId: `BROWSER_E2E_${scenario.toUpperCase()}_${index + 1}`,
+          themeId,
+          challengeId,
+          outcome: "success",
+          completedAt: new Date(Date.now() + index).toISOString(),
+          summary: `ブラウザ検証用 ${scenario === "balanced" ? "均等" : "偏り"}データ：自然終了ゲーム ${index + 1}`,
+          metrics: {
+            endReason: "no-cats",
+            phase1TrialCount: game.phase1TrialCount,
+            phase1FaceCounts: distributions[index],
+            mogumoguEventCount: offerCount,
+            mogumoguDecisionHistory: Array.from({ length: offerCount }, () => "accept"),
+            generatedCatCount: 0,
+            rollCount: game.mainTurnCount,
+            phase2TrialCount: 0,
+            cheshireEventCount: 0,
+            cheshireGeneratedCatCount: 0,
+            cheshireRemovedCatCount: 0
+          }
+        };
+      });
+
+      gameState.researchInstituteData.challengeResults.splice(
+        0, gameState.researchInstituteData.challengeResults.length, ...records
+      );
+      const entry = services.entryManager.getEntry(themeId);
+      entry.attemptCount = 0;
+      entry.successCount = 0;
+      entry.challengeResultIds = [];
+      for (const record of records) services.entryManager.registerAttempt(themeId, record);
+
+      screen.monteCarlo = null;
+      screen.monteCarloSimulationCount = Number(countSelect.value) || 2000;
+      screen.runStatisticsAnalysis(themeId, { challengeId });
+      const faceOneCount = records.reduce(
+        (sum, record) => sum + record.metrics.phase1FaceCounts[1], 0
+      );
+      status.textContent =
+        `準備完了：自然終了ゲーム ${records.length}件 / 観測 ${totalObservedTrials}回 / 出目1 ${faceOneCount}回。現在のデータ：${scenario === "balanced" ? "均等" : "偏り"}。`;
+      report.replaceChildren();
+      const heading = document.createElement("strong");
+      heading.textContent = "観測データの準備完了";
+      report.appendChild(heading);
+      const detail = document.createElement("p");
+      detail.className = "muted";
+      detail.textContent =
+        `自然終了ゲーム ${records.length}件 / 観測標本数 ${totalObservedTrials} / 出目1 ${faceOneCount}回 / 出目2～6 合計 ${totalObservedTrials - faceOneCount}回。` +
+        (scenario === "biased"
+          ? "出目1へ全観測を再配分した人工的な偏りデータです。"
+          : "6つの出目へできるだけ均等に再配分した対照データです。");
+      report.appendChild(detail);
     }
-    status.textContent =
-      "準備完了：研究テーマ・実験記録・ARE統計分析を用意しました。画面の反復数を選択し、上の検証ボタンを押してください。";
+
+    scenarioSelect.addEventListener("change", () => {
+      if (screen.monteCarloRunning) return;
+      installScenario(scenarioSelect.value);
+    });
+    installScenario(scenarioSelect.value || "balanced");
+
 
     const originalRun = screen.runMonteCarloAnalysis.bind(screen);
     let activeRunPromise = null;
@@ -252,10 +344,19 @@
             ["進捗コールバックが複数回届いた", progressUpdateCount > 1],
             ["実行中の進捗バーを確認できた", progressBarSeen && progressAdvanced],
             ["有効なシミュレーション結果が得られた", result.validSimulationCount > 0],
+            ["対象実験数と反復ごとのゲーム数が一致した",
+              result.eligibleExperimentCount === naturalGames.length &&
+              result.experimentCountPerReplicate === naturalGames.length],
+            ["観測データとゲーム終了条件が整合した",
+              result.observedSampleCount === totalObservedTrials],
             ["失敗反復がなかった", result.failedSimulationCount === 0],
             ["Wilson 95%区間が利用できた", Number.isFinite(result.monteCarloLower95) && Number.isFinite(result.monteCarloUpper95)],
             ["収束履歴のグラフが描画された", points > 0 && Boolean(resultPanel)],
-            ["ブラウザ描画フレームが実行中に進んだ", animationFrameCount > 0]
+            ["ブラウザ描画フレームが実行中に進んだ", animationFrameCount > 0],
+            ["観測データの性質が統計結果に現れた",
+              scenarioSelect.value === "biased"
+                ? result.observedStatistic > 0 && result.pValue < 0.05
+                : result.observedStatistic < 2]
           ];
 
           report.replaceChildren();
