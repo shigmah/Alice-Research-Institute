@@ -155,6 +155,30 @@
     const status = document.querySelector("#e2eStatus");
     const report = document.querySelector("#e2eReport");
     const startButton = document.querySelector("#startBrowserCheck");
+    let startBrowserCheckHandler = null;
+
+    // Attach diagnostics and a click handler before any fixture setup runs.
+    // If initialization fails, the page now explains why the action is unavailable.
+    window.addEventListener("error", event => {
+      const detail = event?.message || "不明なJavaScriptエラー";
+      status.textContent = `検証ページの初期化／実行でエラーが発生しました：${detail}`;
+      report.textContent = detail;
+      startButton.disabled = false;
+    });
+    window.addEventListener("unhandledrejection", event => {
+      const reason = event?.reason;
+      const detail = reason instanceof Error ? reason.message : String(reason ?? "不明な非同期エラー");
+      status.textContent = `非同期処理でエラーが発生しました：${detail}`;
+      report.textContent = detail;
+      startButton.disabled = false;
+    });
+    startButton.addEventListener("click", async () => {
+      if (typeof startBrowserCheckHandler !== "function") {
+        status.textContent = "検証データの初期化が完了していません。上記のエラー表示を確認してください。";
+        return;
+      }
+      await startBrowserCheckHandler();
+    });
 
     const gameState = new GameState();
     const services = createResearchInstituteServices({
@@ -414,33 +438,36 @@
       return activeRunPromise;
     };
 
-    startButton.addEventListener("click", async () => {
+    startBrowserCheckHandler = async () => {
       if (screen.monteCarloRunning) return;
       const currentCountSelect = root.querySelector("#areMonteCarloSimulationCount");
-      const currentRunButton = [...root.querySelectorAll("button")]
-        .find(button => button.textContent.includes("停止条件を再現したモンテカルロ検定を実行"));
       const selectedCount = Number(currentCountSelect?.value);
       const supportedCounts = [2000, 5000, 10000, 25000, 50000];
       if (!supportedCounts.includes(selectedCount)) {
         status.textContent = "未対応の反復数が選択されています。";
         return;
       }
+
       startButton.disabled = true;
       status.textContent = `${selectedCount.toLocaleString()}回のブラウザ検証を開始します。`;
-      if (!currentRunButton) {
-        status.textContent = "モンテカルロ検定ボタンが見つかりません。";
-        startButton.disabled = false;
-        return;
-      }
-      currentRunButton.click();
       try {
-        await activeRunPromise;
+        // Invoke the screen's action directly. Avoid synthesizing a click on a
+        // button that may be detached when the screen rerenders during startup.
+        const result = await screen.runMonteCarloAnalysis(themeId, {
+          challengeId,
+          simulationCount: selectedCount
+        });
+        if (!result) {
+          throw new Error("モンテカルロ検定から結果が返されませんでした。");
+        }
       } catch (error) {
-        report.textContent = `ブラウザ検証に失敗しました：${error instanceof Error ? error.message : String(error)}`;
-        status.textContent = "ブラウザ検証に失敗しました。開発者ツールのConsoleも確認してください。";
+        const detail = error instanceof Error ? error.message : String(error);
+        report.textContent = `ブラウザ検証に失敗しました：${detail}`;
+        status.textContent = `ブラウザ検証に失敗しました：${detail}`;
         startButton.disabled = false;
+        scenarioSelect.disabled = false;
       }
-    });
+    };
   </script>
 </body>
 </html>
