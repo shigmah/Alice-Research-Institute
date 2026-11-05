@@ -46,6 +46,10 @@ test("ResearchStatisticsAnalyzer selects natural game-over experiments and recor
     makeResult("RESULT_INVALID", {
       phase1TrialCount: 9,
       faceCounts: { 1: 2, 2: 1, 3: 1, 4: 2, 5: 1, 6: 1 }
+    }),
+    makeResult("RESULT_NEGATIVE_COUNT", {
+      phase1TrialCount: 10,
+      faceCounts: { 1: -1, 2: 2, 3: 1, 4: 2, 5: 1, 6: 4 }
     })
   );
 
@@ -86,9 +90,9 @@ test("ResearchStatisticsAnalyzer selects natural game-over experiments and recor
   });
 
   assert.equal(result.eligibleExperimentCount, 2);
-  assert.equal(result.excludedExperimentCount, 2);
+  assert.equal(result.excludedExperimentCount, 3);
   assert.equal(result.exclusionReasons["player-dropout"], 1);
-  assert.equal(result.exclusionReasons["invalid-or-inconsistent-observation-data"], 1);
+  assert.equal(result.exclusionReasons["invalid-or-inconsistent-observation-data"], 2);
   assert.equal(result.observedSampleCount, 16);
   assert.deepEqual(captured.observedFaceCounts, {
     1: 4, 2: 2, 3: 2, 4: 4, 5: 2, 6: 2
