@@ -93,6 +93,9 @@ const analysis = analyzer.analyze(themeId, { challengeId });
 
 console.assert(analysis.experimentCount === 2, "only the selected theme and challenge are included");
 console.assert(analysis.observationExperimentCount === 2, "experiments with observations are counted");
+console.assert(analysis.successfulExperimentCount === 2 && analysis.successRate === 1,
+  "successful record count and rate are calculated");
+console.assert(analysis.validObservationRate === 1, "valid observation rate is calculated");
 console.assert(analysis.faceObservationCount === 3, "phase 1 face observations are pooled");
 console.assert(analysis.faceCounts[1] === 1 && analysis.faceCounts[3] === 1 && analysis.faceCounts[6] === 1,
   "face frequencies are aggregated correctly");
