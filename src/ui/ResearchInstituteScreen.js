@@ -167,6 +167,9 @@ export class ResearchInstituteScreen {
         item.appendChild(this.element("strong", "", theme.name ?? theme.themeId));
         item.appendChild(this.element("span", "facility-status", this.statusLabel(theme.progress?.status)));
         if (theme.description) item.appendChild(this.element("p", "muted", theme.description));
+        if (theme.progress?.status === "undiscovered" && theme.discoveryHint) {
+          item.appendChild(this.element("p", "muted", `発見条件：${theme.discoveryHint}`));
+        }
         if (theme.progress?.status === "discovered") {
           item.appendChild(this.button("研究を開始", () => {
             this.controller.startResearch(theme.themeId);
