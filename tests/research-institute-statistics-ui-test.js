@@ -99,6 +99,8 @@ const analysis = {
     cheshireRemovedCatCount: 0,
     mogumoguEventCount: 0,
     mogumoguDiceRollCount: 0,
+    mogumoguAcceptedCount: 0,
+    mogumoguDeclinedCount: 0,
     mogumoguRewardCatCount: 0
   },
   chiSquareGoodnessOfFit: {
