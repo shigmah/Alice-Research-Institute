@@ -185,7 +185,28 @@ export class ResearchInstituteScreen {
       for (const entry of entries) {
         const item = this.element("article", "institute-list-item");
         item.appendChild(this.element("strong", "", entry.themeName || entry.themeId));
-        item.appendChild(this.element("p", "muted", `挑戦 ${entry.attemptCount}回 / 成功 ${entry.successCount}回`));
+        item.appendChild(this.element("p", "muted", `実験 ${entry.attemptCount}回 / 有効な観測あり ${entry.successCount}回`));
+
+        const resultRecords = this.controller.gameState.researchInstituteData.challengeResults
+          .filter(result => result.themeId === entry.themeId)
+          .sort((a, b) => String(b.completedAt).localeCompare(String(a.completedAt)))
+          .slice(0, 5);
+        for (const result of resultRecords) {
+          const metrics = result.metrics ?? {};
+          const detail = this.element("div", "institute-list-item");
+          detail.appendChild(this.element("strong", "", `実験結果：${result.outcome === "success" ? "観測データあり" : "観測データなし"}`));
+          detail.appendChild(this.element("p", "muted", result.summary));
+          detail.appendChild(this.element("small", "muted",
+            `第1フェーズ ${metrics.phase1TrialCount ?? 0}回 / 招き猫生成 ${metrics.generatedCatCount ?? 0}匹 / 全ロール ${metrics.rollCount ?? 0}回 / 終了理由 ${metrics.endReason ?? "不明"}`));
+          const faceCounts = metrics.phase1FaceCounts;
+          if (faceCounts && typeof faceCounts === "object") {
+            const distribution = Object.entries(faceCounts)
+              .map(([face, count]) => `${face}：${count}`)
+              .join("　");
+            detail.appendChild(this.element("small", "muted", `第1フェーズの出目分布　${distribution}`));
+          }
+          item.appendChild(detail);
+        }
         entryPanel.appendChild(item);
       }
     }
