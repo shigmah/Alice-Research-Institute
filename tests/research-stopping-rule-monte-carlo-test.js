@@ -104,6 +104,8 @@ test("ResearchStatisticsAnalyzer selects natural game-over experiments and recor
   assert.equal(result.recordedDecisionHistoryCount, 1);
   assert.match(result.mogumoguPolicy, /履歴がない過去記録は受諾/);
   assert.match(result.stoppingRule, /招き猫が0匹/);
+  assert.ok(result.modelNotes.some(note => note.includes("サイコロ512個")),
+    "simulation resource limits are documented for researchers");
 });
 
 test("ClassicModeMonteCarloSimulator runs the real classic game with deterministic seeds", async () => {
@@ -148,11 +150,23 @@ test("ClassicModeMonteCarloSimulator runs the real classic game with determinist
   assert.equal(result.method, "stopping-rule-monte-carlo");
   assert.equal(result.seed, 20261106);
   assert.equal(result.requestedSimulationCount, 8);
+  assert.equal(result.maxMainTurns, 10000);
+  assert.equal(result.maxDicePerTurn, 512);
   assert.ok(result.validSimulationCount > 0);
   assert.ok(result.pValue > 0 && result.pValue <= 1);
   assert.ok(result.averageSimulatedSampleCount >= result.minimumSimulatedSampleCount);
   assert.ok(result.averageSimulatedSampleCount <= result.maximumSimulatedSampleCount);
   assert.equal(yieldCount, 2, "simulation yields between batches to keep the browser responsive");
+
+  const repeatedResult = await simulator.run({
+    observedFaceCounts: { 1: 2, 2: 1, 3: 1, 4: 2, 5: 1, 6: 1 },
+    experimentPolicies: [{ decisions: [], defaultDecision: "accept" }],
+    simulationCount: 8,
+    seed: 20261106,
+    yieldEvery: 4
+  });
+  assert.deepEqual(repeatedResult, result,
+    "the same seed, observed data and policies reproduce the complete Monte Carlo result");
 });
 
 test("ClassicModeMonteCarloSimulator rejects invalid simulation settings", async () => {
