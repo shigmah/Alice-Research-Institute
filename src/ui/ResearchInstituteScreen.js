@@ -276,6 +276,73 @@ export class ResearchInstituteScreen {
     return this.analysis;
   }
 
+  renderFaceDistributionChart(analysis) {
+    const figure = this.element("figure", "ari-chart-figure");
+    figure.setAttribute("aria-label", "出目ごとの実測回数と理論期待度数の比較");
+    figure.appendChild(this.element("figcaption", "ari-chart-title",
+      "出目ごとの実測回数と理論期待度数"));
+
+    const legend = this.element("div", "ari-chart-legend");
+    for (const [className, label] of [
+      ["ari-chart-swatch-observed", "実測回数"],
+      ["ari-chart-swatch-expected", "理論期待度数"]
+    ]) {
+      const item = this.element("span", "ari-chart-legend-item");
+      item.appendChild(this.element("i", `ari-chart-swatch ${className}`));
+      item.appendChild(this.element("span", "", label));
+      legend.appendChild(item);
+    }
+    figure.appendChild(legend);
+
+    const maximum = Math.max(
+      1,
+      ...analysis.faceDistribution.map(face => Math.max(
+        Number.isFinite(face.count) ? face.count : 0,
+        Number.isFinite(face.theoreticalExpectedCount) ? face.theoreticalExpectedCount : 0
+      ))
+    );
+    const scaleMaximum = maximum * 1.15;
+
+    const plot = this.element("div", "ari-chart-plot");
+    plot.setAttribute("role", "img");
+    plot.setAttribute("aria-label",
+      analysis.faceDistribution.map(face =>
+        `出目${face.face}：実測${face.count}回、理論期待度数${face.theoreticalExpectedCount.toFixed(2)}回`
+      ).join("。")
+    );
+
+    for (const face of analysis.faceDistribution) {
+      const column = this.element("div", "ari-chart-column");
+      column.setAttribute("aria-label",
+        `出目${face.face}：実測${face.count}回、理論期待度数${face.theoreticalExpectedCount.toFixed(2)}回`
+      );
+
+      const bars = this.element("div", "ari-chart-bars");
+      for (const [kind, value, label] of [
+        ["observed", face.count, "実測"],
+        ["expected", face.theoreticalExpectedCount, "理論"]
+      ]) {
+        const bar = this.element("div", `ari-chart-bar ari-chart-bar-${kind}`);
+        const safeValue = Number.isFinite(value) && value > 0 ? value : 0;
+        bar.style.height = `${(safeValue / scaleMaximum) * 100}%`;
+        bar.title = `出目${face.face}：${label} ${value}回`;
+        bar.setAttribute("aria-hidden", "true");
+        bars.appendChild(bar);
+      }
+
+      column.appendChild(bars);
+      column.appendChild(this.element("div", "ari-chart-values",
+        `${face.count} / ${face.theoreticalExpectedCount.toFixed(2)}`));
+      column.appendChild(this.element("div", "ari-chart-face", String(face.face)));
+      plot.appendChild(column);
+    }
+
+    figure.appendChild(plot);
+    figure.appendChild(this.element("p", "ari-chart-axis-caption",
+      "縦軸：回数（棒の上の数値は「実測 / 理論期待度数」）"));
+    return figure;
+  }
+
   renderStatisticsAnalysis(analysis) {
     const panel = this.element("section", "institute-content-stack");
     panel.id = "areStatisticsAnalysis";
@@ -305,6 +372,8 @@ export class ResearchInstituteScreen {
       panel.appendChild(this.element("p", "muted",
         `平均値の差（実測 − 理論）：${sign}${difference.toFixed(3)} / 標準誤差：${analysis.standardError === null ? "—" : analysis.standardError.toFixed(3)} / 第1フェーズの平均生成数：${analysis.averageGeneratedCatsPerPhase1Trial.toFixed(3)}匹`));
     }
+
+    panel.appendChild(this.renderFaceDistributionChart(analysis));
 
     const table = this.element("table", "ari-statistics-table");
     const thead = this.element("thead");
