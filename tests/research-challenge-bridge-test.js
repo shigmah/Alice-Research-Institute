@@ -59,12 +59,20 @@ const emit = outcome => {
 
 emit({
   result: { values: [4], total: 4 },
-  mode: { phase: 1, generatedCats: 4, removedCats: 0 }
+  mode: { phase: 1, generatedCats: 4, removedCats: 0 },
+  event: { eventId: "cheshire", payload: { before: 4, after: 9 } }
 });
 state.turn = 2;
 emit({
   result: { values: [2, 3], total: 5 },
-  mode: { phase: 2, generatedCats: 0, removedCats: 1 }
+  mode: { phase: 2, generatedCats: 0, removedCats: 1 },
+  event: { eventId: "mogumogu", payload: { phase: "offer" } }
+});
+emit({
+  event: {
+    eventId: "mogumogu",
+    payload: { dice: 3, reward: { type: "cat-plus-10", amount: 10 } }
+  }
 });
 state.turn = 3;
 state.isGameOver = true;
@@ -80,6 +88,11 @@ console.assert(result?.metrics?.phase1FaceCounts?.[4] === 1, "phase 1 die faces 
 console.assert(result?.metrics?.generatedCatCount === 4, "generated cats are measured from the game result");
 console.assert(result?.metrics?.phase2TrialCount === 1, "phase 2 rolls are counted");
 console.assert(result?.metrics?.removedCatCount === 1, "removed cats are measured");
+console.assert(result?.metrics?.cheshireEventCount === 1, "Cheshire events are counted");
+console.assert(result?.metrics?.cheshireGeneratedCatCount === 5, "Cheshire cat additions are measured separately");
+console.assert(result?.metrics?.mogumoguEventCount === 1, "Mogumogu event offers are counted");
+console.assert(result?.metrics?.mogumoguDiceRollCount === 1, "Mogumogu dice rolls are tracked separately");
+console.assert(result?.metrics?.mogumoguRewardCatCount === 10, "Mogumogu reward cats are tracked separately");
 console.assert(result?.metrics?.endReason === "no-cats", "game end reason is retained");
 console.assert(run.completed === true, "run closes after its first terminal event");
 console.assert(listeners.length === 1, "run keeps event dispatch stable until page cleanup");
