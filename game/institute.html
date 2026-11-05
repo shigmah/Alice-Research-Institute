@@ -114,7 +114,11 @@
     import { SaveManager } from "../src/save/SaveManager.js";
     import { createResearchInstituteServices } from "../src/institute/createResearchInstituteServices.js";
     import { ResearchInstituteScreen } from "../src/ui/ResearchInstituteScreen.js";
-    import { RESEARCH_THEME_DEFINITIONS, ResearchInstituteAchievementBridge } from "../src/institute/ResearchThemeDefinitions.js";
+    import {
+      RESEARCH_INSTITUTE_ACHIEVEMENT_KEY,
+      RESEARCH_THEME_DEFINITIONS,
+      ResearchInstituteAchievementBridge
+    } from "../src/institute/ResearchThemeDefinitions.js";
     import {
       RESEARCH_CHALLENGE_RESULT_PREFIX,
       RESEARCH_CHALLENGE_SESSION_PREFIX,
@@ -153,15 +157,6 @@
     });
 
     const achievementBridge = new ResearchInstituteAchievementBridge();
-    const achievements = achievementBridge.readAll();
-    if (achievements["cat-count-20"]) {
-      services.instituteController.handleInstituteEvent({
-        eventId: "classic-cat-count-20",
-        source: "game_achievement",
-        sourceId: "cat-count-20",
-        achievementId: "cat-count-20"
-      });
-    }
 
     const screen = new ResearchInstituteScreen({
       documentRef: document,
@@ -169,6 +164,27 @@
       controller: services.instituteController,
       services
     });
+
+    function importGameAchievements({ announce = false } = {}) {
+      const achievements = achievementBridge.readAll();
+      if (!achievements["cat-count-20"]) return false;
+
+      const discovered = services.instituteController.handleInstituteEvent({
+        eventId: "classic-cat-count-20",
+        source: "game_achievement",
+        sourceId: "cat-count-20",
+        achievementId: "cat-count-20"
+      });
+
+      if (discovered.length > 0 && announce) {
+        screen.notice = "招き猫20匹達成の実績を確認しました。研究テーマを発見しました！";
+        screen.render();
+      }
+      return discovered.length > 0;
+    }
+
+    // Import achievements already earned before the institute page was opened.
+    importGameAchievements();
 
     const restoreSession = challengeBridge.readActiveSession();
     if (restoreSession && ["active", "completed"].includes(restoreSession.status)) {
@@ -202,6 +218,11 @@
 
     window.addEventListener("storage", event => {
       if (typeof event.key !== "string") return;
+
+      if (event.key === RESEARCH_INSTITUTE_ACHIEVEMENT_KEY) {
+        importGameAchievements({ announce: true });
+        return;
+      }
 
       if (event.key.startsWith(RESEARCH_CHALLENGE_RESULT_PREFIX)) {
         const sessionId = event.key.slice(RESEARCH_CHALLENGE_RESULT_PREFIX.length);
