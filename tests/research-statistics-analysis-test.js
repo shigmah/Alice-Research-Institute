@@ -130,7 +130,7 @@ const services = createResearchInstituteServices({
   themeDefinitions: RESEARCH_THEME_DEFINITIONS,
   now: () => "2026-11-05T14:00:00.000Z"
 });
-const areAnalysis = services.areInterface.openAnalysis(themeId);
+const areAnalysis = services.areInterface.openAnalysis(themeId, { challengeId });
 console.assert(areAnalysis?.faceObservationCount === 3,
   "AREInterface delegates to the statistical analyzer");
 
