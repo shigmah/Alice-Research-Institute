@@ -18,7 +18,13 @@ export class ResearchChallengeRun {
       phase2TrialCount: 0,
       phase1FaceCounts: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 },
       generatedCatCount: 0,
-      removedCatCount: 0
+      removedCatCount: 0,
+      cheshireEventCount: 0,
+      cheshireGeneratedCatCount: 0,
+      cheshireRemovedCatCount: 0,
+      mogumoguEventCount: 0,
+      mogumoguDiceRollCount: 0,
+      mogumoguRewardCatCount: 0
     };
 
     this.unsubscribe = this.game.onChange((state, outcome) => {
@@ -31,6 +37,7 @@ export class ResearchChallengeRun {
     if (state.getGameMode?.() === "CLASSIC" && outcome?.mode) {
       this.recordTurn(outcome);
     }
+    if (outcome?.event) this.recordEvent(outcome.event);
 
     if (state.isGameOver === true || outcome?.gameEnd) {
       this.finish(state, outcome);
@@ -58,6 +65,43 @@ export class ResearchChallengeRun {
     }
   }
 
+  recordEvent(eventResult) {
+    const payload = eventResult?.payload ?? {};
+
+    if (eventResult?.eventId === "cheshire") {
+      this.metrics.cheshireEventCount += 1;
+
+      const before = Number.isFinite(payload.before)
+        ? payload.before
+        : Number.isFinite(payload.before?.catCount)
+          ? payload.before.catCount
+          : null;
+      const after = Number.isFinite(payload.after)
+        ? payload.after
+        : Number.isFinite(payload.after?.catCount)
+          ? payload.after.catCount
+          : null;
+
+      if (before !== null && after !== null) {
+        this.metrics.cheshireGeneratedCatCount += Math.max(0, after - before);
+        this.metrics.cheshireRemovedCatCount += Math.max(0, before - after);
+      }
+      return;
+    }
+
+    if (eventResult?.eventId === "mogumogu") {
+      if (payload.phase === "offer") {
+        this.metrics.mogumoguEventCount += 1;
+      }
+      if (Number.isInteger(payload.dice)) {
+        this.metrics.mogumoguDiceRollCount += 1;
+      }
+      if (payload.reward?.type === "cat-plus-10" && Number.isFinite(payload.reward.amount)) {
+        this.metrics.mogumoguRewardCatCount += payload.reward.amount;
+      }
+    }
+  }
+
   finish(state, outcome = null) {
     if (this.completed) return null;
 
@@ -78,8 +122,9 @@ export class ResearchChallengeRun {
     // "success" means usable experimental observations were captured, not that the
     // player won. The actual end condition remains available in metrics.endReason.
     const resultOutcome = metrics.phase1TrialCount > 0 ? "success" : "failure";
+    const eventGeneratedCatCount = metrics.cheshireGeneratedCatCount + metrics.mogumoguRewardCatCount;
     const summary = metrics.phase1TrialCount > 0
-      ? `クラシックモードの実験を終了しました。第1フェーズの観測は${metrics.phase1TrialCount}回、招き猫の生成は合計${metrics.generatedCatCount}匹でした。終了理由：${endReason}。`
+      ? `クラシックモードの実験を終了しました。第1フェーズの観測は${metrics.phase1TrialCount}回、同フェーズでの生成は${metrics.generatedCatCount}匹、イベントによる生成は${eventGeneratedCatCount}匹でした。終了理由：${endReason}。`
       : `クラシックモードの実験は観測前に終了しました。終了理由：${endReason}。`;
 
     const result = this.bridge.completeSession(this.session.sessionId, {
