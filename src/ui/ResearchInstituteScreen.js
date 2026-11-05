@@ -203,7 +203,7 @@ export class ResearchInstituteScreen {
           detail.appendChild(this.element("strong", "", `実験結果：${result.outcome === "success" ? "観測データあり" : "観測データなし"}`));
           detail.appendChild(this.element("p", "muted", result.summary));
           detail.appendChild(this.element("small", "muted",
-            `第1フェーズ ${metrics.phase1TrialCount ?? 0}回 / 同フェーズ生成 ${metrics.generatedCatCount ?? 0}匹 / チェシャ猫による増減 +${metrics.cheshireGeneratedCatCount ?? 0}/-${metrics.cheshireRemovedCatCount ?? 0}匹 / もぐもぐ報酬 ${metrics.mogumoguRewardCatCount ?? 0}匹（サイコロ ${metrics.mogumoguDiceRollCount ?? 0}回） / 本編ロール ${metrics.rollCount ?? 0}回 / 終了理由 ${metrics.endReason ?? "不明"}`));
+            `第1フェーズ ${metrics.phase1TrialCount ?? 0}回 / 同フェーズ生成 ${metrics.generatedCatCount ?? 0}匹 / チェシャ猫による増減 +${metrics.cheshireGeneratedCatCount ?? 0}/-${metrics.cheshireRemovedCatCount ?? 0}匹 / もぐもぐ ${metrics.mogumoguEventCount ?? 0}回（受諾 ${metrics.mogumoguAcceptedCount ?? 0} / 辞退 ${metrics.mogumoguDeclinedCount ?? 0}、サイコロ ${metrics.mogumoguDiceRollCount ?? 0}回、報酬+${metrics.mogumoguRewardCatCount ?? 0}匹） / 本編ロール ${metrics.rollCount ?? 0}回 / 終了理由 ${metrics.endReason ?? "不明"}`));
           const faceCounts = metrics.phase1FaceCounts;
           if (faceCounts && typeof faceCounts === "object") {
             const distribution = Object.entries(faceCounts)
@@ -550,7 +550,7 @@ export class ResearchInstituteScreen {
 
     const eventEffects = analysis.eventEffects;
     panel.appendChild(this.element("p", "muted",
-      `イベント別集計（出目分布には含めない）：チェシャ猫 ${eventEffects.cheshireEventCount}回（+${eventEffects.cheshireGeneratedCatCount}/−${eventEffects.cheshireRemovedCatCount}匹）、もぐもぐ ${eventEffects.mogumoguEventCount}回（サイコロ${eventEffects.mogumoguDiceRollCount}回、報酬+${eventEffects.mogumoguRewardCatCount}匹）`));
+      `イベント別集計（出目分布には含めない）：チェシャ猫 ${eventEffects.cheshireEventCount}回（+${eventEffects.cheshireGeneratedCatCount}/−${eventEffects.cheshireRemovedCatCount}匹）、もぐもぐ ${eventEffects.mogumoguEventCount}回（受諾 ${eventEffects.mogumoguAcceptedCount} / 辞退 ${eventEffects.mogumoguDeclinedCount}、サイコロ${eventEffects.mogumoguDiceRollCount}回、報酬+${eventEffects.mogumoguRewardCatCount}匹）`));
 
     for (const note of analysis.notes) {
       panel.appendChild(this.element("div", "institute-placeholder", note));
