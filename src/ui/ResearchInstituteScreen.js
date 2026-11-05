@@ -417,7 +417,7 @@ export class ResearchInstituteScreen {
 
     if (result.legacyDecisionAssumptionCount > 0) {
       section.appendChild(this.element("div", "institute-placeholder",
-        `過去の実験記録 ${result.legacyDecisionAssumptionCount}件には、もぐもぐイベントの受諾・辞退履歴がありません。これらはすべて受諾したものとしてシミュレーションしています。`));
+        `実験記録 ${result.legacyDecisionAssumptionCount}件には、もぐもぐイベントの選択履歴がない、または一部不足しています。記録済みの多数決で補い、履歴がない過去記録は受諾と仮定しています。`));
     }
 
     if (result.excludedExperimentCount > 0) {
