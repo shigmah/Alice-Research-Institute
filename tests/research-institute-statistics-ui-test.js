@@ -126,6 +126,8 @@ function createScreen({
     method: "stopping-rule-monte-carlo",
     seed: 1234,
     requestedSimulationCount: 2000,
+    maxMainTurns: 10000,
+    maxDicePerTurn: 512,
     validSimulationCount: 2000,
     failedSimulationCount: 0,
     extremeCount: 100,
