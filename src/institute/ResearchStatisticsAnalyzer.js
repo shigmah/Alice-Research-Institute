@@ -121,9 +121,11 @@ function wilsonInterval(successes, trials) {
     (p * (1 - p) / trials) + (z2 / (4 * trials ** 2))
   )) / denominator;
 
+  // Keep the exact Wilson interval endpoints for zero/all successes.
+  // This avoids tiny floating-point residues at mathematically exact bounds.
   return {
-    lower: Math.max(0, center - margin),
-    upper: Math.min(1, center + margin)
+    lower: successes === 0 ? 0 : Math.max(0, center - margin),
+    upper: successes === trials ? 1 : Math.min(1, center + margin)
   };
 }
 
