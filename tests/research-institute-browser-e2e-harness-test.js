@@ -18,10 +18,22 @@ assert.match(source, /themeManager\.discoverTheme\(/,
   "the research theme is discovered through the real theme manager");
 assert.match(source, /themeManager\.startResearch\(/,
   "the fixture theme enters the researching state");
-assert.match(source, /endReason: "no-cats"/,
-  "the Monte Carlo fixture satisfies the natural game-over stopping rule");
-assert.match(source, /phase1FaceCounts: \{ 1: 10, 2: 10, 3: 10, 4: 10, 5: 10, 6: 10 \}/,
-  "the fixture contains consistent six-face observation counts");
+assert.match(source, /import \{ simulateOneClassicGame \}/,
+  "the harness creates its source records with the real classic game simulator");
+assert.match(source, /naturalGames\.length < 5/,
+  "the fixture builds five independent games that reached natural game over");
+assert.match(source, /gameResult\.endReason === "no-cats"/,
+  "only naturally ended games are included in the observed sample");
+assert.match(source, /balancedTarget/,
+  "the harness creates a balanced comparison distribution");
+assert.match(source, /biasedTarget = \{\s*1: totalObservedTrials,\s*2: 0, 3: 0, 4: 0, 5: 0, 6: 0/s,
+  "the biased scenario concentrates all observed rolls on one face");
+assert.match(source, /phase1TrialCount: game\.phase1TrialCount/,
+  "each fixture record preserves its source game's first-phase trial count");
+assert.match(source, /scenarioSelect\.addEventListener\("change"/,
+  "the user can switch between balanced and biased observation data");
+assert.match(source, /result\.experimentCountPerReplicate === naturalGames\.length/,
+  "the browser check verifies that each replicate uses the same number of games as the observations");
 assert.match(source, /onProgress: checkpoint =>/,
   "the browser harness observes live progress callbacks");
 assert.match(source, /ari-monte-carlo-progress-track/,
