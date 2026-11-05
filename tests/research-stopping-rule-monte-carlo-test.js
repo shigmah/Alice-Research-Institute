@@ -98,7 +98,7 @@ test("ResearchStatisticsAnalyzer selects natural game-over experiments and recor
   assert.deepEqual(captured.experimentPolicies[1].decisions, ["accept", "decline"]);
   assert.equal(result.legacyDecisionAssumptionCount, 1);
   assert.equal(result.recordedDecisionHistoryCount, 1);
-  assert.match(result.mogumoguPolicy, /すべて受諾/);
+  assert.match(result.mogumoguPolicy, /履歴がない過去記録は受諾/);
   assert.match(result.stoppingRule, /招き猫が0匹/);
 });
 
