@@ -232,8 +232,9 @@
     screen.controller.selectFacility("research_lab");
     screen.render();
 
-    const countSelect = root.querySelector("#areMonteCarloSimulationCount");
-    if (!countSelect) throw new Error("Monte Carlo controls did not render in the research institute screen.");
+    if (!root.querySelector("#areMonteCarloSimulationCount")) {
+      throw new Error("Monte Carlo controls did not render in the research institute screen.");
+    }
 
     const scenarioSelect = document.querySelector("#e2eScenario");
     function installScenario(scenario) {
@@ -275,7 +276,8 @@
       for (const record of records) services.entryManager.registerAttempt(themeId, record);
 
       screen.monteCarlo = null;
-      screen.monteCarloSimulationCount = Number(countSelect.value) || 2000;
+      screen.monteCarloSimulationCount =
+        Number(root.querySelector("#areMonteCarloSimulationCount")?.value) || 2000;
       screen.runStatisticsAnalysis(themeId, { challengeId });
       const faceOneCount = records.reduce(
         (sum, record) => sum + record.metrics.phase1FaceCounts[1], 0
@@ -340,7 +342,8 @@
           const points = root.querySelectorAll("#areMonteCarloResult .ari-monte-carlo-point").length;
           const resultPanel = root.querySelector("#areMonteCarloResult");
           const checks = [
-            ["選択した反復数が実行結果に反映された", result.requestedSimulationCount === Number(countSelect.value)],
+            ["選択した反復数が実行結果に反映された",
+              result.requestedSimulationCount === Number(root.querySelector("#areMonteCarloSimulationCount")?.value)],
             ["進捗コールバックが複数回届いた", progressUpdateCount > 1],
             ["実行中の進捗バーを確認できた", progressBarSeen && progressAdvanced],
             ["有効なシミュレーション結果が得られた", result.validSimulationCount > 0],
@@ -390,7 +393,10 @@
 
     startButton.addEventListener("click", async () => {
       if (screen.monteCarloRunning) return;
-      const selectedCount = Number(countSelect.value);
+      const currentCountSelect = root.querySelector("#areMonteCarloSimulationCount");
+      const currentRunButton = [...root.querySelectorAll("button")]
+        .find(button => button.textContent.includes("停止条件を再現したモンテカルロ検定を実行"));
+      const selectedCount = Number(currentCountSelect?.value);
       const supportedCounts = [2000, 5000, 10000, 25000, 50000];
       if (!supportedCounts.includes(selectedCount)) {
         status.textContent = "未対応の反復数が選択されています。";
@@ -398,7 +404,12 @@
       }
       startButton.disabled = true;
       status.textContent = `${selectedCount.toLocaleString()}回のブラウザ検証を開始します。`;
-      runButton.click();
+      if (!currentRunButton) {
+        status.textContent = "モンテカルロ検定ボタンが見つかりません。";
+        startButton.disabled = false;
+        return;
+      }
+      currentRunButton.click();
       try {
         await activeRunPromise;
       } catch (error) {
