@@ -59,7 +59,7 @@ export function createResearchInstituteServices({
   const areInterface = new AREInterface({
     entryManager,
     archiveManager,
-    analysisProvider: themeId => statisticsAnalyzer.analyze(themeId)
+    analysisProvider: (themeId, options) => statisticsAnalyzer.analyze(themeId, options)
   });
   const instituteController = new ResearchInstituteController({
     gameState,
