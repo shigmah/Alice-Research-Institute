@@ -42,6 +42,18 @@ assert.match(source, /decisionText\.includes\("棄却できない"\)/,
   "the balanced scenario verifies the non-rejection decision in the rendered panel");
 assert.match(source, /onProgress: checkpoint =>/,
   "the browser harness observes live progress callbacks");
+assert.match(source, /startButton\.addEventListener\("click"/,
+  "the browser check installs its top-level action handler before fixture initialization");
+assert.match(source, /startBrowserCheckHandler = async \(\) =>/,
+  "the browser check exposes a handler after initialization");
+assert.match(source, /await screen\.runMonteCarloAnalysis\(themeId, \{/,
+  "the browser check invokes the screen action directly rather than synthesizing a click");
+assert.doesNotMatch(source, /currentRunButton\.click\(\)/,
+  "the browser check does not click a possibly detached button after a rerender");
+assert.match(source, /window\.addEventListener\("error"/,
+  "initialization errors are surfaced in the browser page");
+assert.match(source, /window\.addEventListener\("unhandledrejection"/,
+  "asynchronous setup errors are surfaced in the browser page");
 assert.match(source, /ari-monte-carlo-progress-track/,
   "the harness checks that the progress bar is visible and advances");
 assert.match(source, /ari-monte-carlo-point/,
