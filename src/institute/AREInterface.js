@@ -18,8 +18,8 @@ export class AREInterface {
     };
   }
 
-  openAnalysis(targetId) {
-    return this.analysisProvider ? this.analysisProvider(targetId) : null;
+  openAnalysis(targetId, options = {}) {
+    return this.analysisProvider ? this.analysisProvider(targetId, options) : null;
   }
 
   getAnalysisResults(themeId) {
