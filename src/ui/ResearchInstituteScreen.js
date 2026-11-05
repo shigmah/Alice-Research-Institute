@@ -415,9 +415,19 @@ export class ResearchInstituteScreen {
     const progressText = this.element("p", "muted");
     const track = this.element("div", "ari-monte-carlo-progress-track");
     track.setAttribute("role", "progressbar");
+    track.setAttribute("aria-label", "モンテカルロ検定の進捗");
     track.setAttribute("aria-valuemin", "0");
     track.setAttribute("aria-valuemax", "100");
+    track.style.width = "100%";
+    track.style.height = "12px";
+    track.style.overflow = "hidden";
+    track.style.borderRadius = "999px";
+    track.style.background = "rgba(127, 127, 127, 0.2)";
     const fill = this.element("div", "ari-monte-carlo-progress-fill");
+    fill.style.height = "100%";
+    fill.style.width = "0%";
+    fill.style.background = "currentColor";
+    fill.style.transition = "width 120ms linear";
     track.appendChild(fill);
     section.append(progressText, track);
     this.monteCarloProgressElements = { progressText, track, fill };
@@ -682,6 +692,8 @@ export class ResearchInstituteScreen {
     const countControl = this.element("div", "ari-monte-carlo-controls");
     const countLabel = this.element("label", "muted", "シミュレーション反復数");
     const countSelect = this.element("select", "ari-monte-carlo-count-select");
+    countSelect.id = "areMonteCarloSimulationCount";
+    countLabel.setAttribute("for", countSelect.id);
     countSelect.setAttribute("aria-label", "シミュレーション反復数");
     countSelect.disabled = this.monteCarloRunning;
     for (const count of simulationCounts) {
