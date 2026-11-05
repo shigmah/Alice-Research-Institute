@@ -71,9 +71,12 @@ function wilsonInterval(successes, trials) {
     (zSquared / (4 * trials ** 2))
   )) / denominator;
 
+  // Preserve the exact mathematical boundary values. Without these
+  // branches, floating-point rounding can produce a tiny positive lower
+  // bound (for example, 3.47e-18 when successes is zero).
   return {
-    lower: Math.max(0, center - margin),
-    upper: Math.min(1, center + margin)
+    lower: successes === 0 ? 0 : Math.max(0, center - margin),
+    upper: successes === trials ? 1 : Math.min(1, center + margin)
   };
 }
 
