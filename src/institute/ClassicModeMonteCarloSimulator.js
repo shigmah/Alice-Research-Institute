@@ -3,6 +3,7 @@ import { Game } from "../core/Game.js";
 const FACE_VALUES = Object.freeze([1, 2, 3, 4, 5, 6]);
 const MAX_MAIN_TURNS = 10000;
 const MAX_EVENT_STEPS = 10;
+const MAX_DICE_PER_TURN = 512;
 
 function emptyCounts() {
   return { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
@@ -28,13 +29,20 @@ function normalizeSeed(seed) {
 }
 
 function decisionForOffer(policy, index) {
-  if (index < policy.decisions.length) {
-    return policy.decisions[index] === "decline" ? "decline" : "accept";
+  const decisions = Array.isArray(policy?.decisions) ? policy.decisions : [];
+  if (index < decisions.length) {
+    return decisions[index] === "decline" ? "decline" : "accept";
   }
-  return policy.defaultDecision === "decline" ? "decline" : "accept";
+  return policy?.defaultDecision === "decline" ? "decline" : "accept";
 }
 
-function simulateOneClassicGame({ seed, policy, maxMainTurns = MAX_MAIN_TURNS }) {
+function simulateOneClassicGame({
+  seed,
+  policy,
+  maxMainTurns = MAX_MAIN_TURNS,
+  maxDiceCount = MAX_DICE_PER_TURN
+}) {
+  try {
   const game = new Game();
   game.randomManager.setSeed(seed);
 
@@ -44,6 +52,13 @@ function simulateOneClassicGame({ seed, policy, maxMainTurns = MAX_MAIN_TURNS })
   let mogumoguOfferIndex = 0;
 
   while (!game.state.isGameOver && mainTurnCount < maxMainTurns) {
+    const currentDiceCount = game.state.getCurrentDiceCount?.() ?? 1;
+    if (!Number.isInteger(currentDiceCount) ||
+        currentDiceCount < 1 ||
+        currentDiceCount > maxDiceCount) {
+      return { completed: false, reason: "dice-count-limit" };
+    }
+
     const outcome = game.roll();
 
     if (outcome?.mode?.phase === 1) {
@@ -120,9 +135,19 @@ export class ClassicModeMonteCarloSimulator {
     seed = Date.now(),
     yieldEvery = 25
   } = {}) {
-    if (!observedFaceCounts || !Array.isArray(experimentPolicies) ||
-        experimentPolicies.length === 0) {
-      throw new TypeError("observedFaceCounts and at least one experiment policy are required");
+    if (!observedFaceCounts ||
+        !FACE_VALUES.every(face => Number.isSafeInteger(observedFaceCounts[face]) &&
+          observedFaceCounts[face] >= 0) ||
+        !Array.isArray(experimentPolicies) ||
+        experimentPolicies.length === 0 ||
+        !experimentPolicies.every(policy =>
+          policy && typeof policy === "object" &&
+          (policy.decisions === undefined || Array.isArray(policy.decisions)) &&
+          (policy.defaultDecision === undefined ||
+            policy.defaultDecision === "accept" ||
+            policy.defaultDecision === "decline")
+        )) {
+      throw new TypeError("valid observed face counts and at least one valid experiment policy are required");
     }
     if (!Number.isInteger(simulationCount) || simulationCount < 1 || simulationCount > 50000) {
       throw new RangeError("simulationCount must be an integer between 1 and 50000");
@@ -160,7 +185,8 @@ export class ClassicModeMonteCarloSimulator {
         const simulation = simulateOneClassicGame({
           seed: seedForGame,
           policy: experimentPolicies[experimentIndex],
-          maxMainTurns: this.maxMainTurns
+          maxMainTurns: this.maxMainTurns,
+          maxDiceCount: this.maxDiceCount
         });
 
         if (!simulation.completed) {
