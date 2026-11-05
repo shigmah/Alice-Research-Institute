@@ -74,6 +74,8 @@ emit({
     payload: { dice: 3, reward: { type: "cat-plus-10", amount: 10 } }
   }
 });
+emit({ event: { eventId: "mogumogu", payload: { phase: "offer" } } });
+emit({ event: { eventId: "mogumogu", payload: { declined: true, finished: true } } });
 state.turn = 3;
 state.isGameOver = true;
 state.gameEndReason = "no-cats";
@@ -90,8 +92,14 @@ console.assert(result?.metrics?.phase2TrialCount === 1, "phase 2 rolls are count
 console.assert(result?.metrics?.removedCatCount === 1, "removed cats are measured");
 console.assert(result?.metrics?.cheshireEventCount === 1, "Cheshire events are counted");
 console.assert(result?.metrics?.cheshireGeneratedCatCount === 5, "Cheshire cat additions are measured separately");
-console.assert(result?.metrics?.mogumoguEventCount === 1, "Mogumogu event offers are counted");
+console.assert(result?.metrics?.mogumoguEventCount === 2, "Mogumogu event offers are counted");
 console.assert(result?.metrics?.mogumoguDiceRollCount === 1, "Mogumogu dice rolls are tracked separately");
+console.assert(result?.metrics?.mogumoguAcceptedCount === 1, "accepted Mogumogu offers are counted");
+console.assert(result?.metrics?.mogumoguDeclinedCount === 1, "declined Mogumogu offers are counted");
+console.assert(JSON.stringify(result?.metrics?.mogumoguDecisionHistory) === JSON.stringify(["accept", "decline"]),
+  "Mogumogu decisions are retained in event order");
+console.assert(!Object.hasOwn(result?.metrics ?? {}, "pendingMogumoguDecisionIndex"),
+  "transient pending-decision state is not persisted");
 console.assert(result?.metrics?.mogumoguRewardCatCount === 10, "Mogumogu reward cats are tracked separately");
 console.assert(result?.metrics?.endReason === "no-cats", "game end reason is retained");
 console.assert(run.completed === true, "run closes after its first terminal event");
