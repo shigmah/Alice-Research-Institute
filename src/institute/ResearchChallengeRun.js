@@ -27,9 +27,9 @@ export class ResearchChallengeRun {
       mogumoguAcceptedCount: 0,
       mogumoguDeclinedCount: 0,
       mogumoguDecisionHistory: [],
-      pendingMogumoguDecisionIndex: null,
       mogumoguRewardCatCount: 0
     };
+    this.pendingMogumoguDecisionIndex = null;
 
     this.unsubscribe = this.game.onChange((state, outcome) => {
       this.handleChange(state, outcome);
@@ -97,7 +97,7 @@ export class ResearchChallengeRun {
       if (payload.phase === "offer") {
         this.metrics.mogumoguEventCount += 1;
         this.metrics.mogumoguDecisionHistory.push("pending");
-        this.metrics.pendingMogumoguDecisionIndex =
+        this.pendingMogumoguDecisionIndex =
           this.metrics.mogumoguDecisionHistory.length - 1;
       }
 
@@ -119,10 +119,10 @@ export class ResearchChallengeRun {
   }
 
   resolveMogumoguDecision(decision) {
-    const index = this.metrics.pendingMogumoguDecisionIndex;
+    const index = this.pendingMogumoguDecisionIndex;
     if (index === null || !["accept", "decline"].includes(decision)) return false;
     this.metrics.mogumoguDecisionHistory[index] = decision;
-    this.metrics.pendingMogumoguDecisionIndex = null;
+    this.pendingMogumoguDecisionIndex = null;
     return true;
   }
 
