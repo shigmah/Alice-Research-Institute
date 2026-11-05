@@ -34,7 +34,7 @@ function decisionForOffer(policy, index) {
   return policy.defaultDecision === "decline" ? "decline" : "accept";
 }
 
-function simulateOneClassicGame({ seed, policy }) {
+function simulateOneClassicGame({ seed, policy, maxMainTurns = MAX_MAIN_TURNS }) {
   const game = new Game();
   game.randomManager.setSeed(seed);
 
@@ -43,7 +43,7 @@ function simulateOneClassicGame({ seed, policy }) {
   let mainTurnCount = 0;
   let mogumoguOfferIndex = 0;
 
-  while (!game.state.isGameOver && mainTurnCount < MAX_MAIN_TURNS) {
+  while (!game.state.isGameOver && mainTurnCount < maxMainTurns) {
     const outcome = game.roll();
 
     if (outcome?.mode?.phase === 1) {
@@ -159,7 +159,8 @@ export class ClassicModeMonteCarloSimulator {
 
         const simulation = simulateOneClassicGame({
           seed: seedForGame,
-          policy: experimentPolicies[experimentIndex]
+          policy: experimentPolicies[experimentIndex],
+          maxMainTurns: this.maxMainTurns
         });
 
         if (!simulation.completed) {
