@@ -308,6 +308,7 @@
     const originalRun = screen.runMonteCarloAnalysis.bind(screen);
     let activeRunPromise = null;
     screen.runMonteCarloAnalysis = (selectedThemeId, options = {}) => {
+      scenarioSelect.disabled = true;
       activeRunPromise = (async () => {
         let progressUpdateCount = 0;
         let progressBarSeen = false;
@@ -341,6 +342,20 @@
 
           const points = root.querySelectorAll("#areMonteCarloResult .ari-monte-carlo-point").length;
           const resultPanel = root.querySelector("#areMonteCarloResult");
+          const convergenceHistory = Array.isArray(result.convergenceHistory)
+            ? result.convergenceHistory.filter(point =>
+              Number.isFinite(point.monteCarloLower95) &&
+              Number.isFinite(point.monteCarloUpper95))
+            : [];
+          const firstInterval = convergenceHistory[0] ?? null;
+          const lastInterval = convergenceHistory[convergenceHistory.length - 1] ?? null;
+          const firstIntervalWidth = firstInterval
+            ? firstInterval.monteCarloUpper95 - firstInterval.monteCarloLower95
+            : null;
+          const lastIntervalWidth = lastInterval
+            ? lastInterval.monteCarloUpper95 - lastInterval.monteCarloLower95
+            : null;
+          const decisionText = resultPanel?.querySelector(".ari-chi-square-decision")?.textContent ?? "";
           const checks = [
             ["選択した反復数が実行結果に反映された",
               result.requestedSimulationCount === Number(root.querySelector("#areMonteCarloSimulationCount")?.value)],
@@ -358,8 +373,15 @@
             ["ブラウザ描画フレームが実行中に進んだ", animationFrameCount > 0],
             ["観測データの性質が統計結果に現れた",
               scenarioSelect.value === "biased"
-                ? result.observedStatistic > 0 && result.pValue < 0.05
-                : result.observedStatistic < 2]
+                ? result.observedStatistic > 0 && result.pValue < 0.05 &&
+                  decisionText.includes("帰無仮説を棄却") &&
+                  !decisionText.includes("棄却できない")
+                : result.observedStatistic < 2 && result.pValue > 0.05 &&
+                  decisionText.includes("棄却できない")],
+            ["反復数の増加に伴ってWilson区間が縮小した",
+              scenarioSelect.value === "biased"
+                ? firstIntervalWidth > 0 && lastIntervalWidth < firstIntervalWidth
+                : convergenceHistory.length > 1]
           ];
 
           report.replaceChildren();
@@ -385,6 +407,7 @@
           return result;
         } finally {
           keepCountingFrames = false;
+          scenarioSelect.disabled = false;
           startButton.disabled = false;
         }
       })();
