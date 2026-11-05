@@ -266,6 +266,10 @@ console.assert(happy.screen.latestTree.textContent.includes("停止条件を再�
   "Monte Carlo result panel is rendered");
 console.assert(happy.screen.latestTree.textContent.includes("モンテカルロp値"),
   "Monte Carlo p-value is displayed");
+console.assert(happy.screen.latestTree.textContent.includes("モンテカルロ推定誤差が5%境界に重なるため、判定を保留"),
+  "the test decision is held when Monte Carlo uncertainty overlaps the five percent threshold");
+console.assert(happy.screen.latestTree.textContent.includes("95%近似区間"),
+  "Monte Carlo estimation uncertainty is displayed");
 console.assert(happy.screen.latestTree.textContent.includes("すべて受諾する仮定"),
   "legacy Mogumogu decision assumption is disclosed");
 
