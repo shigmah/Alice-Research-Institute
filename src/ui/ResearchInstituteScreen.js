@@ -343,6 +343,38 @@ export class ResearchInstituteScreen {
     return figure;
   }
 
+  renderChiSquareGoodnessOfFit(test) {
+    const section = this.element("section", "ari-chi-square-panel");
+    section.appendChild(this.element("h4", "", "カイ二乗適合度検定"));
+    section.appendChild(this.element("p", "muted",
+      "帰無仮説：サイコロの各出目は、それぞれ同じ確率（1/6）で出現する。対立仮説：少なくとも1つの出目の確率が異なる。"));
+
+    const summary = this.element("div", "institute-summary");
+    summary.append(
+      this.summaryItem("検定統計量 χ²", test.statistic === null ? "—" : test.statistic.toFixed(4)),
+      this.summaryItem("自由度", test.degreesOfFreedom),
+      this.summaryItem(test.canInterpret ? "p値" : "p値（参考値）",
+        test.pValue === null ? "—" : test.pValue.toFixed(4)),
+      this.summaryItem("有意水準 α", test.alpha.toFixed(2)),
+      this.summaryItem("各出目の期待度数", test.expectedCountPerFace === null ? "—" : test.expectedCountPerFace.toFixed(2))
+    );
+    section.appendChild(summary);
+
+    const decisionLabel = test.decision === "reject-null"
+      ? "帰無仮説を棄却（5%水準）"
+      : test.decision === "do-not-reject-null"
+        ? "帰無仮説を棄却できない（5%水準）"
+        : "有意差の判定は保留";
+    const decision = this.element("div",
+      test.canInterpret ? "ari-chi-square-decision" : "institute-placeholder",
+      decisionLabel);
+    decision.setAttribute("role", "status");
+    section.appendChild(decision);
+    section.appendChild(this.element("p", "muted", test.interpretation));
+    section.appendChild(this.element("p", "muted", test.samplingDesignNote));
+    return section;
+  }
+
   renderStatisticsAnalysis(analysis) {
     const panel = this.element("section", "institute-content-stack");
     panel.id = "areStatisticsAnalysis";
@@ -374,6 +406,7 @@ export class ResearchInstituteScreen {
     }
 
     panel.appendChild(this.renderFaceDistributionChart(analysis));
+    panel.appendChild(this.renderChiSquareGoodnessOfFit(analysis.chiSquareGoodnessOfFit));
 
     const table = this.element("table", "ari-statistics-table");
     const thead = this.element("thead");
