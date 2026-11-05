@@ -199,6 +199,22 @@ export function createMain(documentRef = document) {
     const renderState = createPlayer1RenderState(state, game);
     originalRender(renderState, outcome);
 
+    if (isResearchSession) {
+      const reset = documentRef.querySelector?.("#reset");
+      const modeSelect = documentRef.querySelector?.("#modeSelect");
+      const modeStart = documentRef.querySelector?.("#modeStart");
+      const mogumoguPanel = documentRef.querySelector?.(".mogumogu-panel");
+      if (reset) reset.disabled = true;
+      if (modeSelect) modeSelect.disabled = true;
+      if (modeStart) modeStart.hidden = true;
+      if (mogumoguPanel) mogumoguPanel.hidden = true;
+    } else if (hasResearchSessionParameter) {
+      for (const selector of ["#roll", "#dropout", "#reset", "#modeSelect", "#modeStart", "#mogumoguButton"]) {
+        const control = documentRef.querySelector?.(selector);
+        if (control) control.disabled = true;
+      }
+    }
+
     const normalCatField = documentRef.querySelector?.("#cats")?.closest?.("section.panel");
     if (normalCatField) {
       normalCatField.hidden = state?.getGameMode?.() === "BATTLE";
