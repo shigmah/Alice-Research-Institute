@@ -230,11 +230,9 @@ export class ResearchInstituteScreen {
       const themeDefinition = this.services.themeManager.getThemeDefinition(selected.themeId);
       const primaryChallengeId = themeDefinition?.challengeIds?.[0] ?? null;
       arePanel.appendChild(this.button("蓄積データの統計分析を実行", () => {
-        this.analysis = this.services.areInterface.openAnalysis(selected.themeId, {
+        this.runStatisticsAnalysis(selected.themeId, {
           challengeId: primaryChallengeId
         });
-        this.notice = "Research Entryに登録された実験結果を集計しました。";
-        this.render();
       }));
       if (this.analysis?.themeId === selected.themeId) {
         arePanel.appendChild(this.renderStatisticsAnalysis(this.analysis));
@@ -242,6 +240,26 @@ export class ResearchInstituteScreen {
     }
     wrapper.appendChild(arePanel);
     return wrapper;
+  }
+
+  runStatisticsAnalysis(themeId, options = {}) {
+    try {
+      const analysis = this.services.areInterface.openAnalysis(themeId, options);
+      if (!analysis || analysis.themeId !== themeId) {
+        throw new Error("AREから分析結果が返されませんでした。");
+      }
+
+      this.analysis = analysis;
+      this.notice = `統計分析が完了しました。出目標本数：${analysis.faceObservationCount}回。`;
+    } catch (error) {
+      this.analysis = null;
+      const detail = error instanceof Error ? error.message : String(error);
+      this.notice = `統計分析に失敗しました：${detail}`;
+      console.error("[ARE] Statistical analysis failed:", error);
+    }
+
+    this.render();
+    return this.analysis;
   }
 
   renderStatisticsAnalysis(analysis) {
