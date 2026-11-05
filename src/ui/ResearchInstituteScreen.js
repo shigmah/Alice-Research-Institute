@@ -260,7 +260,7 @@ export class ResearchInstituteScreen {
 
     try {
       this.render();
-      this.root.querySelector?.("#areStatisticsAnalysis")?.scrollIntoView?.({
+      this.root?.querySelector?.("#areStatisticsAnalysis")?.scrollIntoView?.({
         behavior: "smooth",
         block: "start"
       });
