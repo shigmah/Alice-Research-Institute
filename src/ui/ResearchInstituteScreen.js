@@ -253,7 +253,8 @@ export class ResearchInstituteScreen {
     const summary = this.element("div", "institute-summary");
     summary.append(
       this.summaryItem("実験回数", analysis.experimentCount),
-      this.summaryItem("有効な観測実験", analysis.observationExperimentCount),
+      this.summaryItem("観測記録成功", analysis.successfulExperimentCount),
+      this.summaryItem("有効観測率", analysis.validObservationRate === null ? "—" : `${(analysis.validObservationRate * 100).toFixed(1)}%`),
       this.summaryItem("出目標本数", analysis.faceObservationCount),
       this.summaryItem("実測平均", analysis.sampleMean === null ? "—" : analysis.sampleMean.toFixed(3)),
       this.summaryItem("理論平均", analysis.theoreticalMean.toFixed(3)),
