@@ -134,6 +134,32 @@ console.assert(emptyAnalysis.faceObservationCount === 0 && emptyAnalysis.sampleM
   "empty themes produce a safe analysis without undefined averages");
 console.assert(emptyAnalysis.faceDistribution.every(face => face.wilson95 === null),
   "empty samples do not produce misleading confidence intervals");
+console.assert(emptyAnalysis.successRate === null && emptyAnalysis.validObservationRate === null,
+  "rates are undefined rather than zero when there are no experiments");
+
+const failureState = new GameState();
+failureState.researchInstituteData.challengeResults.push({
+  resultId: "RESULT_NO_OBSERVATION",
+  themeId,
+  challengeId,
+  completedAt: "2026-11-05T15:30:00.000Z",
+  outcome: "failure",
+  summary: "観測開始前に終了",
+  metrics: {
+    phase1TrialCount: 0,
+    phase1FaceCounts: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 },
+    generatedCatCount: 0
+  }
+});
+const failureAnalysis = new ResearchStatisticsAnalyzer({
+  gameState: failureState,
+  now: () => "2026-11-05T15:30:00.000Z"
+}).analyze(themeId, { challengeId });
+console.assert(failureAnalysis.experimentCount === 1 &&
+  failureAnalysis.successfulExperimentCount === 0 &&
+  failureAnalysis.successRate === 0 &&
+  failureAnalysis.validObservationRate === 0,
+  "failed experiments are counted while their observation rate remains zero");
 
 const inconsistentState = new GameState();
 inconsistentState.researchInstituteData.challengeResults.push({
