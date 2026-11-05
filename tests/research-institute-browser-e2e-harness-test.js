@@ -34,6 +34,12 @@ assert.match(source, /scenarioSelect\.addEventListener\("change"/,
   "the user can switch between balanced and biased observation data");
 assert.match(source, /result\.experimentCountPerReplicate === naturalGames\.length/,
   "the browser check verifies that each replicate uses the same number of games as the observations");
+assert.match(source, /firstIntervalWidth > 0 && lastIntervalWidth < firstIntervalWidth/,
+  "the biased scenario checks that Wilson intervals shrink with more simulations");
+assert.match(source, /decisionText\.includes\("帰無仮説を棄却"\)/,
+  "the biased scenario verifies the significance decision in the rendered panel");
+assert.match(source, /decisionText\.includes\("棄却できない"\)/,
+  "the balanced scenario verifies the non-rejection decision in the rendered panel");
 assert.match(source, /onProgress: checkpoint =>/,
   "the browser harness observes live progress callbacks");
 assert.match(source, /ari-monte-carlo-progress-track/,
