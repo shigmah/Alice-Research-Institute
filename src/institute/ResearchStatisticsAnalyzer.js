@@ -68,6 +68,7 @@ export class ResearchStatisticsAnalyzer {
     };
 
     let observationExperimentCount = 0;
+    const successfulExperimentCount = results.filter(result => result?.outcome === "success").length;
 
     for (const result of results) {
       const metrics = result?.metrics;
@@ -165,7 +166,10 @@ export class ResearchStatisticsAnalyzer {
       challengeId,
       generatedAt: this.now(),
       experimentCount: results.length,
+      successfulExperimentCount,
+      successRate: results.length > 0 ? successfulExperimentCount / results.length : null,
       observationExperimentCount,
+      validObservationRate: results.length > 0 ? observationExperimentCount / results.length : null,
       faceObservationCount,
       totals,
       faceCounts,
