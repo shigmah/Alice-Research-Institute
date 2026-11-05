@@ -135,6 +135,7 @@
       const challengeWindow = window.open(target.toString(), "_blank");
       if (!challengeWindow) {
         challengeBridge.cancelSession(session.sessionId);
+        challengeBridge.consumeResult(session.sessionId);
         return false;
       }
       return true;
