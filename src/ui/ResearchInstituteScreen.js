@@ -430,11 +430,13 @@ export class ResearchInstituteScreen {
     const progress = this.monteCarloProgress;
     if (!elements || !progress) return;
 
-    const requested = Number.isFinite(progress.requested) && progress.requested > 0
-      ? progress.requested
+    const requested = Number.isFinite(progress.requestedSimulationCount) &&
+      progress.requestedSimulationCount > 0
+      ? progress.requestedSimulationCount
       : 0;
-    const completed = Number.isFinite(progress.completed) && progress.completed >= 0
-      ? progress.completed
+    const completed = Number.isFinite(progress.completedSimulationCount) &&
+      progress.completedSimulationCount >= 0
+      ? progress.completedSimulationCount
       : 0;
     const percent = requested > 0
       ? Math.min(100, (completed / requested) * 100)
@@ -447,7 +449,7 @@ export class ResearchInstituteScreen {
       ? ` / 補正p値 ${progress.pValue.toFixed(4)}`
       : "";
     elements.progressText.textContent =
-      `完了 ${completed.toLocaleString()} / ${requested.toLocaleString()}回（${percent.toFixed(1)}%） / 有効 ${(progress.valid ?? 0).toLocaleString()}回・失敗 ${(progress.failed ?? 0).toLocaleString()}回${pValue}${interval}`;
+      `完了 ${completed.toLocaleString()} / ${requested.toLocaleString()}回（${percent.toFixed(1)}%） / 有効 ${(progress.validSimulationCount ?? 0).toLocaleString()}回・失敗 ${(progress.failedSimulationCount ?? 0).toLocaleString()}回${pValue}${interval}`;
     elements.fill.style.width = `${percent}%`;
     elements.track.setAttribute("aria-valuenow", String(Math.round(percent)));
   }
@@ -477,7 +479,7 @@ export class ResearchInstituteScreen {
     const requested = Number.isFinite(result.requestedSimulationCount) &&
       result.requestedSimulationCount > 0
       ? result.requestedSimulationCount
-      : (history[history.length - 1]?.requested ?? 1);
+      : (history[history.length - 1]?.requestedSimulationCount ?? 1);
     const threshold = this.element("div", "ari-monte-carlo-threshold");
     threshold.style.position = "absolute";
     threshold.style.left = "0";
@@ -490,7 +492,9 @@ export class ResearchInstituteScreen {
     let plottedCount = 0;
     for (const checkpoint of history) {
       if (!Number.isFinite(checkpoint?.pValue)) continue;
-      const completed = Number.isFinite(checkpoint.completed) ? checkpoint.completed : 0;
+      const completed = Number.isFinite(checkpoint.completedSimulationCount)
+        ? checkpoint.completedSimulationCount
+        : 0;
       const x = Math.min(100, Math.max(0, (completed / requested) * 100));
       const p = Math.min(1, Math.max(0, checkpoint.pValue));
       const y = (1 - p) * 100;
