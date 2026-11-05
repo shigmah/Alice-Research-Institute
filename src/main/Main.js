@@ -223,6 +223,7 @@ export function createMain(documentRef = document) {
   const modeStart = documentRef.querySelector?.("#modeStart");
   const resetButton = documentRef.querySelector?.("#reset");
   const mogumoguButton = documentRef.querySelector?.("#mogumoguButton");
+  const mogumoguPanel = documentRef.querySelector?.(".mogumogu-panel");
   const gameOverReset = documentRef.querySelector?.("#gameOverReset");
   let invalidResearchSession = false;
 
@@ -231,6 +232,7 @@ export function createMain(documentRef = document) {
     if (modeStart) modeStart.hidden = true;
     if (resetButton) resetButton.disabled = true;
     if (mogumoguButton) mogumoguButton.disabled = true;
+    if (mogumoguPanel) mogumoguPanel.hidden = true;
     if (gameOverReset) gameOverReset.textContent = "研究所へ戻る";
     if (modePanel) {
       const note = documentRef.createElement("p");
