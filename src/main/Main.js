@@ -260,6 +260,7 @@ export function createMain(documentRef = document) {
   if (researchRun && view?.addEventListener) {
     view.addEventListener("pagehide", () => {
       if (!researchRun.completed) researchRun.cancel();
+      else researchRun.destroy();
     }, { once: true });
   }
 
