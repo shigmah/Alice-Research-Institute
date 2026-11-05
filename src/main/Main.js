@@ -4,7 +4,9 @@ import { ensureModeSetup, installCollectorModeSupport } from "../ui/ModeSetup.js
 import { ensureBattleSetup, installBattleModeSupport } from "../ui/BattleSetup.js";
 import { installBattlePlayerBoard } from "../ui/BattleBoard.js";
 import { Game } from "../core/Game.js";
-import { ResearchInstituteAchievementBridge } from "../institute/ResearchThemeDefinitions.js";
+import { ResearchInstituteAchievementBridge, RESEARCH_THEME_DEFINITIONS } from "../institute/ResearchThemeDefinitions.js";
+import { ResearchChallengeBridge } from "../institute/ResearchChallengeBridge.js";
+import { ResearchChallengeRun } from "../institute/ResearchChallengeRun.js";
 
 function createBattleRenderState(state, outcome) {
   if (!state || state.getGameMode?.() !== "BATTLE") return state;
@@ -142,6 +144,27 @@ export function createMain(documentRef = document) {
   ensureBattleSetup(documentRef);
 
   const game = new Game();
+  const view = documentRef.defaultView ?? null;
+  const locationSearch = view?.location?.search ?? "";
+  const requestedResearchSessionId = new URLSearchParams(locationSearch).get("researchSession");
+  const challengeBridge = new ResearchChallengeBridge();
+  const researchSession = requestedResearchSessionId
+    ? challengeBridge.readSession(requestedResearchSessionId)
+    : null;
+  const supportedResearchTheme = RESEARCH_THEME_DEFINITIONS.some(theme =>
+    theme.themeId === researchSession?.themeId &&
+    theme.challengeIds?.includes(researchSession?.challengeId)
+  );
+  const isResearchSession = Boolean(
+    requestedResearchSessionId &&
+    researchSession?.status === "active" &&
+    supportedResearchTheme
+  );
+  const hasResearchSessionParameter = Boolean(requestedResearchSessionId);
+  const researchRun = isResearchSession
+    ? new ResearchChallengeRun({ game, session: researchSession, bridge: challengeBridge })
+    : null;
+
   const achievementBridge = new ResearchInstituteAchievementBridge();
   const unsubscribeAchievement = game.onChange(state => {
     if (state?.getGameMode?.() !== "CLASSIC") return;
@@ -195,5 +218,61 @@ export function createMain(documentRef = document) {
 
   const controller = new GameController({ game, ui });
 
-  return { game, ui, controller, unsubscribeAchievement };
+  const modePanel = documentRef.querySelector?.(".mode-panel");
+  const modeSelect = documentRef.querySelector?.("#modeSelect");
+  const modeStart = documentRef.querySelector?.("#modeStart");
+  const resetButton = documentRef.querySelector?.("#reset");
+  const mogumoguButton = documentRef.querySelector?.("#mogumoguButton");
+  const gameOverReset = documentRef.querySelector?.("#gameOverReset");
+  let invalidResearchSession = false;
+
+  if (isResearchSession) {
+    if (modeSelect) modeSelect.disabled = true;
+    if (modeStart) modeStart.hidden = true;
+    if (resetButton) resetButton.disabled = true;
+    if (mogumoguButton) mogumoguButton.disabled = true;
+    if (gameOverReset) gameOverReset.textContent = "研究所へ戻る";
+    if (modePanel) {
+      const note = documentRef.createElement("p");
+      note.className = "notice";
+      note.textContent = "研究実験中：通常クラシックモードのルールで進行します。実験終了はゲームオーバーまたはドロップアウトです。";
+      modePanel.appendChild(note);
+    }
+  } else if (hasResearchSessionParameter) {
+    invalidResearchSession = true;
+    if (modePanel) {
+      const note = documentRef.createElement("p");
+      note.className = "notice";
+      note.textContent = "有効な研究実験セッションを確認できませんでした。研究所の実験室から開始し直してください。";
+      modePanel.appendChild(note);
+    }
+    for (const selector of ["#roll", "#dropout", "#reset", "#modeSelect", "#modeStart", "#mogumoguButton"]) {
+      const control = documentRef.querySelector?.(selector);
+      if (control) control.disabled = true;
+    }
+  }
+
+  const returnToInstitute = () => {
+    if (researchRun && !researchRun.completed) researchRun.cancel();
+    if (view?.location) view.location.href = "./institute.html";
+  };
+
+  if (researchRun && view?.addEventListener) {
+    view.addEventListener("pagehide", () => {
+      if (!researchRun.completed) researchRun.cancel();
+    }, { once: true });
+  }
+
+  return {
+    game,
+    ui,
+    controller,
+    unsubscribeAchievement,
+    researchSession,
+    researchRun,
+    isResearchSession,
+    hasResearchSessionParameter,
+    invalidResearchSession,
+    returnToInstitute
+  };
 }
