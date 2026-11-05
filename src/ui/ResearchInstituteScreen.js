@@ -227,8 +227,12 @@ export class ResearchInstituteScreen {
       const overview = this.services.areInterface.getOverview(selected.themeId);
       arePanel.appendChild(this.element("p", "muted",
         `対象：${selected.themeName || selected.themeId} / 登録済み実験 ${overview.entry?.attemptCount ?? 0}回`));
+      const themeDefinition = this.services.themeManager.getThemeDefinition(selected.themeId);
+      const primaryChallengeId = themeDefinition?.challengeIds?.[0] ?? null;
       arePanel.appendChild(this.button("蓄積データの統計分析を実行", () => {
-        this.analysis = this.services.areInterface.openAnalysis(selected.themeId);
+        this.analysis = this.services.areInterface.openAnalysis(selected.themeId, {
+          challengeId: primaryChallengeId
+        });
         this.notice = "Research Entryに登録された実験結果を集計しました。";
         this.render();
       }));
