@@ -131,7 +131,7 @@ import { createMain } from "../src/main/Main.js";
 import { installBattleResultDisplay } from "../src/ui/BattleResultDisplay.js";
 const app = createMain(document);
 installBattleResultDisplay(app.ui);
-document.querySelector("#gameOverReset")?.addEventListener("click", () => app.controller.reset());
+document.querySelector("#gameOverReset")?.addEventListener("click", () => { if (app.hasResearchSessionParameter) app.returnToInstitute(); else app.controller.reset(); });
 app.controller.start();
 </script>
 </main>
