@@ -111,6 +111,8 @@ export class ResearchChallengeRun {
       ?? (outcome?.action?.action === "dropout" ? "player-dropout" : "game-over");
 
     const metrics = {
+      sessionId: this.session.sessionId,
+      startedAt: this.session.createdAt ?? null,
       ...this.metrics,
       phase1FaceCounts: { ...this.metrics.phase1FaceCounts },
       endReason,
