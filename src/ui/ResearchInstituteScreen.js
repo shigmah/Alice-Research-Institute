@@ -11,6 +11,9 @@ export class ResearchInstituteScreen {
     this.analysis = null;
     this.monteCarlo = null;
     this.monteCarloRunning = false;
+    this.monteCarloSimulationCount = 2000;
+    this.monteCarloProgress = null;
+    this.monteCarloProgressElements = null;
 
     this.controller.onChange = () => this.render();
     this.render();
@@ -349,16 +352,39 @@ export class ResearchInstituteScreen {
   async runMonteCarloAnalysis(themeId, options = {}) {
     if (this.monteCarloRunning) return null;
 
+    const simulationCount = Number.isSafeInteger(options.simulationCount)
+      ? options.simulationCount
+      : (this.monteCarloSimulationCount ?? 2000);
+    this.monteCarloSimulationCount = simulationCount;
     this.monteCarloRunning = true;
     this.monteCarlo = null;
-    this.notice = "停止条件を再現したモンテカルロ検定を実行しています（2,000反復）。";
+    this.monteCarloProgress = {
+      completed: 0,
+      requested: simulationCount,
+      valid: 0,
+      failed: 0,
+      extremeCount: 0,
+      pValue: null,
+      monteCarloLower95: null,
+      monteCarloUpper95: null
+    };
+    this.monteCarloProgressElements = null;
+    this.notice = `停止条件を再現したモンテカルロ検定を実行しています（${simulationCount.toLocaleString()}反復）。`;
     this.render();
 
     try {
+      const userProgressCallback = options.onProgress;
       this.monteCarlo = await this.services.areInterface.runMonteCarlo(themeId, {
         ...options,
-        simulationCount: 2000,
-        yieldEvery: 25
+        simulationCount,
+        yieldEvery: options.yieldEvery ?? 25,
+        onProgress: checkpoint => {
+          this.monteCarloProgress = checkpoint;
+          this.updateMonteCarloProgressDisplay();
+          if (typeof userProgressCallback === "function") {
+            userProgressCallback(checkpoint);
+          }
+        }
       });
       this.notice = this.monteCarlo?.validSimulationCount > 0
         ? `モンテカルロ検定が完了しました。有効反復数：${this.monteCarlo.validSimulationCount.toLocaleString()}回。`
@@ -370,6 +396,7 @@ export class ResearchInstituteScreen {
       console.error("[ARE] Monte Carlo analysis failed:", error);
     } finally {
       this.monteCarloRunning = false;
+      this.monteCarloProgressElements = null;
       this.render();
       this.root?.querySelector?.("#areMonteCarloResult")?.scrollIntoView?.({
         behavior: "smooth",
@@ -378,6 +405,133 @@ export class ResearchInstituteScreen {
     }
 
     return this.monteCarlo;
+  }
+
+  renderMonteCarloProgress() {
+    const section = this.element("section", "ari-monte-carlo-progress");
+    section.setAttribute("aria-live", "polite");
+    section.appendChild(this.element("h4", "", "シミュレーション進捗"));
+
+    const progressText = this.element("p", "muted");
+    const track = this.element("div", "ari-monte-carlo-progress-track");
+    track.setAttribute("role", "progressbar");
+    track.setAttribute("aria-valuemin", "0");
+    track.setAttribute("aria-valuemax", "100");
+    const fill = this.element("div", "ari-monte-carlo-progress-fill");
+    track.appendChild(fill);
+    section.append(progressText, track);
+    this.monteCarloProgressElements = { progressText, track, fill };
+    this.updateMonteCarloProgressDisplay();
+    return section;
+  }
+
+  updateMonteCarloProgressDisplay() {
+    const elements = this.monteCarloProgressElements;
+    const progress = this.monteCarloProgress;
+    if (!elements || !progress) return;
+
+    const requested = Number.isFinite(progress.requested) && progress.requested > 0
+      ? progress.requested
+      : 0;
+    const completed = Number.isFinite(progress.completed) && progress.completed >= 0
+      ? progress.completed
+      : 0;
+    const percent = requested > 0
+      ? Math.min(100, (completed / requested) * 100)
+      : 0;
+    const interval = Number.isFinite(progress.monteCarloLower95) &&
+      Number.isFinite(progress.monteCarloUpper95)
+      ? ` / Wilson 95%区間 ${progress.monteCarloLower95.toFixed(4)}～${progress.monteCarloUpper95.toFixed(4)}`
+      : "";
+    const pValue = Number.isFinite(progress.pValue)
+      ? ` / 補正p値 ${progress.pValue.toFixed(4)}`
+      : "";
+    elements.progressText.textContent =
+      `完了 ${completed.toLocaleString()} / ${requested.toLocaleString()}回（${percent.toFixed(1)}%） / 有効 ${(progress.valid ?? 0).toLocaleString()}回・失敗 ${(progress.failed ?? 0).toLocaleString()}回${pValue}${interval}`;
+    elements.fill.style.width = `${percent}%`;
+    elements.track.setAttribute("aria-valuenow", String(Math.round(percent)));
+  }
+
+  renderMonteCarloConvergenceChart(result) {
+    const history = Array.isArray(result.convergenceHistory)
+      ? result.convergenceHistory
+      : [];
+    if (history.length === 0) return null;
+
+    const figure = this.element("figure", "ari-monte-carlo-convergence");
+    figure.appendChild(this.element("figcaption", "ari-chart-title",
+      "モンテカルロ推定値の収束履歴"));
+
+    const legend = this.element("p", "muted",
+      "点：+1補正したモンテカルロp値（(B+1)/(M+1)） / 縦線：未補正の超過割合B/Mに対するWilson 95%区間 / 横線：5%境界");
+    figure.appendChild(legend);
+
+    const plot = this.element("div", "ari-monte-carlo-convergence-plot");
+    plot.setAttribute("role", "img");
+    plot.style.position = "relative";
+    plot.style.height = "180px";
+    plot.style.width = "100%";
+    plot.style.margin = "12px 0";
+    plot.style.borderLeft = "1px solid currentColor";
+    plot.style.borderBottom = "1px solid currentColor";
+    const requested = Number.isFinite(result.requestedSimulationCount) &&
+      result.requestedSimulationCount > 0
+      ? result.requestedSimulationCount
+      : (history[history.length - 1]?.requested ?? 1);
+    const threshold = this.element("div", "ari-monte-carlo-threshold");
+    threshold.style.position = "absolute";
+    threshold.style.left = "0";
+    threshold.style.right = "0";
+    threshold.style.top = "95%";
+    threshold.style.borderTop = "1px dashed currentColor";
+    threshold.setAttribute("aria-hidden", "true");
+    plot.appendChild(threshold);
+
+    let plottedCount = 0;
+    for (const checkpoint of history) {
+      if (!Number.isFinite(checkpoint?.pValue)) continue;
+      const completed = Number.isFinite(checkpoint.completed) ? checkpoint.completed : 0;
+      const x = Math.min(100, Math.max(0, (completed / requested) * 100));
+      const p = Math.min(1, Math.max(0, checkpoint.pValue));
+      const y = (1 - p) * 100;
+
+      if (Number.isFinite(checkpoint.monteCarloLower95) &&
+          Number.isFinite(checkpoint.monteCarloUpper95)) {
+        const lower = Math.min(1, Math.max(0, checkpoint.monteCarloLower95));
+        const upper = Math.min(1, Math.max(0, checkpoint.monteCarloUpper95));
+        const interval = this.element("span", "ari-monte-carlo-interval");
+        interval.style.position = "absolute";
+        interval.style.left = `${x}%`;
+        interval.style.top = `${(1 - upper) * 100}%`;
+        interval.style.height = `${Math.max(0.5, (upper - lower) * 100)}%`;
+        interval.style.width = "2px";
+        interval.style.background = "currentColor";
+        interval.title = `${completed}回：Wilson 95%区間 ${lower.toFixed(4)}～${upper.toFixed(4)}`;
+        interval.setAttribute("aria-hidden", "true");
+        plot.appendChild(interval);
+      }
+
+      const point = this.element("span", "ari-monte-carlo-point");
+      point.style.position = "absolute";
+      point.style.left = `${x}%`;
+      point.style.top = `${y}%`;
+      point.style.width = "7px";
+      point.style.height = "7px";
+      point.style.borderRadius = "50%";
+      point.style.background = "currentColor";
+      point.style.transform = "translate(-50%, -50%)";
+      point.title = `${completed}回：補正p値 ${p.toFixed(4)}`;
+      point.setAttribute("aria-hidden", "true");
+      plot.appendChild(point);
+      plottedCount += 1;
+    }
+
+    plot.setAttribute("aria-label",
+      `反復数の増加に伴うモンテカルロp値の推移。5%境界線を表示。表示点数：${plottedCount}。`);
+    figure.appendChild(plot);
+    figure.appendChild(this.element("p", "muted",
+      `横軸：反復数（0～${requested.toLocaleString()}回） / 縦軸：p値（0～1）。Wilson区間は補正前の超過割合に基づきます。`));
+    return figure;
   }
 
   renderMonteCarloResult(result) {
@@ -417,7 +571,9 @@ export class ResearchInstituteScreen {
     section.appendChild(this.element("div", "ari-chi-square-decision", decisionLabel));
 
     section.appendChild(this.element("p", "muted",
-      `観測χ²以上となった反復：${result.extremeCount.toLocaleString()} / ${result.validSimulationCount.toLocaleString()}回。p値のモンテカルロ95%近似区間：${result.monteCarloLower95 === null ? "—" : result.monteCarloLower95.toFixed(4)} ～ ${result.monteCarloUpper95 === null ? "—" : result.monteCarloUpper95.toFixed(4)}。各反復では対象実験と同数のゲームを実行しています。シミュレーション標本数の範囲：${result.minimumSimulatedSampleCount} ～ ${result.maximumSimulatedSampleCount}回。`));
+      `観測χ²以上となった反復：${result.extremeCount.toLocaleString()} / ${result.validSimulationCount.toLocaleString()}回。+1補正p値：(${result.extremeCount.toLocaleString()} + 1) / (${result.validSimulationCount.toLocaleString()} + 1)。未補正の超過割合に対するWilson 95%区間：${result.monteCarloLower95 === null ? "—" : result.monteCarloLower95.toFixed(4)} ～ ${result.monteCarloUpper95 === null ? "—" : result.monteCarloUpper95.toFixed(4)}。各反復では対象実験と同数のゲームを実行しています。シミュレーション標本数の範囲：${result.minimumSimulatedSampleCount} ～ ${result.maximumSimulatedSampleCount}回。`));
+    const convergenceChart = this.renderMonteCarloConvergenceChart(result);
+    if (convergenceChart) section.appendChild(convergenceChart);
     section.appendChild(this.element("p", "muted",
       `乱数シード：${result.seed} / 失敗反復：${result.failedSimulationCount}`));
     section.appendChild(this.element("p", "muted", result.stoppingRule));
@@ -514,15 +670,44 @@ export class ResearchInstituteScreen {
 
     panel.appendChild(this.renderFaceDistributionChart(analysis));
     panel.appendChild(this.renderChiSquareGoodnessOfFit(analysis.chiSquareGoodnessOfFit));
+    const simulationCounts = [2000, 5000, 10000, 25000, 50000];
+    const selectedSimulationCount = simulationCounts.includes(this.monteCarloSimulationCount)
+      ? this.monteCarloSimulationCount
+      : 2000;
+    this.monteCarloSimulationCount = selectedSimulationCount;
+    const countControl = this.element("div", "ari-monte-carlo-controls");
+    const countLabel = this.element("label", "muted", "シミュレーション反復数");
+    const countSelect = this.element("select", "ari-monte-carlo-count-select");
+    countSelect.setAttribute("aria-label", "シミュレーション反復数");
+    countSelect.disabled = this.monteCarloRunning;
+    for (const count of simulationCounts) {
+      const option = this.element("option", "", `${count.toLocaleString()}回`);
+      option.value = String(count);
+      option.selected = count === selectedSimulationCount;
+      countSelect.appendChild(option);
+    }
+    countSelect.value = String(selectedSimulationCount);
+    countSelect.addEventListener("change", event => {
+      const nextCount = Number(event?.target?.value ?? countSelect.value);
+      if (simulationCounts.includes(nextCount) && !this.monteCarloRunning) {
+        this.monteCarloSimulationCount = nextCount;
+      }
+    });
+    countControl.append(countLabel, countSelect);
+    panel.appendChild(countControl);
     panel.appendChild(this.button(
       this.monteCarloRunning
         ? "モンテカルロ検定を実行中…"
-        : "停止条件を再現したモンテカルロ検定を実行（2,000反復）",
+        : `停止条件を再現したモンテカルロ検定を実行（${selectedSimulationCount.toLocaleString()}反復）`,
       () => this.runMonteCarloAnalysis(analysis.themeId, {
-        challengeId: analysis.challengeId
+        challengeId: analysis.challengeId,
+        simulationCount: selectedSimulationCount
       }),
       { disabled: this.monteCarloRunning }
     ));
+    if (this.monteCarloRunning) {
+      panel.appendChild(this.renderMonteCarloProgress());
+    }
     if (this.monteCarlo?.themeId === analysis.themeId) {
       panel.appendChild(this.renderMonteCarloResult(this.monteCarlo));
     }
