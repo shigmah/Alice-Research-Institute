@@ -115,15 +115,36 @@
     import { createResearchInstituteServices } from "../src/institute/createResearchInstituteServices.js";
     import { ResearchInstituteScreen } from "../src/ui/ResearchInstituteScreen.js";
     import { RESEARCH_THEME_DEFINITIONS, ResearchInstituteAchievementBridge } from "../src/institute/ResearchThemeDefinitions.js";
+    import {
+      RESEARCH_CHALLENGE_RESULT_PREFIX,
+      RESEARCH_CHALLENGE_SESSION_PREFIX,
+      ResearchChallengeBridge
+    } from "../src/institute/ResearchChallengeBridge.js";
 
     const gameState = new GameState();
     const saveManager = new SaveManager(gameState);
     saveManager.load();
 
+    const challengeBridge = new ResearchChallengeBridge();
+    const challengeStarter = ({ themeId, challengeId }) => {
+      const session = challengeBridge.createSession({ themeId, challengeId });
+      if (!session) return false;
+
+      const target = new URL("./index.html", window.location.href);
+      target.searchParams.set("researchSession", session.sessionId);
+      const challengeWindow = window.open(target.toString(), "_blank");
+      if (!challengeWindow) {
+        challengeBridge.cancelSession(session.sessionId);
+        return false;
+      }
+      return true;
+    };
+
     const services = createResearchInstituteServices({
       gameState,
       saveManager,
       themeDefinitions: RESEARCH_THEME_DEFINITIONS,
+      challengeStarter,
       discoveryConditionEvaluator: (theme, event) =>
         theme.themeId === "maneki-neko-appearance-probability" &&
         event?.source === "game_achievement" &&
@@ -141,11 +162,65 @@
       });
     }
 
-    new ResearchInstituteScreen({
+    const screen = new ResearchInstituteScreen({
       documentRef: document,
       root: document.querySelector("#researchInstituteRoot"),
       controller: services.instituteController,
       services
+    });
+
+    const restoreSession = challengeBridge.readActiveSession();
+    if (restoreSession && ["active", "completed"].includes(restoreSession.status)) {
+      services.challengeCoordinator.restoreActiveChallenge({
+        themeId: restoreSession.themeId,
+        challengeId: restoreSession.challengeId
+      });
+      if (restoreSession.status === "completed") {
+        receiveChallengeResult(restoreSession.sessionId);
+      }
+    }
+
+    function receiveChallengeResult(sessionId) {
+      const result = challengeBridge.readResult(sessionId);
+      if (!result) return false;
+
+      const receipt = services.instituteController.receiveChallengeResult(result);
+      if (receipt.accepted || receipt.duplicate) {
+        challengeBridge.consumeResult(sessionId);
+        screen.notice = receipt.accepted
+          ? "実験結果を研究記録へ登録しました。"
+          : "この実験結果は登録済みのため、重複登録を行いませんでした。";
+        screen.render();
+        return true;
+      }
+
+      screen.notice = "実験結果を受け取りましたが、登録できませんでした。研究テーマの状態を確認してください。";
+      screen.render();
+      return false;
+    }
+
+    window.addEventListener("storage", event => {
+      if (typeof event.key !== "string") return;
+
+      if (event.key.startsWith(RESEARCH_CHALLENGE_RESULT_PREFIX)) {
+        const sessionId = event.key.slice(RESEARCH_CHALLENGE_RESULT_PREFIX.length);
+        receiveChallengeResult(sessionId);
+        return;
+      }
+
+      if (event.key.startsWith(RESEARCH_CHALLENGE_SESSION_PREFIX) && event.newValue) {
+        try {
+          const session = JSON.parse(event.newValue);
+          if (session?.status === "cancelled") {
+            services.challengeCoordinator.cancelChallenge();
+            challengeBridge.consumeResult(session.sessionId);
+            screen.notice = "実験が中断されたため、結果は登録されていません。実験室から再度開始できます。";
+            screen.render();
+          }
+        } catch (_error) {
+          // Ignore malformed cross-tab session messages.
+        }
+      }
     });
   </script>
 </body>
