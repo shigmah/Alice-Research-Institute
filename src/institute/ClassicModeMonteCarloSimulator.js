@@ -43,89 +43,102 @@ function simulateOneClassicGame({
   maxDiceCount = MAX_DICE_PER_TURN
 }) {
   try {
-  const game = new Game();
-  game.randomManager.setSeed(seed);
+    const game = new Game();
+    game.randomManager.setSeed(seed);
 
-  const faceCounts = emptyCounts();
-  let phase1TrialCount = 0;
-  let mainTurnCount = 0;
-  let mogumoguOfferIndex = 0;
+    const faceCounts = emptyCounts();
+    let phase1TrialCount = 0;
+    let mainTurnCount = 0;
+    let mogumoguOfferIndex = 0;
 
-  while (!game.state.isGameOver && mainTurnCount < maxMainTurns) {
-    const currentDiceCount = game.state.getCurrentDiceCount?.() ?? 1;
-    if (!Number.isInteger(currentDiceCount) ||
-        currentDiceCount < 1 ||
-        currentDiceCount > maxDiceCount) {
-      return { completed: false, reason: "dice-count-limit" };
-    }
-
-    const outcome = game.roll();
-
-    if (outcome?.mode?.phase === 1) {
-      const face = outcome.result?.values?.[0];
-      if (Number.isInteger(face) && face >= 1 && face <= 6) {
-        faceCounts[face] += 1;
-        phase1TrialCount += 1;
+    while (!game.state.isGameOver && mainTurnCount < maxMainTurns) {
+      const currentDiceCount = game.state.getCurrentDiceCount?.() ?? 1;
+      if (!Number.isInteger(currentDiceCount) ||
+          currentDiceCount < 1 ||
+          currentDiceCount > maxDiceCount) {
+        return { completed: false, reason: "dice-count-limit" };
       }
-    }
 
-    if (
-      outcome?.event?.eventId === "mogumogu" &&
-      outcome.event.payload?.phase === "offer"
-    ) {
-      const decision = decisionForOffer(policy, mogumoguOfferIndex);
-      mogumoguOfferIndex += 1;
+      const outcome = game.roll();
 
-      if (decision === "decline") {
-        game.declineCurrentEvent();
-      } else {
-        let eventSteps = 0;
-        while (game.hasActiveEvent() && !game.state.isGameOver) {
-          game.continueCurrentEvent();
-          eventSteps += 1;
-          if (eventSteps > MAX_EVENT_STEPS) {
-            return { completed: false, reason: "mogumogu-step-limit" };
-          }
+      if (outcome?.mode?.phase === 1) {
+        const face = outcome.result?.values?.[0];
+        if (Number.isInteger(face) && face >= 1 && face <= 6) {
+          faceCounts[face] += 1;
+          phase1TrialCount += 1;
         }
       }
-    } else if (outcome?.event?.pending && game.hasActiveEvent()) {
-      // The classic game currently has only one interactive event type. Do not
-      // silently bypass a future interactive event if one is introduced.
-      return { completed: false, reason: "unsupported-interactive-event" };
+
+      if (
+        outcome?.event?.eventId === "mogumogu" &&
+        outcome.event.payload?.phase === "offer"
+      ) {
+        const decision = decisionForOffer(policy, mogumoguOfferIndex);
+        mogumoguOfferIndex += 1;
+
+        if (decision === "decline") {
+          game.declineCurrentEvent();
+        } else {
+          let eventSteps = 0;
+          while (game.hasActiveEvent() && !game.state.isGameOver) {
+            game.continueCurrentEvent();
+            eventSteps += 1;
+            if (eventSteps > MAX_EVENT_STEPS) {
+              return { completed: false, reason: "mogumogu-step-limit" };
+            }
+          }
+        }
+      } else if (outcome?.event?.pending && game.hasActiveEvent()) {
+        // The classic game currently has only one interactive event type. Do not
+        // silently bypass a future interactive event if one is introduced.
+        return { completed: false, reason: "unsupported-interactive-event" };
+      }
+
+      mainTurnCount += 1;
     }
 
-    mainTurnCount += 1;
-  }
+    if (!game.state.isGameOver) {
+      return { completed: false, reason: "main-turn-limit" };
+    }
 
-  if (!game.state.isGameOver) {
-    return { completed: false, reason: "main-turn-limit" };
-  }
+    const endReason = game.state.gameEndReason ?? "no-cats";
+    if (endReason !== "no-cats") {
+      return { completed: false, reason: `unexpected-end:${endReason}` };
+    }
 
-  const endReason = game.state.gameEndReason ?? "no-cats";
-  if (endReason !== "no-cats") {
-    return { completed: false, reason: `unexpected-end:${endReason}` };
+    return {
+      completed: true,
+      endReason,
+      phase1TrialCount,
+      faceCounts,
+      mainTurnCount,
+      mogumoguOfferCount: mogumoguOfferIndex
+    };
+  } catch (_error) {
+    // A single unexpected engine exception invalidates this replicate, not the
+    // entire Monte Carlo run. Failed replicates are surfaced in the final result.
+    return { completed: false, reason: "simulation-error" };
   }
-
-  return {
-    completed: true,
-    endReason,
-    phase1TrialCount,
-    faceCounts,
-    mainTurnCount,
-    mogumoguOfferCount: mogumoguOfferIndex
-  };
 }
 
 export class ClassicModeMonteCarloSimulator {
   constructor({
     yieldControl = () => new Promise(resolve => setTimeout(resolve, 0)),
-    maxMainTurns = MAX_MAIN_TURNS
+    maxMainTurns = MAX_MAIN_TURNS,
+    maxDiceCount = MAX_DICE_PER_TURN
   } = {}) {
     if (typeof yieldControl !== "function") {
       throw new TypeError("yieldControl must be a function");
     }
+    if (!Number.isInteger(maxMainTurns) || maxMainTurns < 1) {
+      throw new RangeError("maxMainTurns must be a positive integer");
+    }
+    if (!Number.isInteger(maxDiceCount) || maxDiceCount < 1) {
+      throw new RangeError("maxDiceCount must be a positive integer");
+    }
     this.yieldControl = yieldControl;
     this.maxMainTurns = maxMainTurns;
+    this.maxDiceCount = maxDiceCount;
   }
 
   async run({
@@ -135,18 +148,22 @@ export class ClassicModeMonteCarloSimulator {
     seed = Date.now(),
     yieldEvery = 25
   } = {}) {
-    if (!observedFaceCounts ||
-        !FACE_VALUES.every(face => Number.isSafeInteger(observedFaceCounts[face]) &&
-          observedFaceCounts[face] >= 0) ||
-        !Array.isArray(experimentPolicies) ||
-        experimentPolicies.length === 0 ||
-        !experimentPolicies.every(policy =>
-          policy && typeof policy === "object" &&
-          (policy.decisions === undefined || Array.isArray(policy.decisions)) &&
-          (policy.defaultDecision === undefined ||
-            policy.defaultDecision === "accept" ||
-            policy.defaultDecision === "decline")
-        )) {
+    const validObservedCounts = observedFaceCounts &&
+      FACE_VALUES.every(face =>
+        Number.isSafeInteger(observedFaceCounts[face]) && observedFaceCounts[face] >= 0
+      );
+    const validPolicies = Array.isArray(experimentPolicies) &&
+      experimentPolicies.length > 0 &&
+      experimentPolicies.every(policy =>
+        policy && typeof policy === "object" &&
+        (policy.decisions === undefined || Array.isArray(policy.decisions)) &&
+        (policy.defaultDecision === undefined ||
+          policy.defaultDecision === "accept" ||
+          policy.defaultDecision === "decline") &&
+        (policy.decisions ?? []).every(decision => decision === "accept" || decision === "decline")
+      );
+
+    if (!validObservedCounts || !validPolicies) {
       throw new TypeError("valid observed face counts and at least one valid experiment policy are required");
     }
     if (!Number.isInteger(simulationCount) || simulationCount < 1 || simulationCount > 50000) {
@@ -158,8 +175,10 @@ export class ClassicModeMonteCarloSimulator {
 
     const observedSampleCount = totalCounts(observedFaceCounts);
     const observedStatistic = chiSquare(observedFaceCounts);
-    if (observedSampleCount <= 0 || observedStatistic === null) {
-      throw new Error("There are no observed phase 1 dice samples to test");
+    if (!Number.isSafeInteger(observedSampleCount) ||
+        observedSampleCount <= 0 ||
+        observedStatistic === null) {
+      throw new Error("There are no valid observed phase 1 dice samples to test");
     }
 
     const normalizedSeed = normalizeSeed(seed);
@@ -203,7 +222,9 @@ export class ClassicModeMonteCarloSimulator {
       if (replicateCompleted) {
         const simulatedSampleCount = totalCounts(pooledCounts);
         const simulatedStatistic = chiSquare(pooledCounts);
-        if (simulatedSampleCount > 0 && Number.isFinite(simulatedStatistic)) {
+        if (Number.isSafeInteger(simulatedSampleCount) &&
+            simulatedSampleCount > 0 &&
+            Number.isFinite(simulatedStatistic)) {
           validSimulationCount += 1;
           totalSimulatedSampleCount += simulatedSampleCount;
           minimumSimulatedSampleCount = Math.min(minimumSimulatedSampleCount, simulatedSampleCount);
@@ -211,6 +232,8 @@ export class ClassicModeMonteCarloSimulator {
           if (simulatedStatistic >= observedStatistic) extremeCount += 1;
         } else {
           failedSimulationCount += 1;
+          failureReasons["empty-or-invalid-simulated-sample"] =
+            (failureReasons["empty-or-invalid-simulated-sample"] ?? 0) + 1;
         }
       } else {
         failedSimulationCount += 1;
@@ -253,6 +276,8 @@ export class ClassicModeMonteCarloSimulator {
       minimumSimulatedSampleCount: validSimulationCount > 0 ? minimumSimulatedSampleCount : null,
       maximumSimulatedSampleCount: validSimulationCount > 0 ? maximumSimulatedSampleCount : null,
       experimentCountPerReplicate: experimentPolicies.length,
+      maxDicePerTurn: this.maxDiceCount,
+      maxMainTurns: this.maxMainTurns,
       failureReasons
     };
   }
