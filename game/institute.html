@@ -114,6 +114,7 @@
     import { SaveManager } from "../src/save/SaveManager.js";
     import { createResearchInstituteServices } from "../src/institute/createResearchInstituteServices.js";
     import { ResearchInstituteScreen } from "../src/ui/ResearchInstituteScreen.js";
+    import { RESEARCH_THEME_DEFINITIONS, ResearchInstituteAchievementBridge } from "../src/institute/ResearchThemeDefinitions.js";
 
     const gameState = new GameState();
     const saveManager = new SaveManager(gameState);
@@ -121,8 +122,25 @@
 
     const services = createResearchInstituteServices({
       gameState,
-      saveManager
+      saveManager,
+      themeDefinitions: RESEARCH_THEME_DEFINITIONS,
+      discoveryConditionEvaluator: (theme, event) =>
+        theme.themeId === "maneki-neko-appearance-probability" &&
+        event?.source === "game_achievement" &&
+        event?.achievementId === "cat-count-20"
     });
+
+    const achievementBridge = new ResearchInstituteAchievementBridge();
+    const achievements = achievementBridge.readAll();
+    if (achievements["cat-count-20"]) {
+      const discovered = services.instituteController.handleInstituteEvent({
+        eventId: "classic-cat-count-20",
+        source: "game_achievement",
+        sourceId: "cat-count-20",
+        achievementId: "cat-count-20"
+      });
+      if (discovered.length > 0) saveManager.save();
+    }
 
     new ResearchInstituteScreen({
       documentRef: document,
