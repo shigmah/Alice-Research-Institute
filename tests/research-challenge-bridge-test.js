@@ -71,7 +71,15 @@ emit({
 emit({
   event: {
     eventId: "mogumogu",
-    payload: { dice: 3, reward: { type: "cat-plus-10", amount: 10 } }
+    payload: { dice: 3 }
+  }
+});
+// A second die roll belongs to the same accepted offer and must not increase
+// the number of accepted offers a second time.
+emit({
+  event: {
+    eventId: "mogumogu",
+    payload: { dice: 5, reward: { type: "cat-plus-10", amount: 10 } }
   }
 });
 emit({ event: { eventId: "mogumogu", payload: { phase: "offer" } } });
@@ -93,7 +101,7 @@ console.assert(result?.metrics?.removedCatCount === 1, "removed cats are measure
 console.assert(result?.metrics?.cheshireEventCount === 1, "Cheshire events are counted");
 console.assert(result?.metrics?.cheshireGeneratedCatCount === 5, "Cheshire cat additions are measured separately");
 console.assert(result?.metrics?.mogumoguEventCount === 2, "Mogumogu event offers are counted");
-console.assert(result?.metrics?.mogumoguDiceRollCount === 1, "Mogumogu dice rolls are tracked separately");
+console.assert(result?.metrics?.mogumoguDiceRollCount === 2, "Mogumogu dice rolls are tracked separately");
 console.assert(result?.metrics?.mogumoguAcceptedCount === 1, "accepted Mogumogu offers are counted");
 console.assert(result?.metrics?.mogumoguDeclinedCount === 1, "declined Mogumogu offers are counted");
 console.assert(JSON.stringify(result?.metrics?.mogumoguDecisionHistory) === JSON.stringify(["accept", "decline"]),
