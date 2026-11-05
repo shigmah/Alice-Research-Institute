@@ -277,5 +277,7 @@ const services = createResearchInstituteServices({
 const areAnalysis = services.areInterface.openAnalysis(themeId, { challengeId });
 console.assert(areAnalysis?.faceObservationCount === 3,
   "AREInterface delegates to the statistical analyzer");
+console.assert(typeof services.areInterface.runMonteCarlo === "function",
+  "AREInterface exposes the stopping-rule Monte Carlo operation");
 
 console.log("Research statistics analysis tests: PASS");
