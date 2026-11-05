@@ -106,7 +106,7 @@ export class ResearchChallengeRun {
         this.resolveMogumoguDecision("decline");
       } else if (Number.isInteger(payload.dice)) {
         this.metrics.mogumoguDiceRollCount += 1;
-        if (this.metrics.pendingMogumoguDecisionIndex !== null) {
+        if (this.pendingMogumoguDecisionIndex !== null) {
           this.metrics.mogumoguAcceptedCount += 1;
           this.resolveMogumoguDecision("accept");
         }
