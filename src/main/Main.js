@@ -4,6 +4,7 @@ import { ensureModeSetup, installCollectorModeSupport } from "../ui/ModeSetup.js
 import { ensureBattleSetup, installBattleModeSupport } from "../ui/BattleSetup.js";
 import { installBattlePlayerBoard } from "../ui/BattleBoard.js";
 import { Game } from "../core/Game.js";
+import { ResearchInstituteAchievementBridge } from "../institute/ResearchThemeDefinitions.js";
 
 function createBattleRenderState(state, outcome) {
   if (!state || state.getGameMode?.() !== "BATTLE") return state;
@@ -141,6 +142,14 @@ export function createMain(documentRef = document) {
   ensureBattleSetup(documentRef);
 
   const game = new Game();
+  const achievementBridge = new ResearchInstituteAchievementBridge();
+  const unsubscribeAchievement = game.onChange(state => {
+    if (state?.getGameMode?.() !== "CLASSIC") return;
+    const catCount = state?.getCats?.()?.length ?? 0;
+    if (catCount >= 20) {
+      achievementBridge.recordAchievement("cat-count-20", { catCount, gameMode: "CLASSIC" });
+    }
+  });
   const ui = new MainScreen(documentRef);
   installCollectorModeSupport(ui);
   installBattleModeSupport(ui);
@@ -186,5 +195,5 @@ export function createMain(documentRef = document) {
 
   const controller = new GameController({ game, ui });
 
-  return { game, ui, controller };
+  return { game, ui, controller, unsubscribeAchievement };
 }
