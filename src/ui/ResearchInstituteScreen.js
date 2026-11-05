@@ -248,7 +248,7 @@ export class ResearchInstituteScreen {
     const panel = this.element("section", "institute-content-stack");
     panel.appendChild(this.element("h4", "", "出目分布の統計分析"));
     panel.appendChild(this.element("p", "muted",
-      "対象は第1フェーズのサイコロです。理論モデルでは1～6の各目がそれぞれ1/6で出現すると仮定します。イベントによる招き猫の増減は、サイコロの出目分布とは分けて集計しています。"));
+      "対象は第1フェーズのサイコロです。理論モデルでは1～6の各目がそれぞれ1/6で出現すると仮定します。通常クラシックモードでは出目と同じ数の招き猫が生成されるため、出目の平均は第1フェーズの平均生成数に対応します。イベントによる招き猫の増減は、サイコロの出目分布とは分けて集計しています。"));
 
     const summary = this.element("div", "institute-summary");
     summary.append(
