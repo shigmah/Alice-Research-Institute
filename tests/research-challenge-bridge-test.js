@@ -4,6 +4,9 @@ import {
 } from "../src/institute/ResearchChallengeBridge.js";
 import { ResearchChallengeRun } from "../src/institute/ResearchChallengeRun.js";
 import { ChallengeCoordinator } from "../src/institute/ChallengeCoordinator.js";
+import { GameState } from "../src/core/GameState.js";
+import { createResearchInstituteServices } from "../src/institute/createResearchInstituteServices.js";
+import { RESEARCH_THEME_DEFINITIONS } from "../src/institute/ResearchThemeDefinitions.js";
 
 class MemoryStorage {
   constructor() { this.values = new Map(); }
@@ -83,20 +86,32 @@ console.assert(listeners.length === 0, "run unsubscribes after completion");
 console.assert(bridge.readSession(session.sessionId)?.status === "completed",
   "completed session status is persisted");
 
-// The institute can rebuild the active challenge association after a reload.
-const restoredCoordinator = new ChallengeCoordinator({
-  themeManager: {
-    getThemeProgress: () => ({ status: "researching" }),
-    getThemeDefinition: () => ({ challengeIds: ["maneki-neko-classic"] })
-  },
-  resultProcessor: { processResult: () => ({ accepted: true }) }
+// The institute can rebuild the active challenge association after a reload,
+// then pass the actual result through its normal result processor.
+const instituteState = new GameState();
+let saveCount = 0;
+const services = createResearchInstituteServices({
+  gameState: instituteState,
+  themeDefinitions: RESEARCH_THEME_DEFINITIONS,
+  saveManager: { save() { saveCount += 1; return true; } },
+  now: fixedNow
 });
-console.assert(restoredCoordinator.restoreActiveChallenge({
+services.themeManager.discoverTheme(session.themeId, "test");
+services.instituteController.startResearch(session.themeId);
+console.assert(services.challengeCoordinator.restoreActiveChallenge({
   themeId: session.themeId,
   challengeId: session.challengeId
 }) === true, "active challenge can be restored after institute reload");
-console.assert(restoredCoordinator.activeChallenge?.challengeId === session.challengeId,
+console.assert(services.challengeCoordinator.activeChallenge?.challengeId === session.challengeId,
   "restored challenge metadata is retained");
+
+const receipt = services.instituteController.receiveChallengeResult(result);
+console.assert(receipt.accepted === true, "institute controller accepts the experiment result");
+console.assert(instituteState.researchInstituteData.challengeResults.length === 1,
+  "experiment result is persisted in institute data");
+console.assert(services.entryManager.getEntry(session.themeId).attemptCount === 1,
+  "result updates Research Entry attempt count");
+console.assert(saveCount === 1, "accepted result triggers institute save");
 
 // Consuming a result clears its temporary cross-tab transport records.
 console.assert(bridge.consumeResult(session.sessionId) === true, "result can be consumed");
