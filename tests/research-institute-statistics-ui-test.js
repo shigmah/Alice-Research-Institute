@@ -6,6 +6,8 @@ class StubElement {
     this.className = "";
     this.children = [];
     this.listeners = {};
+    this.style = {};
+    this.attributes = {};
     this.disabled = false;
     this.type = "";
     this._text = "";
@@ -28,6 +30,10 @@ class StubElement {
 
   addEventListener(type, callback) {
     this.listeners[type] = callback;
+  }
+
+  setAttribute(name, value) {
+    this.attributes[name] = String(value);
   }
 
   click() {
@@ -165,6 +171,23 @@ console.assert(happy.screen.latestTree.textContent.includes("出目分布の統�
   "analysis results are rendered after the button is clicked");
 console.assert(happy.screen.latestTree.textContent.includes("95% Wilson区間"),
   "the statistical distribution table is rendered");
+const chart = findElement(happy.screen.latestTree, node =>
+  node.className === "ari-chart-figure"
+);
+console.assert(chart !== null, "distribution bar chart is rendered");
+const plot = findElement(chart, node => node.className === "ari-chart-plot");
+console.assert(plot?.attributes?.role === "img",
+  "distribution chart has an accessible image role");
+const chartColumns = plot.children.filter(node => node.className === "ari-chart-column");
+console.assert(chartColumns.length === 6, "chart displays one column for each die face");
+const allBars = chartColumns.flatMap(column =>
+  findElement(column, node => node.className === "ari-chart-bars")?.children ?? []
+);
+console.assert(allBars.length === 12, "chart compares observed and theoretical bars for six faces");
+console.assert(allBars[0].style.height === "0%",
+  "zero observed frequency renders as a zero-height bar");
+console.assert(allBars[1].style.height !== "0%",
+  "theoretical expected frequency is shown even when observed count is zero");
 
 // Errors must not disappear silently. The user receives a visible message.
 const broken = createScreen({
