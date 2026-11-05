@@ -156,6 +156,8 @@
     const report = document.querySelector("#e2eReport");
     const startButton = document.querySelector("#startBrowserCheck");
     let startBrowserCheckHandler = null;
+    startButton.disabled = true;
+    status.textContent = "検証ページを初期化しています…";
 
     // Attach diagnostics and a click handler before any fixture setup runs.
     // If initialization fails, the page now explains why the action is unavailable.
@@ -468,6 +470,8 @@
         scenarioSelect.disabled = false;
       }
     };
+    startButton.disabled = false;
+    status.textContent += " ブラウザ検証ボタンを有効にしました。";
   </script>
 </body>
 </html>
