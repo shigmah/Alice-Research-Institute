@@ -132,7 +132,11 @@ function createScreen({ openAnalysis = () => analysis } = {}) {
     }
   };
   screen.render = () => {
-    screen.latestTree = screen.renderResearchLab();
+    const tree = screen.renderResearchLab();
+    if (screen.notice) {
+      tree.appendChild(screen.element("div", "institute-notice", screen.notice));
+    }
+    screen.latestTree = tree;
   };
   screen.latestTree = screen.renderResearchLab();
   return {
