@@ -59,7 +59,8 @@ export function createResearchInstituteServices({
   const areInterface = new AREInterface({
     entryManager,
     archiveManager,
-    analysisProvider: (themeId, options) => statisticsAnalyzer.analyze(themeId, options)
+    analysisProvider: (themeId, options) => statisticsAnalyzer.analyze(themeId, options),
+    monteCarloProvider: (themeId, options) => statisticsAnalyzer.runMonteCarlo(themeId, options)
   });
   const instituteController = new ResearchInstituteController({
     gameState,
