@@ -169,7 +169,7 @@ test("ClassicModeMonteCarloSimulator rejects invalid simulation settings", async
   );
   const stopped = new ClassicModeMonteCarloSimulator({
     yieldControl: async () => {},
-    maxMainTurns: 0
+    maxMainTurns: 1
   });
   const notCompleted = await stopped.run({
     observedFaceCounts: { 1: 1, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 },
