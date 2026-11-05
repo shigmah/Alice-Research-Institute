@@ -4,6 +4,9 @@ const FACE_VALUES = Object.freeze([1, 2, 3, 4, 5, 6]);
 const MAX_MAIN_TURNS = 10000;
 const MAX_EVENT_STEPS = 10;
 const MAX_DICE_PER_TURN = 512;
+const MAX_SIMULATIONS = 50000;
+const WILSON_Z_95 = 1.959963984540054;
+const DEFAULT_PROGRESS_POINTS = 100;
 
 function emptyCounts() {
   return { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
@@ -13,9 +16,18 @@ function totalCounts(counts) {
   return FACE_VALUES.reduce((sum, face) => sum + counts[face], 0);
 }
 
+function hasValidFaceCounts(counts) {
+  return Boolean(
+    counts &&
+    typeof counts === "object" &&
+    !Array.isArray(counts) &&
+    FACE_VALUES.every(face => Number.isSafeInteger(counts[face]) && counts[face] >= 0)
+  );
+}
+
 function chiSquare(counts) {
   const n = totalCounts(counts);
-  if (n <= 0) return null;
+  if (!Number.isSafeInteger(n) || n <= 0) return null;
   const expected = n / FACE_VALUES.length;
   return FACE_VALUES.reduce((sum, face) => {
     const difference = counts[face] - expected;
@@ -34,6 +46,76 @@ function decisionForOffer(policy, index) {
     return decisions[index] === "decline" ? "decline" : "accept";
   }
   return policy?.defaultDecision === "decline" ? "decline" : "accept";
+}
+
+/**
+ * Wilson score interval for a binomial proportion.
+ * The interval is based on the raw extremeCount / validSimulationCount ratio;
+ * the reported Monte Carlo p-value separately uses the plus-one correction.
+ */
+function wilsonInterval(successes, trials) {
+  if (!Number.isSafeInteger(successes) ||
+      !Number.isSafeInteger(trials) ||
+      trials <= 0 ||
+      successes < 0 ||
+      successes > trials) {
+    return null;
+  }
+
+  const zSquared = WILSON_Z_95 ** 2;
+  const proportion = successes / trials;
+  const denominator = 1 + zSquared / trials;
+  const center = (proportion + zSquared / (2 * trials)) / denominator;
+  const margin = (WILSON_Z_95 * Math.sqrt(
+    (proportion * (1 - proportion) / trials) +
+    (zSquared / (4 * trials ** 2))
+  )) / denominator;
+
+  return {
+    lower: Math.max(0, center - margin),
+    upper: Math.min(1, center + margin)
+  };
+}
+
+function createEstimate(extremeCount, validSimulationCount) {
+  if (validSimulationCount <= 0) {
+    return {
+      pValue: null,
+      monteCarloStandardError: null,
+      monteCarloLower95: null,
+      monteCarloUpper95: null
+    };
+  }
+
+  const pValue = (extremeCount + 1) / (validSimulationCount + 1);
+  const monteCarloStandardError = Math.sqrt(
+    (pValue * (1 - pValue)) / (validSimulationCount + 1)
+  );
+  const interval = wilsonInterval(extremeCount, validSimulationCount);
+
+  return {
+    pValue,
+    monteCarloStandardError,
+    monteCarloLower95: interval?.lower ?? null,
+    monteCarloUpper95: interval?.upper ?? null
+  };
+}
+
+function createProgressSnapshot({
+  completedSimulationCount,
+  requestedSimulationCount,
+  validSimulationCount,
+  failedSimulationCount,
+  extremeCount
+}) {
+  return {
+    completedSimulationCount,
+    requestedSimulationCount,
+    validSimulationCount,
+    failedSimulationCount,
+    extremeCount,
+    ...createEstimate(extremeCount, validSimulationCount)
+  };
 }
 
 function simulateOneClassicGame({
@@ -103,7 +185,7 @@ function simulateOneClassicGame({
 
     const endReason = game.state.gameEndReason ?? "no-cats";
     if (endReason !== "no-cats") {
-      return { completed: false, reason: `unexpected-end:${endReason}` };
+      return { completed: false, reason: "unexpected-end:" + endReason };
     }
 
     return {
@@ -115,8 +197,7 @@ function simulateOneClassicGame({
       mogumoguOfferCount: mogumoguOfferIndex
     };
   } catch (_error) {
-    // A single unexpected engine exception invalidates this replicate, not the
-    // entire Monte Carlo run. Failed replicates are surfaced in the final result.
+    // One unexpected engine exception invalidates this replicate, not the entire run.
     return { completed: false, reason: "simulation-error" };
   }
 }
@@ -125,7 +206,8 @@ export class ClassicModeMonteCarloSimulator {
   constructor({
     yieldControl = () => new Promise(resolve => setTimeout(resolve, 0)),
     maxMainTurns = MAX_MAIN_TURNS,
-    maxDiceCount = MAX_DICE_PER_TURN
+    maxDiceCount = MAX_DICE_PER_TURN,
+    simulateGame = simulateOneClassicGame
   } = {}) {
     if (typeof yieldControl !== "function") {
       throw new TypeError("yieldControl must be a function");
@@ -136,9 +218,14 @@ export class ClassicModeMonteCarloSimulator {
     if (!Number.isInteger(maxDiceCount) || maxDiceCount < 1) {
       throw new RangeError("maxDiceCount must be a positive integer");
     }
+    if (typeof simulateGame !== "function") {
+      throw new TypeError("simulateGame must be a function");
+    }
+
     this.yieldControl = yieldControl;
     this.maxMainTurns = maxMainTurns;
     this.maxDiceCount = maxDiceCount;
+    this.simulateGame = simulateGame;
   }
 
   async run({
@@ -146,31 +233,40 @@ export class ClassicModeMonteCarloSimulator {
     experimentPolicies,
     simulationCount = 2000,
     seed = Date.now(),
-    yieldEvery = 25
+    yieldEvery = 25,
+    progressEvery = null,
+    onProgress = null
   } = {}) {
-    const validObservedCounts = observedFaceCounts &&
-      FACE_VALUES.every(face =>
-        Number.isSafeInteger(observedFaceCounts[face]) && observedFaceCounts[face] >= 0
-      );
+    const validObservedCounts = hasValidFaceCounts(observedFaceCounts);
     const validPolicies = Array.isArray(experimentPolicies) &&
       experimentPolicies.length > 0 &&
       experimentPolicies.every(policy =>
-        policy && typeof policy === "object" &&
+        policy &&
+        typeof policy === "object" &&
         (policy.decisions === undefined || Array.isArray(policy.decisions)) &&
         (policy.defaultDecision === undefined ||
           policy.defaultDecision === "accept" ||
           policy.defaultDecision === "decline") &&
-        (policy.decisions ?? []).every(decision => decision === "accept" || decision === "decline")
+        (policy.decisions ?? []).every(decision =>
+          decision === "accept" || decision === "decline"
+        )
       );
 
     if (!validObservedCounts || !validPolicies) {
       throw new TypeError("valid observed face counts and at least one valid experiment policy are required");
     }
-    if (!Number.isInteger(simulationCount) || simulationCount < 1 || simulationCount > 50000) {
-      throw new RangeError("simulationCount must be an integer between 1 and 50000");
+    if (!Number.isInteger(simulationCount) || simulationCount < 1 || simulationCount > MAX_SIMULATIONS) {
+      throw new RangeError("simulationCount must be an integer between 1 and " + MAX_SIMULATIONS);
     }
     if (!Number.isInteger(yieldEvery) || yieldEvery < 1) {
       throw new RangeError("yieldEvery must be a positive integer");
+    }
+    if (progressEvery !== null &&
+        (!Number.isInteger(progressEvery) || progressEvery < 1)) {
+      throw new RangeError("progressEvery must be a positive integer when provided");
+    }
+    if (onProgress !== null && typeof onProgress !== "function") {
+      throw new TypeError("onProgress must be a function when provided");
     }
 
     const observedSampleCount = totalCounts(observedFaceCounts);
@@ -182,6 +278,9 @@ export class ClassicModeMonteCarloSimulator {
     }
 
     const normalizedSeed = normalizeSeed(seed);
+    const normalizedProgressEvery = progressEvery ??
+      Math.max(1, Math.ceil(simulationCount / DEFAULT_PROGRESS_POINTS));
+
     let extremeCount = 0;
     let validSimulationCount = 0;
     let failedSimulationCount = 0;
@@ -189,10 +288,31 @@ export class ClassicModeMonteCarloSimulator {
     let minimumSimulatedSampleCount = Number.POSITIVE_INFINITY;
     let maximumSimulatedSampleCount = 0;
     const failureReasons = {};
+    const convergenceHistory = [];
+
+    const recordProgress = completedSimulationCount => {
+      const snapshot = createProgressSnapshot({
+        completedSimulationCount,
+        requestedSimulationCount: simulationCount,
+        validSimulationCount,
+        failedSimulationCount,
+        extremeCount
+      });
+
+      const previous = convergenceHistory[convergenceHistory.length - 1];
+      if (previous?.completedSimulationCount !== completedSimulationCount) {
+        convergenceHistory.push(snapshot);
+      } else {
+        convergenceHistory[convergenceHistory.length - 1] = snapshot;
+      }
+
+      if (onProgress) onProgress({ ...snapshot });
+    };
 
     for (let simulationIndex = 0; simulationIndex < simulationCount; simulationIndex += 1) {
       const pooledCounts = emptyCounts();
       let replicateCompleted = true;
+      let replicateFailureReason = null;
 
       for (let experimentIndex = 0; experimentIndex < experimentPolicies.length; experimentIndex += 1) {
         const seedForGame = (
@@ -201,22 +321,46 @@ export class ClassicModeMonteCarloSimulator {
           Math.imul(experimentIndex + 1, 0x85ebca77)
         ) >>> 0;
 
-        const simulation = simulateOneClassicGame({
-          seed: seedForGame,
-          policy: experimentPolicies[experimentIndex],
-          maxMainTurns: this.maxMainTurns,
-          maxDiceCount: this.maxDiceCount
-        });
+        let simulation;
+        try {
+          simulation = this.simulateGame({
+            seed: seedForGame,
+            policy: experimentPolicies[experimentIndex],
+            maxMainTurns: this.maxMainTurns,
+            maxDiceCount: this.maxDiceCount
+          });
+        } catch (_error) {
+          simulation = { completed: false, reason: "simulation-error" };
+        }
 
-        if (!simulation.completed) {
+        if (!simulation?.completed) {
           replicateCompleted = false;
-          failureReasons[simulation.reason] = (failureReasons[simulation.reason] ?? 0) + 1;
+          replicateFailureReason = simulation?.reason ?? "simulation-incomplete";
+          break;
+        }
+
+        const validSimulatedFaceCounts = hasValidFaceCounts(simulation.faceCounts);
+        const simulatedGameSampleCount = validSimulatedFaceCounts
+          ? totalCounts(simulation.faceCounts)
+          : null;
+        if (!validSimulatedFaceCounts ||
+            !Number.isSafeInteger(simulation.phase1TrialCount) ||
+            simulation.phase1TrialCount <= 0 ||
+            simulatedGameSampleCount !== simulation.phase1TrialCount) {
+          replicateCompleted = false;
+          replicateFailureReason = "invalid-or-inconsistent-simulated-observation-data";
           break;
         }
 
         for (const face of FACE_VALUES) {
           pooledCounts[face] += simulation.faceCounts[face];
+          if (!Number.isSafeInteger(pooledCounts[face])) {
+            replicateCompleted = false;
+            replicateFailureReason = "simulated-observation-count-overflow";
+            break;
+          }
         }
+        if (!replicateCompleted) break;
       }
 
       if (replicateCompleted) {
@@ -231,45 +375,45 @@ export class ClassicModeMonteCarloSimulator {
           maximumSimulatedSampleCount = Math.max(maximumSimulatedSampleCount, simulatedSampleCount);
           if (simulatedStatistic >= observedStatistic) extremeCount += 1;
         } else {
-          failedSimulationCount += 1;
-          failureReasons["empty-or-invalid-simulated-sample"] =
-            (failureReasons["empty-or-invalid-simulated-sample"] ?? 0) + 1;
+          replicateCompleted = false;
+          replicateFailureReason = "empty-or-invalid-simulated-sample";
         }
-      } else {
-        failedSimulationCount += 1;
       }
 
-      if ((simulationIndex + 1) % yieldEvery === 0) {
+      if (!replicateCompleted) {
+        failedSimulationCount += 1;
+        const reason = replicateFailureReason ?? "simulation-incomplete";
+        failureReasons[reason] = (failureReasons[reason] ?? 0) + 1;
+      }
+
+      const completedSimulationCount = simulationIndex + 1;
+      if (completedSimulationCount % normalizedProgressEvery === 0 ||
+          completedSimulationCount === simulationCount) {
+        recordProgress(completedSimulationCount);
+      }
+
+      if (completedSimulationCount % yieldEvery === 0) {
         await this.yieldControl();
       }
     }
 
-    const pValue = validSimulationCount > 0
-      ? (extremeCount + 1) / (validSimulationCount + 1)
-      : null;
-    const monteCarloStandardError = pValue === null
-      ? null
-      : Math.sqrt((pValue * (1 - pValue)) / (validSimulationCount + 1));
-    const monteCarloLower95 = pValue === null
-      ? null
-      : Math.max(0, pValue - (1.96 * monteCarloStandardError));
-    const monteCarloUpper95 = pValue === null
-      ? null
-      : Math.min(1, pValue + (1.96 * monteCarloStandardError));
+    const estimate = createEstimate(extremeCount, validSimulationCount);
 
     return {
       method: "stopping-rule-monte-carlo",
       seed: normalizedSeed,
       requestedSimulationCount: simulationCount,
+      completedSimulationCount: simulationCount,
+      progressEvery: normalizedProgressEvery,
+      confidenceLevel: 0.95,
+      monteCarloIntervalMethod: "wilson-score",
       validSimulationCount,
       failedSimulationCount,
       extremeCount,
       observedStatistic,
       observedSampleCount,
-      pValue,
-      monteCarloStandardError,
-      monteCarloLower95,
-      monteCarloUpper95,
+      ...estimate,
+      convergenceHistory,
       averageSimulatedSampleCount: validSimulationCount > 0
         ? totalSimulatedSampleCount / validSimulationCount
         : null,
@@ -283,4 +427,4 @@ export class ClassicModeMonteCarloSimulator {
   }
 }
 
-export { simulateOneClassicGame };
+export { simulateOneClassicGame, wilsonInterval };
