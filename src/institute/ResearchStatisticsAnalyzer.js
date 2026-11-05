@@ -192,6 +192,9 @@ export class ResearchStatisticsAnalyzer {
 
       let decisions = [];
       let defaultDecision = "accept";
+      const mogumoguOfferCount = Number.isSafeInteger(metrics.mogumoguEventCount)
+        ? Math.max(0, metrics.mogumoguEventCount)
+        : 0;
       if (Array.isArray(metrics.mogumoguDecisionHistory)) {
         decisions = metrics.mogumoguDecisionHistory
           .filter(decision => decision === "accept" || decision === "decline");
@@ -199,7 +202,12 @@ export class ResearchStatisticsAnalyzer {
         const accepted = decisions.filter(decision => decision === "accept").length;
         const declined = decisions.length - accepted;
         defaultDecision = declined > accepted ? "decline" : "accept";
-      } else if ((metrics.mogumoguEventCount ?? 0) > 0) {
+        if (decisions.length < mogumoguOfferCount) {
+          // A partially recorded or legacy event history uses the modal decision
+          // for missing offers, and the assumption is reported to the researcher.
+          legacyDecisionAssumptionCount += 1;
+        }
+      } else if (mogumoguOfferCount > 0) {
         // Historical result records predate explicit offer-decision tracking.
         // Auto-accept is a transparent fallback assumption for those records.
         legacyDecisionAssumptionCount += 1;
@@ -242,7 +250,7 @@ export class ResearchStatisticsAnalyzer {
       legacyDecisionAssumptionCount,
       recordedDecisionHistoryCount,
       mogumoguPolicy: legacyDecisionAssumptionCount > 0
-        ? "過去の記録は受諾・辞退の履歴がないため、もぐもぐイベントをすべて受諾する仮定で再現しました。"
+        ? "もぐもぐイベントの受諾・辞退履歴がない、または一部不足しています。不足している選択は、記録済みの多数決（履歴がない過去記録は受諾）で補っています。"
         : "保存されているもぐもぐイベントの受諾・辞退履歴を実験ごとに再現しました。",
       stoppingRule: "各シミュレーション実験は、通常クラシックモードのゲーム本体を使用し、招き猫が0匹になった時点で終了します。",
       modelNotes: [
