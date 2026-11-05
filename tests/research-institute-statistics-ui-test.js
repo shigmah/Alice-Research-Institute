@@ -101,6 +101,19 @@ const analysis = {
     mogumoguDiceRollCount: 0,
     mogumoguRewardCatCount: 0
   },
+  chiSquareGoodnessOfFit: {
+    statistic: 1.25,
+    degreesOfFreedom: 5,
+    pValue: 0.94,
+    alpha: 0.05,
+    expectedCountPerFace: 1.17,
+    expectedCountConditionMet: false,
+    dataConsistency: true,
+    canInterpret: false,
+    decision: "pending",
+    interpretation: "理論期待度数が5未満のため、p値は参考値です。有意差の判定は保留します。",
+    samplingDesignNote: "A方式では標本数は固定されません。"
+  },
   notes: ["画面テスト用の標本です。"]
 };
 
@@ -171,6 +184,16 @@ console.assert(happy.screen.latestTree.textContent.includes("出目分布の統�
   "analysis results are rendered after the button is clicked");
 console.assert(happy.screen.latestTree.textContent.includes("95% Wilson区間"),
   "the statistical distribution table is rendered");
+console.assert(happy.screen.latestTree.textContent.includes("カイ二乗適合度検定"),
+  "chi-square goodness-of-fit panel is rendered");
+console.assert(happy.screen.latestTree.textContent.includes("1.2500"),
+  "chi-square statistic is displayed");
+console.assert(happy.screen.latestTree.textContent.includes("0.9400"),
+  "chi-square p-value is displayed");
+console.assert(happy.screen.latestTree.textContent.includes("有意差の判定は保留"),
+  "small expected frequencies are displayed as pending rather than a conclusion");
+console.assert(happy.screen.latestTree.textContent.includes("標本数は固定されません"),
+  "the variable stopping design caution is displayed");
 const chart = findElement(happy.screen.latestTree, node =>
   node.className === "ari-chart-figure"
 );
