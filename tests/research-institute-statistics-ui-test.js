@@ -121,11 +121,23 @@ const analysis = {
 
 function createScreen({
   openAnalysis = () => analysis,
-  runMonteCarlo = async () => ({
+  runMonteCarlo = async (_id, options = {}) => {
+    options.onProgress?.({
+      completedSimulationCount: 200,
+      requestedSimulationCount: options.simulationCount,
+      validSimulationCount: 200,
+      failedSimulationCount: 0,
+      extremeCount: 10,
+      pValue: 11 / 201,
+      monteCarloLower95: 0.025,
+      monteCarloUpper95: 0.075
+    });
+    return {
     themeId,
     method: "stopping-rule-monte-carlo",
     seed: 1234,
-    requestedSimulationCount: 2000,
+    requestedSimulationCount: options.simulationCount,
+    completedSimulationCount: options.simulationCount,
     maxMainTurns: 10000,
     maxDicePerTurn: 512,
     validSimulationCount: 2000,
@@ -148,8 +160,31 @@ function createScreen({
     recordedDecisionHistoryCount: 6,
     mogumoguPolicy: "過去の記録はもぐもぐイベントをすべて受諾する仮定で再現しました。",
     stoppingRule: "招き猫が0匹になった時点で終了します。",
-    modelNotes: ["既存のGame実装を使用します。"]
-  })
+    modelNotes: ["既存のGame実装を使用します。"],
+    convergenceHistory: [
+      {
+        completedSimulationCount: 100,
+        requestedSimulationCount: options.simulationCount,
+        validSimulationCount: 100,
+        failedSimulationCount: 0,
+        extremeCount: 4,
+        pValue: 5 / 101,
+        monteCarloLower95: 0.015,
+        monteCarloUpper95: 0.095
+      },
+      {
+        completedSimulationCount: options.simulationCount,
+        requestedSimulationCount: options.simulationCount,
+        validSimulationCount: options.simulationCount,
+        failedSimulationCount: 0,
+        extremeCount: 100,
+        pValue: 101 / (options.simulationCount + 1),
+        monteCarloLower95: 0.0409,
+        monteCarloUpper95: 0.0601
+      }
+    ]
+    };
+  }
 } = {}) {
   let receivedOptions = null;
   let receivedMonteCarloOptions = null;
@@ -261,7 +296,11 @@ console.assert(happy.getReceivedMonteCarloOptions()?.id === themeId,
 console.assert(happy.getReceivedMonteCarloOptions()?.challengeId === challengeId,
   "Monte Carlo action uses the selected challenge");
 console.assert(happy.getReceivedMonteCarloOptions()?.simulationCount === 2000,
-  "Monte Carlo action requests 2,000 replicates");
+  "Monte Carlo action requests the selected 2,000 replicates");
+console.assert(typeof happy.getReceivedMonteCarloOptions()?.onProgress === "function",
+  "Monte Carlo action forwards a progress callback");
+console.assert(happy.screen.monteCarloProgress?.completedSimulationCount === 200,
+  "progress checkpoints are retained in screen state during execution");
 console.assert(happy.screen.monteCarlo?.validSimulationCount === 2000,
   "Monte Carlo result is retained in screen state");
 console.assert(happy.screen.latestTree.textContent.includes("停止条件を再現したモンテカルロ検定"),
@@ -270,10 +309,37 @@ console.assert(happy.screen.latestTree.textContent.includes("モンテカルロp
   "Monte Carlo p-value is displayed");
 console.assert(happy.screen.latestTree.textContent.includes("モンテカルロ推定誤差が5%境界に重なるため、判定を保留"),
   "the test decision is held when Monte Carlo uncertainty overlaps the five percent threshold");
-console.assert(happy.screen.latestTree.textContent.includes("95%近似区間"),
-  "Monte Carlo estimation uncertainty is displayed");
+console.assert(happy.screen.latestTree.textContent.includes("Wilson 95%区間"),
+  "Monte Carlo estimation uncertainty is identified as a Wilson interval");
+console.assert(happy.screen.latestTree.textContent.includes("モンテカルロ推定値の収束履歴"),
+  "the convergence history chart is displayed");
+console.assert(happy.screen.latestTree.textContent.includes("未補正の超過割合B/M"),
+  "the chart distinguishes the raw exceedance ratio interval from the plus-one estimate");
 console.assert(happy.screen.latestTree.textContent.includes("すべて受諾する仮定"),
   "legacy Mogumogu decision assumption is disclosed");
+
+// The iteration selector updates the actual request, not only its visible label.
+const selectable = createScreen();
+const selectableAnalyzeButton = findElement(selectable.screen.latestTree, node =>
+  node.tagName === "BUTTON" && node.textContent.includes("蓄積データの統計分析を実行")
+);
+selectableAnalyzeButton.click();
+const simulationCountSelect = findElement(selectable.screen.latestTree, node =>
+  node.tagName === "SELECT" && node.className === "ari-monte-carlo-count-select"
+);
+console.assert(simulationCountSelect !== null, "a simulation count selector is rendered");
+console.assert(simulationCountSelect.children.length === 5,
+  "the selector offers supported simulation sizes up to the 50,000-iteration limit");
+simulationCountSelect.value = "5000";
+simulationCountSelect.listeners.change?.({ target: simulationCountSelect });
+const selectedRunButton = findElement(selectable.screen.latestTree, node =>
+  node.tagName === "BUTTON" && node.textContent.includes("モンテカルロ検定を実行")
+);
+console.assert(selectedRunButton.textContent.includes("5,000反復"),
+  "the run button label follows the selected iteration count");
+await selectedRunButton.click();
+console.assert(selectable.getReceivedMonteCarloOptions()?.simulationCount === 5000,
+  "the selected 5,000 iterations are passed to ARE");
 
 // Errors must not disappear silently. The user receives a visible message.
 const broken = createScreen({
