@@ -217,6 +217,11 @@ export class ResearchInstituteScreen {
         const item = this.element("article", "institute-list-item");
         item.appendChild(this.element("strong", "", theme.name ?? theme.themeId));
         const challengeIds = Array.isArray(theme.challengeIds) ? theme.challengeIds : [];
+        const activeChallenge = this.services.challengeCoordinator.activeChallenge;
+        const anotherChallengeIsActive = Boolean(activeChallenge);
+        if (activeChallenge?.themeId === theme.themeId) {
+          item.appendChild(this.element("p", "muted", "この研究テーマの実験を実行中です。別タブの招き猫ゲームを終了すると、結果がここへ戻ります。"));
+        }
         if (challengeIds.length === 0) {
           item.appendChild(this.element("p", "muted", "対応するチャレンジ定義がありません。"));
         } else {
@@ -224,10 +229,10 @@ export class ResearchInstituteScreen {
             item.appendChild(this.button(`実験を開始：${challengeId}`, () => {
               const started = this.controller.startChallenge(theme.themeId, challengeId);
               this.notice = started
-                ? "チャレンジを開始しました。実行側との接続処理を待っています。"
-                : "チャレンジ実行アダプターが未接続です。チャレンジ側の実装後に開始できます。";
+                ? "実験を別タブで開始しました。ゲームオーバーまたはドロップアウトで終了すると、結果が研究所へ登録されます。"
+                : "実験を開始できませんでした。別の実験が実行中でないか、ポップアップがブロックされていないか確認してください。";
               this.render();
-            }));
+            }, { disabled: anotherChallengeIsActive }));
           }
         }
         panel.appendChild(item);
