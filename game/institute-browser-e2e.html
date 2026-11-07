@@ -50,6 +50,11 @@
     .e2e-check:last-child { border-bottom: 0; }
     .e2e-pass { color: #23633d; font-weight: 700; }
     .e2e-fail { color: #a12e2e; font-weight: 700; }
+    .e2e-table-wrap { width: 100%; overflow-x: auto; margin-top: 12px; }
+    .e2e-precision-table { width: 100%; border-collapse: collapse; font-size: .86rem; font-variant-numeric: tabular-nums; }
+    .e2e-precision-table th, .e2e-precision-table td { padding: 9px 10px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+    .e2e-precision-table th { color: var(--ink); background: #fbfaf6; }
+    .e2e-precision-table th:last-child, .e2e-precision-table td:last-child { text-align: left; }
     #researchInstituteRoot { margin-top: 24px; }
     .institute-header { text-align: center; margin-bottom: 24px; }
     .institute-eyebrow { color: var(--muted); font-size: .82rem; letter-spacing: .16em; }
@@ -140,6 +145,36 @@
     <section id="e2eReport" class="e2e-report" aria-live="polite">
       <strong>検証結果</strong>
       <p class="muted">検証開始後、進捗更新・推定結果・収束図を確認します。</p>
+    </section>
+    <section class="e2e-report" aria-live="polite">
+      <h2>反復数別の推定精度比較</h2>
+      <p class="muted">
+        同じ観測データ・同じ乱数シードを固定し、反復数だけを増やして比較します。
+        2,000 → 5,000 → 10,000 → 25,000 → 50,000回の順に実行すると、
+        同一シミュレーション列の先頭部分を比較できます。
+      </p>
+      <p class="muted" id="e2ePrecisionSeed">比較用乱数シード：初期化中</p>
+      <div class="e2e-table-wrap">
+        <table class="e2e-precision-table">
+          <thead>
+            <tr>
+              <th>反復数</th>
+              <th>有効</th>
+              <th>超過数 B</th>
+              <th>+1補正 p値</th>
+              <th>MC標準誤差</th>
+              <th>Wilson下限</th>
+              <th>Wilson上限</th>
+              <th>区間幅</th>
+              <th>判定</th>
+            </tr>
+          </thead>
+          <tbody id="e2ePrecisionHistoryBody">
+            <tr><td colspan="9">まだ実行結果はありません。</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="muted">注意：Wilson区間幅は一般に反復数とともに小さくなりますが、各段階の観測比率も変動するため、幅が毎回必ず単調減少するとは限りません。</p>
     </section>
     <div id="researchInstituteRoot"></div>
   </main>
