@@ -372,7 +372,7 @@
         biased: "極端な偏り"
       };
       const scenarioDescription = scenario === "near-boundary"
-        ? `df=5のχ²臨界値 ${CHI_SQUARE_5_PERCENT_CRITICAL_DF5.toFixed(3)} に近づけた人工データです（生成したχ²=${nearBoundaryTarget.statistic.toFixed(3)}）。`
+        ? `df=5のχ²臨界値 ${CHI_SQUARE_5_PERCENT_CRITICAL_DF5.toFixed(3)} に近づけた人工データです（生成したχ²=${nearBoundaryTarget.statistic.toFixed(3)}）。この臨界値は配分設計用の目安で、最終判定は停止ルールを再現したモンテカルロp値とWilson区間で行います。`
         : scenario === "biased"
           ? `${biasedTargetDescription}した人工的な偏りデータです。`
           : "6つの出目へできるだけ均等に再配分した対照データです。";
