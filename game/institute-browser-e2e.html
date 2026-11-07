@@ -125,14 +125,15 @@
     <div class="e2e-intro">
       <p><strong>このページは検証専用です。</strong> 本物の <code>Game</code>、<code>ResearchStatisticsAnalyzer</code>、<code>ClassicModeMonteCarloSimulator</code>、<code>ResearchInstituteScreen</code> を使用します。</p>
       <p class="e2e-warning">実際のGameで自然終了した5ゲームを基に検証用観測データを作成します。出目の再配分は検証のための人工的な操作で、メモリ内だけに保持します。SaveManager・localStorageには保存しません。</p>
-      <p class="muted">均等データと偏りデータを切り替えて比較できます。各データは同じ5ゲーム分の試行数を維持します。2,000回から開始し、最大50,000回まで試せます。</p>
+      <p class="muted">均等データ・5%境界付近・極端な偏りの3ケースを比較できます。各データは同じ15ゲーム分の試行数を維持します。2,000回から開始し、最大50,000回まで試せます。</p>
     </div>
     <div id="e2eStatus" class="e2e-status" role="status">検証用データを準備しています…</div>
     <div class="e2e-actions">
       <label for="e2eScenario">観測データ</label>
       <select id="e2eScenario">
         <option value="balanced">均等データ</option>
-        <option value="biased">偏りデータ（全観測を出目1に再配分）</option>
+        <option value="near-boundary">5%境界付近（カイ二乗臨界値近傍）</option>
+        <option value="biased">極端な偏り（全観測を出目1に再配分）</option>
       </select>
       <button id="startBrowserCheck" type="button">選択した反復数でブラウザ検証を開始</button>
     </div>
@@ -196,10 +197,10 @@
       throw new Error("Could not prepare the in-memory research theme fixture.");
     }
 
-    // Collect five genuine natural-stop games. Both test datasets retain each
-    // game's actual number of first-phase trials and the same five-game count.
+    // Collect fifteen genuine natural-stop games. All test datasets retain each
+    // game's actual number of first-phase trials and the same experiment count.
     const naturalGames = [];
-    for (let attempt = 0; attempt < 100 && naturalGames.length < 5; attempt += 1) {
+    for (let attempt = 0; attempt < 500 && naturalGames.length < 15; attempt += 1) {
       const gameResult = simulateOneClassicGame({
         seed: 2026110601 + attempt,
         policy: { decisions: [], defaultDecision: "accept" }
@@ -211,13 +212,19 @@
         naturalGames.push(gameResult);
       }
     }
-    if (naturalGames.length !== 5) {
-      throw new Error("Could not generate five natural-stop game fixtures.");
+    if (naturalGames.length !== 15) {
+      throw new Error("Could not generate fifteen natural-stop game fixtures.");
     }
 
     const totalObservedTrials = naturalGames.reduce(
       (sum, game) => sum + game.phase1TrialCount, 0
     );
+    if (totalObservedTrials < 30) {
+      throw new Error(
+        `15自然終了ゲームの観測標本数が不足しています（${totalObservedTrials}回）。期待度数を5以上にするため検証条件を見直してください。`
+      );
+    }
+
     const balancedTarget = Object.fromEntries([1, 2, 3, 4, 5, 6].map(face => [
       face,
       Math.floor(totalObservedTrials / 6) +
@@ -228,6 +235,53 @@
       2: 0, 3: 0, 4: 0, 5: 0, 6: 0
     };
 
+    const CHI_SQUARE_5_PERCENT_CRITICAL_DF5 = 11.0704976935;
+    function calculateChiSquare(counts) {
+      const expected = totalObservedTrials / 6;
+      return [1, 2, 3, 4, 5, 6].reduce(
+        (sum, face) => sum + ((counts[face] - expected) ** 2) / expected,
+        0
+      );
+    }
+
+    // Search a small deterministic family of integer count vectors around
+    // the df=5, alpha=.05 chi-square reference point. The actual Monte Carlo
+    // p-value remains empirical and is not forced to equal five percent.
+    function createNearBoundaryTarget(baseCounts) {
+      let best = null;
+      const expected = totalObservedTrials / 6;
+      const maxDelta = Math.ceil(Math.sqrt(
+        CHI_SQUARE_5_PERCENT_CRITICAL_DF5 * expected
+      )) + 4;
+
+      for (let increaseFace1 = 1; increaseFace1 <= maxDelta; increaseFace1 += 1) {
+        for (let decreaseFace2 = 0; decreaseFace2 <= increaseFace1; decreaseFace2 += 1) {
+          const counts = { ...baseCounts };
+          counts[1] += increaseFace1;
+          counts[2] -= decreaseFace2;
+          counts[3] -= increaseFace1 - decreaseFace2;
+          if ([1, 2, 3, 4, 5, 6].some(face => counts[face] < 0)) continue;
+
+          const statistic = calculateChiSquare(counts);
+          const distance = Math.abs(
+            statistic - CHI_SQUARE_5_PERCENT_CRITICAL_DF5
+          );
+          if (!best || distance < best.distance) {
+            best = { counts, statistic, distance };
+          }
+        }
+      }
+
+      if (!best || best.distance > 0.75) {
+        throw new Error(
+          "5%境界付近の出目配分を作成できませんでした。観測標本数を確認してください。"
+        );
+      }
+      return best;
+    }
+
+    const nearBoundaryTarget = createNearBoundaryTarget(balancedTarget);
+    const biasedTargetDescription = "出目1に全観測を再配分";
     function allocateFaceCounts(targetCounts) {
       const remaining = { ...targetCounts };
       return naturalGames.map(game => {
@@ -246,6 +300,7 @@
 
     const scenarioData = {
       balanced: allocateFaceCounts(balancedTarget),
+      "near-boundary": allocateFaceCounts(nearBoundaryTarget.counts),
       biased: allocateFaceCounts(biasedTarget)
     };
 
@@ -274,7 +329,11 @@
           challengeId,
           outcome: "success",
           completedAt: new Date(Date.now() + index).toISOString(),
-          summary: `ブラウザ検証用 ${scenario === "balanced" ? "均等" : "偏り"}データ：自然終了ゲーム ${index + 1}`,
+          summary: `ブラウザ検証用 ${({
+            balanced: "均等",
+            "near-boundary": "5%境界付近",
+            biased: "極端な偏り"
+          })[scenario]}データ：自然終了ゲーム ${index + 1}`,
           metrics: {
             endReason: "no-cats",
             phase1TrialCount: game.phase1TrialCount,
@@ -307,8 +366,18 @@
       const faceOneCount = records.reduce(
         (sum, record) => sum + record.metrics.phase1FaceCounts[1], 0
       );
+      const scenarioLabels = {
+        balanced: "均等",
+        "near-boundary": "5%境界付近",
+        biased: "極端な偏り"
+      };
+      const scenarioDescription = scenario === "near-boundary"
+        ? `df=5のχ²臨界値 ${CHI_SQUARE_5_PERCENT_CRITICAL_DF5.toFixed(3)} に近づけた人工データです（生成したχ²=${nearBoundaryTarget.statistic.toFixed(3)}）。`
+        : scenario === "biased"
+          ? `${biasedTargetDescription}した人工的な偏りデータです。`
+          : "6つの出目へできるだけ均等に再配分した対照データです。";
       status.textContent =
-        `準備完了：自然終了ゲーム ${records.length}件 / 観測 ${totalObservedTrials}回 / 出目1 ${faceOneCount}回。現在のデータ：${scenario === "balanced" ? "均等" : "偏り"}。`;
+        `準備完了：自然終了ゲーム ${records.length}件 / 観測 ${totalObservedTrials}回 / 出目1 ${faceOneCount}回。現在のデータ：${scenarioLabels[scenario]}。`;
       report.replaceChildren();
       const heading = document.createElement("strong");
       heading.textContent = "観測データの準備完了";
@@ -316,10 +385,7 @@
       const detail = document.createElement("p");
       detail.className = "muted";
       detail.textContent =
-        `自然終了ゲーム ${records.length}件 / 観測標本数 ${totalObservedTrials} / 出目1 ${faceOneCount}回 / 出目2～6 合計 ${totalObservedTrials - faceOneCount}回。` +
-        (scenario === "biased"
-          ? "出目1へ全観測を再配分した人工的な偏りデータです。"
-          : "6つの出目へできるだけ均等に再配分した対照データです。");
+        `自然終了ゲーム ${records.length}件 / 観測標本数 ${totalObservedTrials} / 出目1 ${faceOneCount}回 / 出目2～6 合計 ${totalObservedTrials - faceOneCount}回。 ${scenarioDescription}`;
       report.appendChild(detail);
     }
 
@@ -408,12 +474,20 @@
                 ? result.observedStatistic > 0 && result.pValue < 0.05 &&
                   decisionText.includes("帰無仮説を棄却") &&
                   !decisionText.includes("棄却できない")
-                : result.observedStatistic < 2 && result.pValue > 0.05 &&
-                  decisionText.includes("棄却できない")],
+                : scenarioSelect.value === "near-boundary"
+                  ? Math.abs(result.observedStatistic -
+                      CHI_SQUARE_5_PERCENT_CRITICAL_DF5) <= 0.75 &&
+                    result.pValue >= 0.02 && result.pValue <= 0.08
+                  : result.observedStatistic < 2 && result.pValue > 0.05 &&
+                    decisionText.includes("棄却できない")],
+            ["5%境界付近のケースでWilson区間が5%をまたいだ",
+              scenarioSelect.value === "near-boundary"
+                ? result.monteCarloLower95 <= 0.05 &&
+                  result.monteCarloUpper95 >= 0.05 &&
+                  decisionText.includes("判定を保留")
+                : true],
             ["反復数の増加に伴ってWilson区間が縮小した",
-              scenarioSelect.value === "biased"
-                ? firstIntervalWidth > 0 && lastIntervalWidth < firstIntervalWidth
-                : convergenceHistory.length > 1]
+              firstIntervalWidth > 0 && lastIntervalWidth < firstIntervalWidth]
           ];
 
           report.replaceChildren();
