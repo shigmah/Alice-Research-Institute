@@ -98,14 +98,36 @@ export class ResearchChallengeBridge {
       metrics
     };
 
+    const resultKey = this.resultKey(sessionId);
+    const sessionKey = this.sessionKey(sessionId);
+    const previousResultValue = this.storage.getItem(resultKey);
+    let resultWritten = false;
+
     try {
+      // Persist the (potentially larger) payload first. The session remains
+      // active until the result is safely available to the institute tab.
+      this.storage.setItem(resultKey, JSON.stringify(result));
+      resultWritten = true;
+
       session.status = "completed";
       session.completedAt = completedAt;
-      this.storage.setItem(this.sessionKey(sessionId), JSON.stringify(session));
-      // The result key is written last so the institute tab sees a fully committed session.
-      this.storage.setItem(this.resultKey(sessionId), JSON.stringify(result));
+      this.storage.setItem(sessionKey, JSON.stringify(session));
       return result;
     } catch (_error) {
+      // Restore the transport state so a failed completion can be retried.
+      // Best-effort rollback: storage may be full or unavailable for all writes.
+      session.status = "active";
+      session.completedAt = null;
+      try {
+        if (previousResultValue === null) {
+          if (resultWritten) this.storage.removeItem(resultKey);
+        } else if (resultWritten) {
+          this.storage.setItem(resultKey, previousResultValue);
+        }
+      } catch (_rollbackError) {
+        // Leave the session active in memory and report failure. The caller
+        // must not treat the completion as accepted.
+      }
       return null;
     }
   }
