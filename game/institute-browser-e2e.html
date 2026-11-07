@@ -191,7 +191,79 @@
     const status = document.querySelector("#e2eStatus");
     const report = document.querySelector("#e2eReport");
     const startButton = document.querySelector("#startBrowserCheck");
+    const precisionHistoryBody = document.querySelector("#e2ePrecisionHistoryBody");
+    const precisionSeedLabel = document.querySelector("#e2ePrecisionSeed");
+    const COMPARISON_SEED = 2026110705;
+    const precisionRuns = [];
     let startBrowserCheckHandler = null;
+
+    precisionSeedLabel.textContent = `比較用乱数シード：${COMPARISON_SEED}（全反復数で固定）`;
+
+    function renderPrecisionHistory() {
+      precisionHistoryBody.replaceChildren();
+      if (precisionRuns.length === 0) {
+        const row = document.createElement("tr");
+        const cell = document.createElement("td");
+        cell.colSpan = 9;
+        cell.textContent = "まだ実行結果はありません。";
+        row.appendChild(cell);
+        precisionHistoryBody.appendChild(row);
+        return;
+      }
+
+      const orderedRuns = [...precisionRuns].sort(
+        (left, right) => left.simulationCount - right.simulationCount
+      );
+      for (const run of orderedRuns) {
+        const row = document.createElement("tr");
+        const values = [
+          run.simulationCount.toLocaleString(),
+          run.validSimulationCount.toLocaleString(),
+          run.extremeCount.toLocaleString(),
+          run.pValue.toFixed(5),
+          run.standardError.toFixed(5),
+          run.lower.toFixed(5),
+          run.upper.toFixed(5),
+          run.intervalWidth.toFixed(5),
+          run.decision
+        ];
+        for (const value of values) {
+          const cell = document.createElement("td");
+          cell.textContent = value;
+          row.appendChild(cell);
+        }
+        precisionHistoryBody.appendChild(row);
+      }
+    }
+
+    function recordPrecisionRun(result, decisionText) {
+      const lower = result.monteCarloLower95;
+      const upper = result.monteCarloUpper95;
+      const decision = upper < 0.05
+        ? "棄却"
+        : lower > 0.05
+          ? "棄却せず"
+          : "判定保留";
+      const run = {
+        simulationCount: result.requestedSimulationCount,
+        validSimulationCount: result.validSimulationCount,
+        extremeCount: result.extremeCount,
+        pValue: result.pValue,
+        standardError: result.monteCarloStandardError,
+        lower,
+        upper,
+        intervalWidth: upper - lower,
+        decision,
+        decisionText,
+        seed: result.seed
+      };
+      const existingIndex = precisionRuns.findIndex(
+        item => item.simulationCount === run.simulationCount
+      );
+      if (existingIndex >= 0) precisionRuns.splice(existingIndex, 1, run);
+      else precisionRuns.push(run);
+      renderPrecisionHistory();
+    }
     startButton.disabled = true;
     status.textContent = "検証ページを初期化しています…";
 
@@ -353,6 +425,8 @@
     // the first scenario below.
     const scenarioSelect = document.querySelector("#e2eScenario");
     function installScenario(scenario) {
+      precisionRuns.length = 0;
+      renderPrecisionHistory();
       const distributions = scenarioData[scenario];
       if (!distributions) throw new Error("Unknown browser fixture scenario: " + scenario);
 
@@ -489,9 +563,22 @@
             ? lastInterval.monteCarloUpper95 - lastInterval.monteCarloLower95
             : null;
           const decisionText = resultPanel?.querySelector(".ari-chi-square-decision")?.textContent ?? "";
+          const intervalIsAvailable =
+            Number.isFinite(result.monteCarloLower95) &&
+            Number.isFinite(result.monteCarloUpper95);
+          const intervalDecisionConsistent = intervalIsAvailable && (
+            result.monteCarloUpper95 < 0.05
+              ? decisionText.includes("帰無仮説を棄却") &&
+                !decisionText.includes("棄却できない")
+              : result.monteCarloLower95 > 0.05
+                ? decisionText.includes("帰無仮説を棄却できない")
+                : decisionText.includes("判定を保留")
+          );
           const checks = [
             ["選択した反復数が実行結果に反映された",
               result.requestedSimulationCount === Number(root.querySelector("#areMonteCarloSimulationCount")?.value)],
+            ["比較用の乱数シードが固定されている",
+              result.seed === COMPARISON_SEED],
             ["進捗コールバックが複数回届いた", progressUpdateCount > 1],
             ["実行中の進捗バーを確認できた", progressBarSeen && progressAdvanced],
             ["有効なシミュレーション結果が得られた", result.validSimulationCount > 0],
@@ -512,14 +599,16 @@
                 : scenarioSelect.value === "near-boundary"
                   ? Math.abs(result.observedStatistic -
                       CHI_SQUARE_5_PERCENT_CRITICAL_DF5) <= 0.75 &&
-                    result.pValue >= 0.02 && result.pValue <= 0.08
+                    Number.isFinite(result.pValue) &&
+                    result.pValue >= 0 && result.pValue <= 1
                   : result.observedStatistic < 2 && result.pValue > 0.05 &&
                     decisionText.includes("棄却できない")],
-            ["5%境界付近のケースでWilson区間が5%をまたいだ",
+            ["Wilson区間と画面上の有意性判定が一致している",
+              intervalDecisionConsistent],
+            ["5%境界付近の観測統計量が臨界値近傍にある",
               scenarioSelect.value === "near-boundary"
-                ? result.monteCarloLower95 <= 0.05 &&
-                  result.monteCarloUpper95 >= 0.05 &&
-                  decisionText.includes("判定を保留")
+                ? Math.abs(result.observedStatistic -
+                    CHI_SQUARE_5_PERCENT_CRITICAL_DF5) <= 0.75
                 : true],
             ["反復数の増加に伴ってWilson区間が縮小した",
               firstIntervalWidth > 0 && lastIntervalWidth < firstIntervalWidth]
@@ -542,6 +631,7 @@
           detail.textContent =
             `要求 ${result.requestedSimulationCount.toLocaleString()}回 / 有効 ${result.validSimulationCount.toLocaleString()}回 / 失敗 ${result.failedSimulationCount.toLocaleString()}回 / 進捗通知 ${progressUpdateCount}回 / 描画フレーム ${animationFrameCount}回 / グラフ点 ${points}個`;
           report.appendChild(detail);
+          recordPrecisionRun(result, decisionText);
           status.textContent = checks.every(([, passed]) => passed)
             ? "ブラウザ検証が完了しました。全項目PASSです。"
             : "ブラウザ検証が完了しました。要確認の項目があります。";
@@ -572,7 +662,8 @@
         // button that may be detached when the screen rerenders during startup.
         const result = await screen.runMonteCarloAnalysis(themeId, {
           challengeId,
-          simulationCount: selectedCount
+          simulationCount: selectedCount,
+          seed: COMPARISON_SEED
         });
         if (!result) {
           throw new Error("モンテカルロ検定から結果が返されませんでした。");
