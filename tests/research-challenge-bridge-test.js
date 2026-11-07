@@ -1,5 +1,7 @@
 import {
   RESEARCH_CHALLENGE_ACTIVE_SESSION_KEY,
+  RESEARCH_CHALLENGE_RESULT_PREFIX,
+  RESEARCH_CHALLENGE_SESSION_PREFIX,
   ResearchChallengeBridge
 } from "../src/institute/ResearchChallengeBridge.js";
 import { ResearchChallengeRun } from "../src/institute/ResearchChallengeRun.js";
@@ -122,22 +124,21 @@ console.assert(bridge.readSession(session.sessionId)?.status === "completed",
 console.assert(bridge.readResult(session.sessionId)?.resultId === result.resultId,
   "result payload is stored before session completion is committed");
 
-// A quota-style failure on the session write must not leave a completed
-// session without a result, and the active challenge must remain retryable.
+// A quota failure while writing the result payload must leave the session
+// active. This is the exact failure mode identified in the Codex review.
 class QuotaFailureStorage extends MemoryStorage {
   constructor() {
     super();
-    this.failSessionCompletionWrite = false;
+    this.failKey = null;
   }
   setItem(key, value) {
-    if (this.failSessionCompletionWrite &&
-        key === `research-challenge-session:${quotaSession.sessionId}` &&
-        JSON.parse(String(value)).status === "completed") {
+    if (this.failKey === key) {
       throw new Error("QuotaExceededError");
     }
     super.setItem(key, value);
   }
 }
+
 const quotaStorage = new QuotaFailureStorage();
 let quotaId = 0;
 const quotaBridge = new ResearchChallengeBridge({
@@ -154,30 +155,71 @@ const quotaResultPayload = {
   summary: "quota recovery test",
   metrics: { payload: "x".repeat(128) }
 };
-quotaStorage.failSessionCompletionWrite = true;
-const quotaFailure = quotaBridge.completeSession(
+
+quotaStorage.failKey =
+  `${RESEARCH_CHALLENGE_RESULT_PREFIX}${quotaSession.sessionId}`;
+const resultWriteFailure = quotaBridge.completeSession(
   quotaSession.sessionId,
   quotaResultPayload
 );
-console.assert(quotaFailure === null,
-  "a session completion write failure is reported");
+console.assert(resultWriteFailure === null,
+  "a result payload quota failure is reported");
 console.assert(quotaBridge.readSession(quotaSession.sessionId)?.status === "active",
-  "a failed completion rolls the session back to active");
+  "a result payload quota failure leaves the session active");
 console.assert(quotaBridge.readResult(quotaSession.sessionId) === null,
-  "a failed completion rolls back the result payload");
+  "a result payload quota failure does not create a partial result");
 console.assert(quotaBridge.readActiveSession()?.sessionId === quotaSession.sessionId,
-  "a failed completion leaves the active session available for retry");
-quotaStorage.failSessionCompletionWrite = false;
+  "a result payload quota failure keeps the challenge retryable");
+
+quotaStorage.failKey = null;
 const quotaRetry = quotaBridge.completeSession(
   quotaSession.sessionId,
   quotaResultPayload
 );
 console.assert(quotaRetry?.resultId === `RESULT_${quotaSession.sessionId}`,
-  "completion can be retried after storage becomes available");
+  "completion can be retried after result storage becomes available");
 console.assert(quotaBridge.readSession(quotaSession.sessionId)?.status === "completed",
   "retry commits the completed session");
-console.assert(quotaBridge.readResult(quotaSession.sessionId)?.resultId === quotaRetry.resultId,
+console.assert(quotaBridge.readResult(quotaSession.sessionId)?.resultId === quotaRetry?.resultId,
   "retry leaves a recoverable result payload");
+
+// Also cover failure of the smaller session commit after the result payload
+// has been written. The result is rolled back and the active session is retained.
+const sessionCommitStorage = new QuotaFailureStorage();
+let sessionCommitId = 0;
+const sessionCommitBridge = new ResearchChallengeBridge({
+  storage: sessionCommitStorage,
+  now: fixedNow,
+  idFactory: () => `RCH_SESSION_COMMIT_${++sessionCommitId}`
+});
+const sessionCommit = sessionCommitBridge.createSession({
+  themeId: "maneki-neko-appearance-probability",
+  challengeId: "maneki-neko-classic"
+});
+sessionCommitStorage.failKey =
+  `${RESEARCH_CHALLENGE_SESSION_PREFIX}${sessionCommit.sessionId}`;
+const sessionCommitFailure = sessionCommitBridge.completeSession(
+  sessionCommit.sessionId,
+  quotaResultPayload
+);
+console.assert(sessionCommitFailure === null,
+  "a session completion write failure is reported");
+console.assert(sessionCommitBridge.readSession(sessionCommit.sessionId)?.status === "active",
+  "a failed completion rolls the session back to active");
+console.assert(sessionCommitBridge.readResult(sessionCommit.sessionId) === null,
+  "a failed completion rolls back the result payload");
+console.assert(sessionCommitBridge.readActiveSession()?.sessionId === sessionCommit.sessionId,
+  "a failed completion leaves the active session available for retry");
+
+sessionCommitStorage.failKey = null;
+const sessionCommitRetry = sessionCommitBridge.completeSession(
+  sessionCommit.sessionId,
+  quotaResultPayload
+);
+console.assert(sessionCommitRetry?.resultId === `RESULT_${sessionCommit.sessionId}`,
+  "session completion can be retried after storage becomes available");
+console.assert(sessionCommitBridge.readResult(sessionCommit.sessionId)?.resultId === sessionCommitRetry?.resultId,
+  "session completion retry leaves a recoverable result payload");
 
 // The institute can rebuild the active challenge association after a reload,
 // then pass the actual result through its normal result processor.
