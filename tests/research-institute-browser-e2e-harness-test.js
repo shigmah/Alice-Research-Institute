@@ -69,7 +69,7 @@ assert.match(source, /firstIntervalWidth > 0 && lastIntervalWidth < firstInterva
   "the biased scenario checks that Wilson intervals shrink with more simulations");
 assert.match(source, /precisionRuns\.sort|sort\(\s*\(left, right\) => left\.simulationCount - right\.simulationCount/s,
   "the precision comparison table orders runs by iteration count");
-assert.match(source, /same observation data.*same random seed/si,
+assert.match(source, /同じ観測データ・同じ乱数シードを固定し/,
   "the comparison instructions explain the controlled iteration-count experiment");
 assert.match(source, /decisionText\.includes\("帰無仮説を棄却"\)/,
   "the biased scenario verifies the significance decision in the rendered panel");
