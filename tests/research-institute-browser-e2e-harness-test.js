@@ -27,12 +27,22 @@ assert.match(source, /runStatisticsAnalysis\(themeId, \{ challengeId \}\)/,
   "installing a scenario renders the statistics panel before controls are checked");
 assert.match(source, /import \{ simulateOneClassicGame \}/,
   "the harness creates its source records with the real classic game simulator");
-assert.match(source, /naturalGames\.length < 5/,
-  "the fixture builds five independent games that reached natural game over");
+assert.match(source, /naturalGames\.length < 15/,
+  "the fixture builds fifteen independent games that reached natural game over");
 assert.match(source, /gameResult\.endReason === "no-cats"/,
   "only naturally ended games are included in the observed sample");
 assert.match(source, /balancedTarget/,
   "the harness creates a balanced comparison distribution");
+assert.match(source, /CHI_SQUARE_5_PERCENT_CRITICAL_DF5 = 11\.0704976935/,
+  "the harness targets the five-degree-of-freedom five-percent chi-square reference point");
+assert.match(source, /createNearBoundaryTarget\(balancedTarget\)/,
+  "the near-boundary case is generated from an integer count vector near the critical statistic");
+assert.match(source, /value="near-boundary"/,
+  "the user can select the near-five-percent scenario");
+assert.match(source, /result\.monteCarloLower95 <= 0\.05 &&\s*result\.monteCarloUpper95 >= 0\.05/s,
+  "the near-boundary case verifies that the Wilson interval spans five percent");
+assert.match(source, /decisionText\.includes\("判定を保留"\)/,
+  "the near-boundary case verifies that the rendered result defers the significance decision");
 assert.match(source, /biasedTarget = \{\s*1: totalObservedTrials,\s*2: 0, 3: 0, 4: 0, 5: 0, 6: 0/s,
   "the biased scenario concentrates all observed rolls on one face");
 assert.match(source, /phase1TrialCount: game\.phase1TrialCount/,
