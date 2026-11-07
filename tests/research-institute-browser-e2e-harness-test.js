@@ -18,6 +18,13 @@ assert.match(source, /themeManager\.discoverTheme\(/,
   "the research theme is discovered through the real theme manager");
 assert.match(source, /themeManager\.startResearch\(/,
   "the fixture theme enters the researching state");
+const firstScenarioIndex = source.indexOf('installScenario(scenarioSelect.value || "balanced")');
+const monteCarloControlsGuardIndex =
+  source.indexOf('root.querySelector("#areMonteCarloSimulationCount")', firstScenarioIndex);
+assert.ok(firstScenarioIndex >= 0 && monteCarloControlsGuardIndex > firstScenarioIndex,
+  "Monte Carlo controls are checked only after the first scenario runs its statistics analysis");
+assert.match(source, /runStatisticsAnalysis\(themeId, \{ challengeId \}\)/,
+  "installing a scenario renders the statistics panel before controls are checked");
 assert.match(source, /import \{ simulateOneClassicGame \}/,
   "the harness creates its source records with the real classic game simulator");
 assert.match(source, /naturalGames\.length < 5/,
