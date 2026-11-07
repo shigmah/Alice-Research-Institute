@@ -216,15 +216,16 @@
       );
       for (const run of orderedRuns) {
         const row = document.createElement("tr");
+        const format = value => Number.isFinite(value) ? value.toFixed(5) : "—";
         const values = [
           run.simulationCount.toLocaleString(),
           run.validSimulationCount.toLocaleString(),
           run.extremeCount.toLocaleString(),
-          run.pValue.toFixed(5),
-          run.standardError.toFixed(5),
-          run.lower.toFixed(5),
-          run.upper.toFixed(5),
-          run.intervalWidth.toFixed(5),
+          format(run.pValue),
+          format(run.standardError),
+          format(run.lower),
+          format(run.upper),
+          format(run.intervalWidth),
           run.decision
         ];
         for (const value of values) {
@@ -237,22 +238,30 @@
     }
 
     function recordPrecisionRun(result, decisionText) {
-      const lower = result.monteCarloLower95;
-      const upper = result.monteCarloUpper95;
-      const decision = upper < 0.05
-        ? "棄却"
-        : lower > 0.05
-          ? "棄却せず"
-          : "判定保留";
+      const lower = Number.isFinite(result.monteCarloLower95)
+        ? result.monteCarloLower95
+        : null;
+      const upper = Number.isFinite(result.monteCarloUpper95)
+        ? result.monteCarloUpper95
+        : null;
+      const decision = lower === null || upper === null
+        ? "判定不可"
+        : upper < 0.05
+          ? "棄却"
+          : lower > 0.05
+            ? "棄却せず"
+            : "判定保留";
       const run = {
         simulationCount: result.requestedSimulationCount,
         validSimulationCount: result.validSimulationCount,
         extremeCount: result.extremeCount,
-        pValue: result.pValue,
-        standardError: result.monteCarloStandardError,
+        pValue: Number.isFinite(result.pValue) ? result.pValue : null,
+        standardError: Number.isFinite(result.monteCarloStandardError)
+          ? result.monteCarloStandardError
+          : null,
         lower,
         upper,
-        intervalWidth: upper - lower,
+        intervalWidth: lower === null || upper === null ? null : upper - lower,
         decision,
         decisionText,
         seed: result.seed
