@@ -39,10 +39,24 @@ assert.match(source, /createNearBoundaryTarget\(balancedTarget\)/,
   "the near-boundary case is generated from an integer count vector near the critical statistic");
 assert.match(source, /value="near-boundary"/,
   "the user can select the near-five-percent scenario");
-assert.match(source, /result\.monteCarloLower95 <= 0\.05 &&\s*result\.monteCarloUpper95 >= 0\.05/s,
-  "the near-boundary case verifies that the Wilson interval spans five percent");
+assert.match(source, /const COMPARISON_SEED = 2026110705/,
+  "iteration-count comparisons use a fixed Monte Carlo seed");
+assert.match(source, /seed: COMPARISON_SEED/,
+  "the fixed seed is passed into every Monte Carlo run");
+assert.match(source, /e2ePrecisionHistoryBody/,
+  "the browser page renders a cumulative precision comparison table");
+assert.match(source, /recordPrecisionRun\(result, decisionText\)/,
+  "each completed iteration-count run is added to the comparison history");
+assert.match(source, /item\.simulationCount === run\.simulationCount/,
+  "re-running the same iteration count replaces its existing comparison row");
+assert.match(source, /const intervalDecisionConsistent = intervalIsAvailable &&/,
+  "the rendered significance decision is checked against the Wilson interval");
+assert.match(source, /result\.monteCarloUpper95 < 0\.05/,
+  "the check recognizes an interval fully below the five-percent boundary");
+assert.match(source, /result\.monteCarloLower95 > 0\.05/,
+  "the check recognizes an interval fully above the five-percent boundary");
 assert.match(source, /decisionText\.includes\("判定を保留"\)/,
-  "the near-boundary case verifies that the rendered result defers the significance decision");
+  "the check recognizes a Wilson interval crossing the five-percent boundary");
 assert.match(source, /biasedTarget = \{\s*1: totalObservedTrials,\s*2: 0, 3: 0, 4: 0, 5: 0, 6: 0/s,
   "the biased scenario concentrates all observed rolls on one face");
 assert.match(source, /phase1TrialCount: game\.phase1TrialCount/,
@@ -53,6 +67,10 @@ assert.match(source, /result\.experimentCountPerReplicate === naturalGames\.leng
   "the browser check verifies that each replicate uses the same number of games as the observations");
 assert.match(source, /firstIntervalWidth > 0 && lastIntervalWidth < firstIntervalWidth/,
   "the biased scenario checks that Wilson intervals shrink with more simulations");
+assert.match(source, /precisionRuns\.sort|sort\(\s*\(left, right\) => left\.simulationCount - right\.simulationCount/s,
+  "the precision comparison table orders runs by iteration count");
+assert.match(source, /same observation data.*same random seed/si,
+  "the comparison instructions explain the controlled iteration-count experiment");
 assert.match(source, /decisionText\.includes\("帰無仮説を棄却"\)/,
   "the biased scenario verifies the significance decision in the rendered panel");
 assert.match(source, /decisionText\.includes\("棄却できない"\)/,
