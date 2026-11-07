@@ -27,6 +27,7 @@ export class Game {
   }
 
   reset(mode = this.modeType, { targetTurns = this.targetTurns } = {}) {
+    const researchInstituteData = this.state?.researchInstituteData ?? null;
     const normalizedMode = ["classic", "alice", "collector", "collector-alice", "battle"].includes(mode)
       ? mode
       : "classic";
@@ -36,6 +37,7 @@ export class Game {
       ? Math.min(999, Math.max(1, Number(targetTurns)))
       : 20;
     this.state = new GameState();
+    if (researchInstituteData) this.state.researchInstituteData = researchInstituteData;
     this.catManager = new CatManager(this.state);
     this.randomManager = new RandomManager();
 

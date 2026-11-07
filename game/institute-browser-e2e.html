@@ -1,0 +1,692 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f3ea">
+  <title>ARE ブラウザ実動作検証</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #26344a;
+      --muted: #667085;
+      --line: #e5dfd4;
+      --paper: rgba(255,255,255,.96);
+      --blue: #5870a8;
+      --blue-dark: #435889;
+      --blue-soft: #eef2f9;
+      --gold: #c99b4a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background: linear-gradient(180deg, #faf7f0 0%, #f7f3ea 100%);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Yu Gothic", Meiryo, sans-serif;
+      line-height: 1.7;
+    }
+    main { width: min(1080px, calc(100% - 28px)); margin: 0 auto; padding: 24px 0 50px; }
+    h1 { margin: 0 0 4px; font-family: Georgia, "Yu Mincho", serif; }
+    h2 { margin: 24px 0 10px; font-size: 1.2rem; }
+    p { margin: 8px 0; }
+    .muted { color: var(--muted); }
+    .e2e-intro, .e2e-status, .e2e-report {
+      margin: 14px 0; padding: 16px 18px; border: 1px solid var(--line);
+      border-radius: 14px; background: var(--paper);
+    }
+    .e2e-status { background: var(--blue-soft); border-color: #d9e0ee; }
+    .e2e-warning { color: #745c2f; font-weight: 700; }
+    .e2e-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: 16px 0; }
+    .e2e-actions label { font-weight: 700; }
+    .e2e-actions select { padding: 9px 12px; border: 1px solid #cbd4e4; border-radius: 10px; background: white; color: var(--ink); font: inherit; }
+    button {
+      padding: 10px 16px; border: 1px solid #cbd4e4; border-radius: 999px;
+      background: white; color: var(--blue-dark); font: inherit; font-weight: 700; cursor: pointer;
+    }
+    button:hover:not(:disabled) { background: var(--blue-soft); }
+    button:disabled { opacity: .55; cursor: not-allowed; }
+    .e2e-check { padding: 8px 0; border-bottom: 1px solid var(--line); }
+    .e2e-check:last-child { border-bottom: 0; }
+    .e2e-pass { color: #23633d; font-weight: 700; }
+    .e2e-fail { color: #a12e2e; font-weight: 700; }
+    .e2e-table-wrap { width: 100%; overflow-x: auto; margin-top: 12px; }
+    .e2e-precision-table { width: 100%; border-collapse: collapse; font-size: .86rem; font-variant-numeric: tabular-nums; }
+    .e2e-precision-table th, .e2e-precision-table td { padding: 9px 10px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+    .e2e-precision-table th { color: var(--ink); background: #fbfaf6; }
+    .e2e-precision-table th:last-child, .e2e-precision-table td:last-child { text-align: left; }
+    #researchInstituteRoot { margin-top: 24px; }
+    .institute-header { text-align: center; margin-bottom: 24px; }
+    .institute-eyebrow { color: var(--muted); font-size: .82rem; letter-spacing: .16em; }
+    .institute-header h1 { font-size: clamp(2rem, 6vw, 3.3rem); letter-spacing: .04em; }
+    .institute-header-links { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+    .institute-link { color: var(--blue-dark); font-weight: 700; text-decoration: none; }
+    .institute-panel, .institute-facility-card {
+      border: 1px solid var(--line); border-radius: 18px; background: var(--paper);
+      box-shadow: 0 8px 26px rgba(55,48,38,.06);
+    }
+    .institute-panel { padding: 22px; margin: 0 0 18px; }
+    .institute-panel h3 { margin: 0 0 6px; font-size: 1.25rem; }
+    .institute-panel > p { margin: 0 0 14px; }
+    .institute-notice { margin: 0 0 16px; padding: 12px 15px; border: 1px solid #d9e0ee; border-radius: 12px; background: var(--blue-soft); }
+    .institute-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 18px; }
+    .institute-summary-item { display: flex; flex-direction: column; align-items: center; padding: 10px; border-radius: 12px; background: #fbfaf6; min-width: 0; }
+    .institute-summary-item strong { font-size: 1.35rem; overflow-wrap: anywhere; }
+    .institute-facility-group { margin-top: 26px; }
+    .institute-facility-group h2 { margin: 0 0 12px; }
+    .institute-facility-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 13px; }
+    .institute-facility-card { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-height: 140px; padding: 18px; color: var(--ink); text-align: left; }
+    .facility-card-title { font-size: 1.14rem; font-weight: 800; }
+    .facility-card-description, .muted { color: var(--muted); }
+    .facility-card-meta { display: flex; gap: 7px; margin-top: auto; }
+    .facility-status, .facility-level { display: inline-block; padding: 2px 9px; border-radius: 999px; background: #f1f0ec; color: #5f6570; font-size: .77rem; font-weight: 700; }
+    .institute-facility-nav { margin-bottom: 15px; }
+    .institute-button { padding: 9px 15px; border: 1px solid #cbd4e4; border-radius: 999px; background: #fff; color: var(--blue-dark); font: inherit; font-weight: 700; cursor: pointer; }
+    .institute-placeholder { padding: 14px 16px; border: 1px dashed #d8d4cc; border-radius: 12px; background: #fcfbf8; color: var(--muted); }
+    .institute-content-stack { display: grid; gap: 16px; }
+    .institute-list-item { display: grid; gap: 5px; padding: 13px 0; border-top: 1px solid #eee9e0; }
+    .institute-list-item:first-of-type { border-top: 0; }
+    .ari-chart-figure, .ari-chi-square-panel, .ari-monte-carlo-panel, .ari-monte-carlo-convergence {
+      margin: 18px 0; padding: 16px 14px; border: 1px solid var(--line); border-radius: 14px; background: #fff;
+    }
+    .ari-chart-title { margin-bottom: 10px; font-weight: 800; }
+    .ari-chart-legend { display: flex; justify-content: center; gap: 18px; margin: 6px 0 14px; color: var(--muted); font-size: .88rem; }
+    .ari-chart-plot { display: grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap: 8px; min-height: 220px; padding: 8px 4px 0; border-bottom: 1px solid var(--line); }
+    .ari-chart-column { display: flex; min-width: 0; flex-direction: column; align-items: center; justify-content: flex-end; }
+    .ari-chart-bars { display: flex; align-items: flex-end; justify-content: center; gap: 5px; width: 100%; height: 170px; border-bottom: 1px solid #d9d4ca; }
+    .ari-chart-bar { width: min(34%,28px); border-radius: 5px 5px 0 0; }
+    .ari-chart-bar-observed { background: var(--blue); }
+    .ari-chart-bar-expected { background: var(--gold); }
+    .ari-chart-values { margin-top: 7px; color: var(--muted); font-size: .72rem; white-space: nowrap; }
+    .ari-chart-face { padding: 2px 0 7px; font-weight: 800; }
+    .ari-chi-square-decision { padding: 12px 15px; border: 1px solid #d9e0ee; border-radius: 12px; background: var(--blue-soft); font-weight: 800; }
+    .ari-statistics-table { width: 100%; border-collapse: collapse; background: #fff; font-size: .9rem; }
+    .ari-statistics-table th, .ari-statistics-table td { padding: 8px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+    .ari-monte-carlo-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 14px 0; }
+    .ari-monte-carlo-count-select { min-width: 132px; padding: 8px 12px; border: 1px solid #cbd4e4; border-radius: 10px; background: #fff; color: var(--ink); font: inherit; }
+    .ari-monte-carlo-progress { margin: 14px 0; padding: 13px 15px; border: 1px solid var(--line); border-radius: 12px; background: #fbfaf6; }
+    .ari-monte-carlo-progress h4 { margin: 0 0 7px; }
+    .ari-monte-carlo-progress p, .ari-monte-carlo-convergence > p { margin: 7px 0; font-size: .86rem; overflow-wrap: anywhere; }
+    .ari-monte-carlo-convergence-plot { background: repeating-linear-gradient(to top, transparent 0, transparent calc(25% - 1px), #eeeae3 calc(25% - 1px), #eeeae3 25%); }
+    .ari-monte-carlo-point { z-index: 2; }
+    .ari-monte-carlo-interval { z-index: 1; opacity: .65; }
+    @media (max-width: 700px) {
+      .institute-facility-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+      .institute-summary { grid-template-columns: repeat(2,minmax(0,1fr)); }
+      .ari-statistics-table { font-size: .76rem; }
+      .ari-statistics-table th, .ari-statistics-table td { padding: 6px 4px; }
+    }
+    @media (max-width: 480px) {
+      main { width: calc(100% - 20px); }
+      .institute-panel { padding: 16px; }
+      .institute-facility-grid { grid-template-columns: 1fr; }
+      .institute-summary-item strong { font-size: 1.1rem; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>ARE ブラウザ実動作検証</h1>
+    <div class="e2e-intro">
+      <p><strong>このページは検証専用です。</strong> 本物の <code>Game</code>、<code>ResearchStatisticsAnalyzer</code>、<code>ClassicModeMonteCarloSimulator</code>、<code>ResearchInstituteScreen</code> を使用します。</p>
+      <p class="e2e-warning">実際のGameで自然終了した5ゲームを基に検証用観測データを作成します。出目の再配分は検証のための人工的な操作で、メモリ内だけに保持します。SaveManager・localStorageには保存しません。</p>
+      <p class="muted">均等データ・5%境界付近・極端な偏りの3ケースを比較できます。各データは同じ15ゲーム分の試行数を維持します。2,000回から開始し、最大50,000回まで試せます。</p>
+    </div>
+    <div id="e2eStatus" class="e2e-status" role="status">検証用データを準備しています…</div>
+    <div class="e2e-actions">
+      <label for="e2eScenario">観測データ</label>
+      <select id="e2eScenario">
+        <option value="balanced">均等データ</option>
+        <option value="near-boundary">5%境界付近（カイ二乗臨界値近傍）</option>
+        <option value="biased">極端な偏り（全観測を出目1に再配分）</option>
+      </select>
+      <button id="startBrowserCheck" type="button">選択した反復数でブラウザ検証を開始</button>
+    </div>
+    <section id="e2eReport" class="e2e-report" aria-live="polite">
+      <strong>検証結果</strong>
+      <p class="muted">検証開始後、進捗更新・推定結果・収束図を確認します。</p>
+    </section>
+    <section class="e2e-report" aria-live="polite">
+      <h2>反復数別の推定精度比較</h2>
+      <p class="muted">
+        同じ観測データ・同じ乱数シードを固定し、反復数だけを増やして比較します。
+        2,000 → 5,000 → 10,000 → 25,000 → 50,000回の順に実行すると、
+        同一シミュレーション列の先頭部分を比較できます。
+      </p>
+      <p class="muted" id="e2ePrecisionSeed">比較用乱数シード：初期化中</p>
+      <div class="e2e-table-wrap">
+        <table class="e2e-precision-table">
+          <thead>
+            <tr>
+              <th>反復数</th>
+              <th>有効</th>
+              <th>超過数 B</th>
+              <th>+1補正 p値</th>
+              <th>MC標準誤差</th>
+              <th>Wilson下限</th>
+              <th>Wilson上限</th>
+              <th>区間幅</th>
+              <th>判定</th>
+            </tr>
+          </thead>
+          <tbody id="e2ePrecisionHistoryBody">
+            <tr><td colspan="9">まだ実行結果はありません。</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="muted">注意：Wilson区間幅は一般に反復数とともに小さくなりますが、各段階の観測比率も変動するため、幅が毎回必ず単調減少するとは限りません。</p>
+    </section>
+    <div id="researchInstituteRoot"></div>
+  </main>
+  <script type="module">
+    import { GameState } from "../src/core/GameState.js";
+    import { simulateOneClassicGame } from "../src/institute/ClassicModeMonteCarloSimulator.js";
+    import { createResearchInstituteServices } from "../src/institute/createResearchInstituteServices.js";
+    import { RESEARCH_THEME_DEFINITIONS } from "../src/institute/ResearchThemeDefinitions.js";
+    import { ResearchInstituteScreen } from "../src/ui/ResearchInstituteScreen.js";
+
+    const themeId = "maneki-neko-appearance-probability";
+    const challengeId = "maneki-neko-classic";
+    const root = document.querySelector("#researchInstituteRoot");
+    const status = document.querySelector("#e2eStatus");
+    const report = document.querySelector("#e2eReport");
+    const startButton = document.querySelector("#startBrowserCheck");
+    const precisionHistoryBody = document.querySelector("#e2ePrecisionHistoryBody");
+    const precisionSeedLabel = document.querySelector("#e2ePrecisionSeed");
+    const COMPARISON_SEED = 2026110705;
+    const precisionRuns = [];
+    let startBrowserCheckHandler = null;
+
+    precisionSeedLabel.textContent = `比較用乱数シード：${COMPARISON_SEED}（全反復数で固定）`;
+
+    function renderPrecisionHistory() {
+      precisionHistoryBody.replaceChildren();
+      if (precisionRuns.length === 0) {
+        const row = document.createElement("tr");
+        const cell = document.createElement("td");
+        cell.colSpan = 9;
+        cell.textContent = "まだ実行結果はありません。";
+        row.appendChild(cell);
+        precisionHistoryBody.appendChild(row);
+        return;
+      }
+
+      const orderedRuns = [...precisionRuns].sort(
+        (left, right) => left.simulationCount - right.simulationCount
+      );
+      for (const run of orderedRuns) {
+        const row = document.createElement("tr");
+        const format = value => Number.isFinite(value) ? value.toFixed(5) : "—";
+        const values = [
+          run.simulationCount.toLocaleString(),
+          run.validSimulationCount.toLocaleString(),
+          run.extremeCount.toLocaleString(),
+          format(run.pValue),
+          format(run.standardError),
+          format(run.lower),
+          format(run.upper),
+          format(run.intervalWidth),
+          run.decision
+        ];
+        for (const value of values) {
+          const cell = document.createElement("td");
+          cell.textContent = value;
+          row.appendChild(cell);
+        }
+        precisionHistoryBody.appendChild(row);
+      }
+    }
+
+    function recordPrecisionRun(result, decisionText) {
+      const lower = Number.isFinite(result.monteCarloLower95)
+        ? result.monteCarloLower95
+        : null;
+      const upper = Number.isFinite(result.monteCarloUpper95)
+        ? result.monteCarloUpper95
+        : null;
+      const decision = lower === null || upper === null
+        ? "判定不可"
+        : upper < 0.05
+          ? "棄却"
+          : lower > 0.05
+            ? "棄却せず"
+            : "判定保留";
+      const run = {
+        simulationCount: result.requestedSimulationCount,
+        validSimulationCount: result.validSimulationCount,
+        extremeCount: result.extremeCount,
+        pValue: Number.isFinite(result.pValue) ? result.pValue : null,
+        standardError: Number.isFinite(result.monteCarloStandardError)
+          ? result.monteCarloStandardError
+          : null,
+        lower,
+        upper,
+        intervalWidth: lower === null || upper === null ? null : upper - lower,
+        decision,
+        decisionText,
+        seed: result.seed
+      };
+      const existingIndex = precisionRuns.findIndex(
+        item => item.simulationCount === run.simulationCount
+      );
+      if (existingIndex >= 0) precisionRuns.splice(existingIndex, 1, run);
+      else precisionRuns.push(run);
+      renderPrecisionHistory();
+    }
+    startButton.disabled = true;
+    status.textContent = "検証ページを初期化しています…";
+
+    // Attach diagnostics and a click handler before any fixture setup runs.
+    // If initialization fails, the page now explains why the action is unavailable.
+    window.addEventListener("error", event => {
+      const detail = event?.message || "不明なJavaScriptエラー";
+      status.textContent = `検証ページの初期化／実行でエラーが発生しました：${detail}`;
+      report.textContent = detail;
+      startButton.disabled = false;
+    });
+    window.addEventListener("unhandledrejection", event => {
+      const reason = event?.reason;
+      const detail = reason instanceof Error ? reason.message : String(reason ?? "不明な非同期エラー");
+      status.textContent = `非同期処理でエラーが発生しました：${detail}`;
+      report.textContent = detail;
+      startButton.disabled = false;
+    });
+    startButton.addEventListener("click", async () => {
+      if (typeof startBrowserCheckHandler !== "function") {
+        status.textContent = "検証データの初期化が完了していません。上記のエラー表示を確認してください。";
+        return;
+      }
+      await startBrowserCheckHandler();
+    });
+
+    const gameState = new GameState();
+    const services = createResearchInstituteServices({
+      gameState,
+      themeDefinitions: RESEARCH_THEME_DEFINITIONS
+    });
+
+    const discovered = services.themeManager.discoverTheme(
+      themeId, "browser-e2e-fixture", "in-memory-only"
+    );
+    const researching = services.themeManager.startResearch(themeId);
+    if (!discovered || !researching) {
+      throw new Error("Could not prepare the in-memory research theme fixture.");
+    }
+
+    // Collect fifteen genuine natural-stop games. All test datasets retain each
+    // game's actual number of first-phase trials and the same experiment count.
+    const naturalGames = [];
+    for (let attempt = 0; attempt < 500 && naturalGames.length < 15; attempt += 1) {
+      const gameResult = simulateOneClassicGame({
+        seed: 2026110601 + attempt,
+        policy: { decisions: [], defaultDecision: "accept" }
+      });
+      if (gameResult?.completed &&
+          gameResult.endReason === "no-cats" &&
+          Number.isSafeInteger(gameResult.phase1TrialCount) &&
+          gameResult.phase1TrialCount > 0) {
+        naturalGames.push(gameResult);
+      }
+    }
+    if (naturalGames.length !== 15) {
+      throw new Error("Could not generate fifteen natural-stop game fixtures.");
+    }
+
+    const totalObservedTrials = naturalGames.reduce(
+      (sum, game) => sum + game.phase1TrialCount, 0
+    );
+    if (totalObservedTrials < 30) {
+      throw new Error(
+        `15自然終了ゲームの観測標本数が不足しています（${totalObservedTrials}回）。期待度数を5以上にするため検証条件を見直してください。`
+      );
+    }
+
+    const balancedTarget = Object.fromEntries([1, 2, 3, 4, 5, 6].map(face => [
+      face,
+      Math.floor(totalObservedTrials / 6) +
+        (face <= totalObservedTrials % 6 ? 1 : 0)
+    ]));
+    const biasedTarget = {
+      1: totalObservedTrials,
+      2: 0, 3: 0, 4: 0, 5: 0, 6: 0
+    };
+
+    const CHI_SQUARE_5_PERCENT_CRITICAL_DF5 = 11.0704976935;
+    function calculateChiSquare(counts) {
+      const expected = totalObservedTrials / 6;
+      return [1, 2, 3, 4, 5, 6].reduce(
+        (sum, face) => sum + ((counts[face] - expected) ** 2) / expected,
+        0
+      );
+    }
+
+    // Search a small deterministic family of integer count vectors around
+    // the df=5, alpha=.05 chi-square reference point. The actual Monte Carlo
+    // p-value remains empirical and is not forced to equal five percent.
+    function createNearBoundaryTarget(baseCounts) {
+      let best = null;
+      const expected = totalObservedTrials / 6;
+      const maxDelta = Math.ceil(Math.sqrt(
+        CHI_SQUARE_5_PERCENT_CRITICAL_DF5 * expected
+      )) + 4;
+
+      for (let increaseFace1 = 1; increaseFace1 <= maxDelta; increaseFace1 += 1) {
+        for (let decreaseFace2 = 0; decreaseFace2 <= increaseFace1; decreaseFace2 += 1) {
+          const counts = { ...baseCounts };
+          counts[1] += increaseFace1;
+          counts[2] -= decreaseFace2;
+          counts[3] -= increaseFace1 - decreaseFace2;
+          if ([1, 2, 3, 4, 5, 6].some(face => counts[face] < 0)) continue;
+
+          const statistic = calculateChiSquare(counts);
+          const distance = Math.abs(
+            statistic - CHI_SQUARE_5_PERCENT_CRITICAL_DF5
+          );
+          if (!best || distance < best.distance) {
+            best = { counts, statistic, distance };
+          }
+        }
+      }
+
+      if (!best || best.distance > 0.75) {
+        throw new Error(
+          "5%境界付近の出目配分を作成できませんでした。観測標本数を確認してください。"
+        );
+      }
+      return best;
+    }
+
+    const nearBoundaryTarget = createNearBoundaryTarget(balancedTarget);
+    const biasedTargetDescription = "出目1に全観測を再配分";
+    function allocateFaceCounts(targetCounts) {
+      const remaining = { ...targetCounts };
+      return naturalGames.map(game => {
+        let slots = game.phase1TrialCount;
+        const counts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+        for (const face of [1, 2, 3, 4, 5, 6]) {
+          const assigned = Math.min(slots, remaining[face]);
+          counts[face] = assigned;
+          remaining[face] -= assigned;
+          slots -= assigned;
+        }
+        if (slots !== 0) throw new Error("Could not allocate the synthetic face distribution.");
+        return counts;
+      });
+    }
+
+    const scenarioData = {
+      balanced: allocateFaceCounts(balancedTarget),
+      "near-boundary": allocateFaceCounts(nearBoundaryTarget.counts),
+      biased: allocateFaceCounts(biasedTarget)
+    };
+
+    const screen = new ResearchInstituteScreen({
+      documentRef: document,
+      root,
+      controller: services.instituteController,
+      services
+    });
+    screen.controller.selectFacility("research_lab");
+    screen.render();
+
+    // The Monte Carlo controls are rendered only after the statistics
+    // analysis has been requested. Do not look for them before installing
+    // the first scenario below.
+    const scenarioSelect = document.querySelector("#e2eScenario");
+    function installScenario(scenario) {
+      precisionRuns.length = 0;
+      renderPrecisionHistory();
+      const distributions = scenarioData[scenario];
+      if (!distributions) throw new Error("Unknown browser fixture scenario: " + scenario);
+
+      const records = naturalGames.map((game, index) => {
+        const offerCount = game.mogumoguOfferCount ?? 0;
+        return {
+          resultId: `BROWSER_E2E_${scenario.toUpperCase()}_${index + 1}`,
+          themeId,
+          challengeId,
+          outcome: "success",
+          completedAt: new Date(Date.now() + index).toISOString(),
+          summary: `ブラウザ検証用 ${({
+            balanced: "均等",
+            "near-boundary": "5%境界付近",
+            biased: "極端な偏り"
+          })[scenario]}データ：自然終了ゲーム ${index + 1}`,
+          metrics: {
+            endReason: "no-cats",
+            phase1TrialCount: game.phase1TrialCount,
+            phase1FaceCounts: distributions[index],
+            mogumoguEventCount: offerCount,
+            mogumoguDecisionHistory: Array.from({ length: offerCount }, () => "accept"),
+            generatedCatCount: 0,
+            rollCount: game.mainTurnCount,
+            phase2TrialCount: 0,
+            cheshireEventCount: 0,
+            cheshireGeneratedCatCount: 0,
+            cheshireRemovedCatCount: 0
+          }
+        };
+      });
+
+      gameState.researchInstituteData.challengeResults.splice(
+        0, gameState.researchInstituteData.challengeResults.length, ...records
+      );
+      const entry = services.entryManager.getEntry(themeId);
+      entry.attemptCount = 0;
+      entry.successCount = 0;
+      entry.challengeResultIds = [];
+      for (const record of records) services.entryManager.registerAttempt(themeId, record);
+
+      screen.monteCarlo = null;
+      screen.monteCarloSimulationCount =
+        Number(root.querySelector("#areMonteCarloSimulationCount")?.value) || 2000;
+      screen.runStatisticsAnalysis(themeId, { challengeId });
+      const faceOneCount = records.reduce(
+        (sum, record) => sum + record.metrics.phase1FaceCounts[1], 0
+      );
+      const scenarioLabels = {
+        balanced: "均等",
+        "near-boundary": "5%境界付近",
+        biased: "極端な偏り"
+      };
+      const scenarioDescription = scenario === "near-boundary"
+        ? `df=5のχ²臨界値 ${CHI_SQUARE_5_PERCENT_CRITICAL_DF5.toFixed(3)} に近づけた人工データです（生成したχ²=${nearBoundaryTarget.statistic.toFixed(3)}）。この臨界値は配分設計用の目安で、最終判定は停止ルールを再現したモンテカルロp値とWilson区間で行います。`
+        : scenario === "biased"
+          ? `${biasedTargetDescription}した人工的な偏りデータです。`
+          : "6つの出目へできるだけ均等に再配分した対照データです。";
+      status.textContent =
+        `準備完了：自然終了ゲーム ${records.length}件 / 観測 ${totalObservedTrials}回 / 出目1 ${faceOneCount}回。現在のデータ：${scenarioLabels[scenario]}。`;
+      report.replaceChildren();
+      const heading = document.createElement("strong");
+      heading.textContent = "観測データの準備完了";
+      report.appendChild(heading);
+      const detail = document.createElement("p");
+      detail.className = "muted";
+      detail.textContent =
+        `自然終了ゲーム ${records.length}件 / 観測標本数 ${totalObservedTrials} / 出目1 ${faceOneCount}回 / 出目2～6 合計 ${totalObservedTrials - faceOneCount}回。 ${scenarioDescription}`;
+      report.appendChild(detail);
+    }
+
+    scenarioSelect.addEventListener("change", () => {
+      if (screen.monteCarloRunning) return;
+      installScenario(scenarioSelect.value);
+    });
+    installScenario(scenarioSelect.value || "balanced");
+
+    // installScenario() loads the in-memory records and calls
+    // runStatisticsAnalysis(), which renders the actual Monte Carlo controls.
+    if (!root.querySelector("#areMonteCarloSimulationCount")) {
+      throw new Error(
+        "統計分析後もモンテカルロ操作欄が表示されません。研究記録と分析結果を確認してください。"
+      );
+    }
+
+    const originalRun = screen.runMonteCarloAnalysis.bind(screen);
+    let activeRunPromise = null;
+    screen.runMonteCarloAnalysis = (selectedThemeId, options = {}) => {
+      scenarioSelect.disabled = true;
+      activeRunPromise = (async () => {
+        let progressUpdateCount = 0;
+        let progressBarSeen = false;
+        let progressAdvanced = false;
+        let animationFrameCount = 0;
+        let keepCountingFrames = true;
+        const countFrame = () => {
+          if (!keepCountingFrames) return;
+          animationFrameCount += 1;
+          requestAnimationFrame(countFrame);
+        };
+        requestAnimationFrame(countFrame);
+
+        try {
+          const result = await originalRun(selectedThemeId, {
+            ...options,
+            onProgress: checkpoint => {
+              progressUpdateCount += 1;
+              const progressBar = root.querySelector(".ari-monte-carlo-progress-track");
+              if (progressBar) {
+                progressBarSeen = true;
+                if (Number(progressBar.getAttribute("aria-valuenow")) > 0) {
+                  progressAdvanced = true;
+                }
+              }
+              status.textContent =
+                `実行中：${checkpoint.completedSimulationCount.toLocaleString()} / ${checkpoint.requestedSimulationCount.toLocaleString()}回。進捗更新を観測しています。`;
+              options.onProgress?.(checkpoint);
+            }
+          });
+
+          const points = root.querySelectorAll("#areMonteCarloResult .ari-monte-carlo-point").length;
+          const resultPanel = root.querySelector("#areMonteCarloResult");
+          const convergenceHistory = Array.isArray(result.convergenceHistory)
+            ? result.convergenceHistory.filter(point =>
+              Number.isFinite(point.monteCarloLower95) &&
+              Number.isFinite(point.monteCarloUpper95))
+            : [];
+          const firstInterval = convergenceHistory[0] ?? null;
+          const lastInterval = convergenceHistory[convergenceHistory.length - 1] ?? null;
+          const firstIntervalWidth = firstInterval
+            ? firstInterval.monteCarloUpper95 - firstInterval.monteCarloLower95
+            : null;
+          const lastIntervalWidth = lastInterval
+            ? lastInterval.monteCarloUpper95 - lastInterval.monteCarloLower95
+            : null;
+          const decisionText = resultPanel?.querySelector(".ari-chi-square-decision")?.textContent ?? "";
+          const intervalIsAvailable =
+            Number.isFinite(result.monteCarloLower95) &&
+            Number.isFinite(result.monteCarloUpper95);
+          const intervalDecisionConsistent = intervalIsAvailable && (
+            result.monteCarloUpper95 < 0.05
+              ? decisionText.includes("帰無仮説を棄却") &&
+                !decisionText.includes("棄却できない")
+              : result.monteCarloLower95 > 0.05
+                ? decisionText.includes("帰無仮説を棄却できない")
+                : decisionText.includes("判定を保留")
+          );
+          const checks = [
+            ["選択した反復数が実行結果に反映された",
+              result.requestedSimulationCount === Number(root.querySelector("#areMonteCarloSimulationCount")?.value)],
+            ["比較用の乱数シードが固定されている",
+              result.seed === COMPARISON_SEED],
+            ["進捗コールバックが複数回届いた", progressUpdateCount > 1],
+            ["実行中の進捗バーを確認できた", progressBarSeen && progressAdvanced],
+            ["有効なシミュレーション結果が得られた", result.validSimulationCount > 0],
+            ["対象実験数と反復ごとのゲーム数が一致した",
+              result.eligibleExperimentCount === naturalGames.length &&
+              result.experimentCountPerReplicate === naturalGames.length],
+            ["観測データとゲーム終了条件が整合した",
+              result.observedSampleCount === totalObservedTrials],
+            ["失敗反復がなかった", result.failedSimulationCount === 0],
+            ["Wilson 95%区間が利用できた", Number.isFinite(result.monteCarloLower95) && Number.isFinite(result.monteCarloUpper95)],
+            ["収束履歴のグラフが描画された", points > 0 && Boolean(resultPanel)],
+            ["ブラウザ描画フレームが実行中に進んだ", animationFrameCount > 0],
+            ["観測データの性質が統計結果に現れた",
+              scenarioSelect.value === "biased"
+                ? result.observedStatistic > 0 && result.pValue < 0.05 &&
+                  decisionText.includes("帰無仮説を棄却") &&
+                  !decisionText.includes("棄却できない")
+                : scenarioSelect.value === "near-boundary"
+                  ? Math.abs(result.observedStatistic -
+                      CHI_SQUARE_5_PERCENT_CRITICAL_DF5) <= 0.75 &&
+                    Number.isFinite(result.pValue) &&
+                    result.pValue >= 0 && result.pValue <= 1
+                  : result.observedStatistic < 2 && result.pValue > 0.05 &&
+                    decisionText.includes("棄却できない")],
+            ["Wilson区間と画面上の有意性判定が一致している",
+              intervalDecisionConsistent],
+            ["5%境界付近の観測統計量が臨界値近傍にある",
+              scenarioSelect.value === "near-boundary"
+                ? Math.abs(result.observedStatistic -
+                    CHI_SQUARE_5_PERCENT_CRITICAL_DF5) <= 0.75
+                : true],
+            ["反復数の増加に伴ってWilson区間が縮小した",
+              firstIntervalWidth > 0 && lastIntervalWidth < firstIntervalWidth]
+          ];
+
+          report.replaceChildren();
+          report.appendChild(document.createElement("strong")).textContent =
+            checks.every(([, passed]) => passed) ? "ブラウザ検証：PASS" : "ブラウザ検証：要確認";
+          for (const [label, passed] of checks) {
+            const row = document.createElement("div");
+            row.className = "e2e-check";
+            const mark = document.createElement("span");
+            mark.className = passed ? "e2e-pass" : "e2e-fail";
+            mark.textContent = passed ? "PASS" : "確認";
+            row.append(mark, document.createTextNode(`　${label}`));
+            report.appendChild(row);
+          }
+          const detail = document.createElement("p");
+          detail.className = "muted";
+          detail.textContent =
+            `要求 ${result.requestedSimulationCount.toLocaleString()}回 / 有効 ${result.validSimulationCount.toLocaleString()}回 / 失敗 ${result.failedSimulationCount.toLocaleString()}回 / 進捗通知 ${progressUpdateCount}回 / 描画フレーム ${animationFrameCount}回 / グラフ点 ${points}個`;
+          report.appendChild(detail);
+          recordPrecisionRun(result, decisionText);
+          status.textContent = checks.every(([, passed]) => passed)
+            ? "ブラウザ検証が完了しました。全項目PASSです。"
+            : "ブラウザ検証が完了しました。要確認の項目があります。";
+          return result;
+        } finally {
+          keepCountingFrames = false;
+          scenarioSelect.disabled = false;
+          startButton.disabled = false;
+        }
+      })();
+      return activeRunPromise;
+    };
+
+    startBrowserCheckHandler = async () => {
+      if (screen.monteCarloRunning) return;
+      const currentCountSelect = root.querySelector("#areMonteCarloSimulationCount");
+      const selectedCount = Number(currentCountSelect?.value);
+      const supportedCounts = [2000, 5000, 10000, 25000, 50000];
+      if (!supportedCounts.includes(selectedCount)) {
+        status.textContent = "未対応の反復数が選択されています。";
+        return;
+      }
+
+      startButton.disabled = true;
+      status.textContent = `${selectedCount.toLocaleString()}回のブラウザ検証を開始します。`;
+      try {
+        // Invoke the screen's action directly. Avoid synthesizing a click on a
+        // button that may be detached when the screen rerenders during startup.
+        const result = await screen.runMonteCarloAnalysis(themeId, {
+          challengeId,
+          simulationCount: selectedCount,
+          seed: COMPARISON_SEED
+        });
+        if (!result) {
+          throw new Error("モンテカルロ検定から結果が返されませんでした。");
+        }
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        report.textContent = `ブラウザ検証に失敗しました：${detail}`;
+        status.textContent = `ブラウザ検証に失敗しました：${detail}`;
+        startButton.disabled = false;
+        scenarioSelect.disabled = false;
+      }
+    };
+    startButton.disabled = false;
+    status.textContent += " ブラウザ検証ボタンを有効にしました。";
+  </script>
+</body>
+</html>
