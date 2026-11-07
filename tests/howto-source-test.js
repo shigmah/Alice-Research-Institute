@@ -10,7 +10,7 @@ console.assert(html.includes("チェシャ猫イベント"), "Cheshire explanati
 console.assert(html.includes("もぐもぐチャレンジ"), "Mogumogu explanation exists");
 console.assert(!html.includes("C108 ベータ版"), "outdated C108 beta label is removed");
 console.assert(
-  html.includes("招き猫数と出目の合計の差（絶対値）を差し引きます"),
+  html.includes("招き猫数と出目の合計の差（絶対値）」を差し引きます"),
   "phase 2 explains the cat-count reduction rule"
 );
 console.assert(
