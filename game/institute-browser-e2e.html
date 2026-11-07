@@ -258,10 +258,9 @@
     screen.controller.selectFacility("research_lab");
     screen.render();
 
-    if (!root.querySelector("#areMonteCarloSimulationCount")) {
-      throw new Error("Monte Carlo controls did not render in the research institute screen.");
-    }
-
+    // The Monte Carlo controls are rendered only after the statistics
+    // analysis has been requested. Do not look for them before installing
+    // the first scenario below.
     const scenarioSelect = document.querySelector("#e2eScenario");
     function installScenario(scenario) {
       const distributions = scenarioData[scenario];
@@ -330,6 +329,13 @@
     });
     installScenario(scenarioSelect.value || "balanced");
 
+    // installScenario() loads the in-memory records and calls
+    // runStatisticsAnalysis(), which renders the actual Monte Carlo controls.
+    if (!root.querySelector("#areMonteCarloSimulationCount")) {
+      throw new Error(
+        "統計分析後もモンテカルロ操作欄が表示されません。研究記録と分析結果を確認してください。"
+      );
+    }
 
     const originalRun = screen.runMonteCarloAnalysis.bind(screen);
     let activeRunPromise = null;
