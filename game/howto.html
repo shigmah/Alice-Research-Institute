@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>招き猫ゲーム - 遊び方・ルール</title>
 <style>
-body{margin:0;background:#f7f5f0;color:#333;font-family:system-ui,-apple-system,"Yu Gothic",Meiryo,sans-serif}
+body{margin:0;background:#f7f5f0;color:#333;font-family:system-ui,-apple-system,"Yu Gothic",Meiryo,sans-serif;line-height:1.75}
 main{width:min(900px,calc(100% - 28px));margin:0 auto;padding:22px 0 34px}
 .panel{background:#fff;border:1px solid #e5dfd2;border-radius:14px;padding:20px;margin-bottom:14px;box-shadow:0 3px 12px #0000000b}
 h1{text-align:center;margin:8px 0 4px}.lead{text-align:center;color:#666;margin-bottom:18px}
@@ -14,6 +14,12 @@ h2{margin-top:0} h3{margin-bottom:6px}
 .back{text-align:center;margin:18px 0}.back a{display:inline-block;padding:11px 18px;border-radius:9px;background:#e74c3c;color:#fff;text-decoration:none;font-weight:700}
 .small{font-size:13px;color:#666}
 ul{padding-left:1.2em}
+.math{overflow-x:auto;text-align:center;padding:8px 0;font-family:Georgia,"Times New Roman",serif;font-size:1.12em}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:.95em}
+th,td{border:1px solid #e5dfd2;padding:8px;text-align:left}
+th{background:#f5f2eb}
+.result{background:#f2f7f4;border:1px solid #d6e7da;border-radius:10px;padding:14px;text-align:center;margin:14px 0}
+.result strong{font-size:1.25em}
 </style>
 </head>
 <body>
@@ -70,6 +76,65 @@ ul{padding-left:1.2em}
 <h2>🔬 数学のポイント</h2>
 <p>遊んでいるうちに、「この目が出る確率は？」「合計が素数になるのはどのくらい？」と考えてみてください。</p>
 <p class="small">ゲームの細かな仕様や、今後追加されるモード・イベントは、今後の更新で拡張されます。</p>
+</section>
+
+<section class="panel" id="math-note-01">
+<h2>📐 数学研究ノート ①</h2>
+<h3>サイコロ2個の合計が素数になる確率は？</h3>
+<p>クラシックモードのフェーズ2では、サイコロの出目をすべて足し、その合計が素数かどうかを判定します。では、サイコロを2個振ったとき、合計が素数になる確率はどれくらいでしょうか？</p>
+
+<h3>1. 問題の設定</h3>
+<ul>
+<li>公平な6面サイコロを2個使います。</li>
+<li>それぞれの出目は1から6までで、互いに独立です。</li>
+<li>2個の出目の合計を判定します。</li>
+</ul>
+<p>1個目と2個目の出目をそれぞれ <strong>X₁</strong>、<strong>X₂</strong> とすると、合計 <strong>S</strong> は次のとおりです。</p>
+<div class="math">S = X₁ + X₂</div>
+
+<h3>2. すべての組み合わせ</h3>
+<p>サイコロはそれぞれ6通りの出目を持つため、組み合わせは次のとおり36通りです。</p>
+<div class="math">6 × 6 = 36 通り</div>
+<p>ここでは、例えば「1個目が1、2個目が2」と「1個目が2、2個目が1」は別の結果として数えます。</p>
+
+<h3>3. 合計が素数になる場合</h3>
+<p>2個のサイコロの合計として可能な値は2から12までです。このうち素数は <strong>2・3・5・7・11</strong> です。</p>
+<table>
+<thead><tr><th>合計</th><th>出目の組み合わせ</th><th>通り数</th></tr></thead>
+<tbody>
+<tr><td>2</td><td>(1,1)</td><td>1</td></tr>
+<tr><td>3</td><td>(1,2)、(2,1)</td><td>2</td></tr>
+<tr><td>5</td><td>(1,4)、(2,3)、(3,2)、(4,1)</td><td>4</td></tr>
+<tr><td>7</td><td>(1,6)、(2,5)、(3,4)、(4,3)、(5,2)、(6,1)</td><td>6</td></tr>
+<tr><td>11</td><td>(5,6)、(6,5)</td><td>2</td></tr>
+<tr><th colspan="2">合計</th><th>15</th></tr>
+</tbody>
+</table>
+<p>したがって、合計が素数になる組み合わせは36通り中15通りです。</p>
+
+<h3>4. 理論確率を求める</h3>
+<p>確率は「その事象が起こる場合の数」を「すべての場合の数」で割って求めます。</p>
+<div class="math">P(Sが素数) = 15 / 36 = 5 / 12</div>
+<div class="result">
+<div>理論確率</div>
+<strong>5 / 12 ≒ 41.67％</strong>
+</div>
+<p>反対に、合計が素数でない確率は、</p>
+<div class="math">1 − 5 / 12 = 7 / 12 ≒ 58.33％</div>
+<p>となります。</p>
+
+<h3>5. この結果から何が分かる？</h3>
+<p>合計値はどれも同じ確率で現れるわけではありません。例えば、合計が2になる組み合わせは1通りですが、合計が7になる組み合わせは6通りあります。このように、合計ごとに出やすさが異なることが、今回の確率を決めています。</p>
+<p>サイコロ2個で1回判定するとき、合計が素数になる確率は50％未満です。ただし、これはあくまで1回の判定についての確率です。実際のゲームではサイコロの個数や招き猫数も変化するため、ゲーム全体の展開はさらに複雑になります。</p>
+
+<h3>6. 次の研究課題</h3>
+<ul>
+<li>サイコロが3個、4個、5個と増えた場合、素数になる確率はどう変化する？</li>
+<li>サイコロの個数が増えると、素数判定は起こりやすくなる？</li>
+<li>理論上の確率と、何万回も試行したシミュレーション結果はどれくらい一致する？</li>
+</ul>
+<p>数学で予測し、プログラムで確かめる。次回以降も、ゲームの中に隠れた法則を研究していきましょう。</p>
+<p class="small">※この41.67％は、サイコロ2個を使った1回の判定に関する理論値です。イベントを含むゲーム全体の勝率や継続ターン数を表すものではありません。</p>
 </section>
 
 <div class="back">
